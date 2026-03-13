@@ -7,10 +7,9 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.const import CONF_HOST, CONF_PORT
 
 from .const import DEFAULT_PORT, DOMAIN, ERROR_CANNOT_CONNECT
 
@@ -68,7 +67,7 @@ class LumagenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await writer.drain()
             data = await asyncio.wait_for(reader.readline(), timeout=5.0)
             return b"S00" in data and b"Ok" in data
-        except Exception:  # noqa: BLE001
+        except Exception:
             _LOGGER.debug("Connection test failed for %s:%s", host, port, exc_info=True)
             return False
         finally:
@@ -76,5 +75,5 @@ class LumagenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 try:
                     writer.close()
                     await writer.wait_closed()
-                except Exception:  # noqa: BLE001
+                except Exception:
                     pass

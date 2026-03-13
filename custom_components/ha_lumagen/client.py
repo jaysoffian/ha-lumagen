@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
 import logging
 import re
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass, field
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -348,7 +348,7 @@ class LumagenClient:
             try:
                 self._writer.close()
                 await self._writer.wait_closed()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
         self._reader = None
         self._writer = None
@@ -361,7 +361,7 @@ class LumagenClient:
                 asyncio.open_connection(self._host, self._port),
                 timeout=10.0,
             )
-        except (OSError, asyncio.TimeoutError) as err:
+        except (TimeoutError, OSError) as err:
             _LOGGER.error("Failed to connect to %s:%s: %s", self._host, self._port, err)
             self.state.connected = False
             if self._on_connection_changed:
@@ -386,7 +386,7 @@ class LumagenClient:
         if self._writer:
             try:
                 self._writer.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
         self._reader = None
         self._writer = None
@@ -432,7 +432,7 @@ class LumagenClient:
                 return
             except (OSError, ConnectionError):
                 break
-            except Exception:  # noqa: BLE001
+            except Exception:
                 _LOGGER.debug("Read loop error", exc_info=True)
                 break
 
@@ -482,7 +482,7 @@ class LumagenClient:
             try:
                 if handler(self.state, fields):
                     self._notify_state_changed()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 _LOGGER.debug("Error in handler for %s", name, exc_info=True)
 
     def _handle_label_response(self, line: str, idx: int) -> None:
@@ -518,7 +518,7 @@ class LumagenClient:
             try:
                 await self.send_command("ZQS00")
                 await asyncio.wait_for(self._alive_event.wait(), timeout=5.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 _LOGGER.warning("Keepalive timeout — reconnecting")
                 await self._handle_disconnect()
                 return
@@ -542,7 +542,7 @@ class LumagenClient:
                 await self._writer.drain()
             except (OSError, ConnectionError) as err:
                 _LOGGER.error("Send error: %s", err)
-                asyncio.create_task(self._handle_disconnect())
+                self._reconnect_task = asyncio.create_task(self._handle_disconnect())
 
     def _notify_state_changed(self) -> None:
         if self._on_state_changed:
@@ -557,7 +557,7 @@ class LumagenClient:
             await asyncio.sleep(0.05)  # brief pause between queries
 
     async def get_labels(self) -> dict[str, str]:
-        """Query all input labels (A0–D9). Returns ``{id: text}``."""
+        """Query all input labels (A0-D9). Returns ``{id: text}``."""
         labels: dict[str, str] = {}
         for bank in "ABCD":
             for i in range(10):
@@ -570,7 +570,7 @@ class LumagenClient:
                     await asyncio.wait_for(self._label_event.wait(), timeout=2.0)
                     if self._last_label_value is not None:
                         labels[label_id] = self._last_label_value
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     _LOGGER.debug("Timeout waiting for label %s", label_id)
         self._pending_label_id = None
         self.state.input_labels = labels
@@ -627,7 +627,7 @@ class LumagenClient:
     async def display_message(self, text: str, duration: int = 3) -> None:
         """Show an OSD message.
 
-        *duration*: 0–8 for timed (seconds), 9 for persistent.
+        *duration*: 0-8 for timed (seconds), 9 for persistent.
         *text*: up to 60 chars (two 30-char lines separated by ``\\n``).
         """
         duration = max(0, min(9, duration))

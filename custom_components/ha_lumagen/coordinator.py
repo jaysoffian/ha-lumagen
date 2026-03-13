@@ -61,8 +61,8 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         try:
             await self.client.fetch_full_state()
             await self.client.get_labels()
-        except Exception:  # noqa: BLE001
-            _LOGGER.error("Error during power-on refresh", exc_info=True)
+        except Exception:
+            _LOGGER.exception("Error during power-on refresh")
 
     async def _async_update_data(self) -> LumagenState:
         """Fallback for first refresh — returns current state snapshot."""
