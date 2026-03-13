@@ -188,24 +188,24 @@ class TestHandlePower:
     def test_active(self):
         state = LumagenState()
         assert _handle_power(state, ["1"]) is True
-        assert state.device_status == "Active"
+        assert state.power == "on"
 
     def test_standby(self):
         state = LumagenState()
         assert _handle_power(state, ["0"]) is True
-        assert state.device_status == "Standby"
+        assert state.power == "off"
 
     def test_unknown_value_treated_as_standby(self):
         state = LumagenState()
         assert _handle_power(state, ["2"]) is True
-        assert state.device_status == "Standby"
+        assert state.power == "off"
 
     def test_empty_fields(self):
         state = LumagenState()
         assert _handle_power(state, []) is False
 
     def test_no_change(self):
-        state = LumagenState(device_status="Active")
+        state = LumagenState(power="on")
         assert _handle_power(state, ["1"]) is False
 
 
@@ -388,16 +388,16 @@ class TestProcessLine:
 
     def test_power_up_complete(self):
         self.client._process_line("Power-up complete.")
-        assert self.client.state.device_status == "Active"
+        assert self.client.state.power == "on"
         assert self.state_changes == 1
 
     def test_power_off(self):
         self.client._process_line("POWER OFF.")
-        assert self.client.state.device_status == "Standby"
+        assert self.client.state.power == "off"
         assert self.state_changes == 1
 
     def test_power_up_no_duplicate_notify(self):
-        self.client.state.device_status = "Active"
+        self.client.state.power = "on"
         self.client._process_line("Power-up complete.")
         assert self.state_changes == 0
 
@@ -428,11 +428,11 @@ class TestProcessLine:
 
     def test_s02_active(self):
         self.client._process_line("ZQS02!S02,1")
-        assert self.client.state.device_status == "Active"
+        assert self.client.state.power == "on"
 
     def test_s02_standby(self):
         self.client._process_line("ZQS02!S02,0")
-        assert self.client.state.device_status == "Standby"
+        assert self.client.state.power == "off"
 
     # -- I00 input info with echo ------------------------------------------
 

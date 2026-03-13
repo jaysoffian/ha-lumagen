@@ -149,7 +149,7 @@ class LumagenSensorEntity(LumagenEntity, SensorEntity):
         data = self.coordinator.data
         if self.entity_description.entity_category == EntityCategory.DIAGNOSTIC:
             return data.connected
-        return data.connected and data.device_status == "Active"
+        return data.connected and data.power == "on"
 
     @property
     def native_value(self) -> Any:

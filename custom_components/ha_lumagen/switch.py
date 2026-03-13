@@ -44,7 +44,7 @@ class LumagenPowerSwitch(LumagenEntity, SwitchEntity):
     def is_on(self) -> bool:
         if self._optimistic_state is not None:
             return self._optimistic_state
-        return self.coordinator.data.device_status == "Active"
+        return self.coordinator.data.power == "on"
 
     def _handle_coordinator_update(self) -> None:
         self._optimistic_state = None
