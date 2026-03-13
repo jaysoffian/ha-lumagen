@@ -219,3 +219,41 @@ Labels are fetched from the device on power-on. If you see default names:
 2. Power-cycle the device (or toggle the power switch) to trigger a label fetch
 3. Labels are per memory bank — switching banks shows that bank's labels
 
+## Development
+
+Requires [uv](https://docs.astral.sh/uv/).
+
+```bash
+# Run tests
+uv run --with pytest --with homeassistant pytest tests/ -v
+
+# Lint + format
+uvx ruff check custom_components/ tests/
+uvx ruff format custom_components/ tests/
+
+# Type check
+uvx --with homeassistant ty check
+
+# Install pre-commit hooks (ruff, ty, trailing whitespace, etc.)
+uv tool install pre-commit
+pre-commit install
+```
+
+### Repo layout
+
+```
+custom_components/ha_lumagen/
+  client.py        — async TCP client, RS-232 protocol, state dataclass
+  coordinator.py   — HA DataUpdateCoordinator (event-driven, no polling)
+  entity.py        — shared base entity (device_info, availability)
+  config_flow.py   — single-step IP/port config flow
+  sensor.py        — status + diagnostic sensors
+  select.py        — input source, aspect ratio, memory bank
+  switch.py        — power on/off
+  remote.py        — menu navigation commands
+  const.py         — domain, defaults, errors
+docs/
+  rs232_command_reference.md — full Lumagen RS-232 command + query reference
+tests/
+  test_client.py   — response parsing and protocol tests
+```
