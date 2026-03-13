@@ -23,13 +23,13 @@ repos:
     hooks:
       - id: ty-check
         name: ty check
-        entry: uvx --with homeassistant ty check --exclude tests/
+        entry: uv run ty check --exclude tests/
         language: system
         types: [python]
         pass_filenames: false
       - id: pytest
         name: pytest
-        entry: uvx --with pytest --with homeassistant pytest tests/ -v
+        entry: uv run pytest tests/ -v
         language: system
         types: [python]
         pass_filenames: false

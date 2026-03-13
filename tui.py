@@ -1,8 +1,4 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.13"
-# dependencies = ["textual>=1.0"]
-# ///
+#!/usr/bin/env -S uv run python
 """Textual TUI for exercising the Lumagen Radiance Pro TCP client."""
 
 from __future__ import annotations
@@ -257,7 +253,7 @@ class LumagenTUI(App):
             log.write("[red]Connection failed.[/]")
 
     def _on_state_changed(self) -> None:
-        self.call_from_thread(self._refresh_state)
+        self.call_later(self._refresh_state)
 
     def _on_connection_changed(self, connected: bool) -> None:
         def _update() -> None:
@@ -268,7 +264,7 @@ class LumagenTUI(App):
                 log.write("[red]Disconnected.[/]")
             self._refresh_state()
 
-        self.call_from_thread(_update)
+        self.call_later(_update)
 
     def _refresh_state(self) -> None:
         panel = self.query_one("#state", StatePanel)
@@ -276,14 +272,14 @@ class LumagenTUI(App):
 
     def _log_sent(self, cmd: str) -> None:
         ts = datetime.now().strftime("%H:%M:%S")
-        self.call_from_thread(
+        self.call_later(
             self.query_one("#log", RichLog).write,
             f"[dim]{ts}[/] [bold cyan]→[/] {cmd}",
         )
 
     def _log_received(self, line: str) -> None:
         ts = datetime.now().strftime("%H:%M:%S")
-        self.call_from_thread(
+        self.call_later(
             self.query_one("#log", RichLog).write,
             f"[dim]{ts}[/] [bold green]←[/] {line}",
         )
