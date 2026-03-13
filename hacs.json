@@ -1,0 +1,7 @@
+{
+  "name": "Lumagen Radiance Pro",
+  "content_in_root": false,
+  "filename": "ha_lumagen",
+  "render_readme": true,
+  "homeassistant": "2024.1.0"
+}

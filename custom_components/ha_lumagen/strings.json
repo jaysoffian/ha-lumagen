@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Lumagen Connection",
+        "description": "Enter the IP address and port of your Lumagen's TCP-to-serial adapter.",
+        "data": {
+          "host": "Host IP Address",
+          "port": "Port"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the Lumagen device. Please check your connection settings and ensure the device is powered on.",
+      "unknown": "An unexpected error occurred. Please try again."
+    },
+    "abort": {
+      "already_configured": "This Lumagen device is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "logical_input": { "name": "Logical Input" },
+      "physical_input": { "name": "Physical Input" },
+      "output_resolution": { "name": "Output Resolution" },
+      "source_aspect_ratio": { "name": "Source Aspect Ratio" },
+      "source_dynamic_range": { "name": "Source Dynamic Range" },
+      "input_configuration": { "name": "Input Configuration" },
+      "output_cms": { "name": "Output CMS" },
+      "output_style": { "name": "Output Style" },
+      "model_name": { "name": "Model Name" },
+      "software_revision": { "name": "Software Revision" },
+      "model_number": { "name": "Model Number" },
+      "serial_number": { "name": "Serial Number" }
+    },
+    "select": {
+      "input_source": { "name": "Input Source" },
+      "source_aspect_ratio": { "name": "Source Aspect Ratio" },
+      "memory_bank": { "name": "Memory Bank" }
+    }
+  }
+}
