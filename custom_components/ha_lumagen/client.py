@@ -213,18 +213,12 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
         state, "source_vertical_resolution", _safe_int(fields[2])
     )
     changed |= _setattr_changed(state, "input_config_number", _safe_int(fields[4]))
-    changed |= _setattr_changed(
-        state, "source_raster_aspect", _aspect_name(fields[5])
-    )
-    changed |= _setattr_changed(
-        state, "source_content_aspect", _aspect_name(fields[6])
-    )
+    changed |= _setattr_changed(state, "source_raster_aspect", _aspect_name(fields[5]))
+    changed |= _setattr_changed(state, "source_content_aspect", _aspect_name(fields[6]))
     changed |= _setattr_changed(state, "nls_active", fields[7] == "N")
     changed |= _setattr_changed(state, "output_cms", _safe_int(fields[10]))
     changed |= _setattr_changed(state, "output_style", _safe_int(fields[11]))
-    changed |= _setattr_changed(
-        state, "output_vertical_rate", _safe_int(fields[12])
-    )
+    changed |= _setattr_changed(state, "output_vertical_rate", _safe_int(fields[12]))
     changed |= _setattr_changed(
         state, "output_vertical_resolution", _safe_int(fields[13])
     )
@@ -500,17 +494,13 @@ class LumagenClient:
     # -- Sending ------------------------------------------------------------
 
     async def send_command(self, cmd: str) -> None:
-        """Send a command string as raw bytes (no framing)."""
-        await self._send_raw(cmd)
-
-    async def _send_raw(self, data: str) -> None:
-        """Write raw ASCII bytes to the device."""
+        """Send a raw ASCII command string to the device (no framing)."""
         if not self._writer:
             _LOGGER.warning("Cannot send — not connected")
             return
         async with self._write_lock:
             try:
-                self._writer.write(data.encode("ascii"))
+                self._writer.write(cmd.encode("ascii"))
                 await self._writer.drain()
             except (OSError, ConnectionError) as err:
                 _LOGGER.error("Send error: %s", err)
@@ -561,22 +551,22 @@ class LumagenClient:
 
     async def power_on(self) -> None:
         """Power on the device."""
-        await self._send_raw("%")
+        await self.send_command("%")
 
     async def power_off(self) -> None:
         """Power off (standby)."""
-        await self._send_raw("$")
+        await self.send_command("$")
 
     async def select_input(self, number: int) -> None:
         """Select logical input (1-based)."""
         if 1 <= number <= 9:
-            await self._send_raw(f"i{number}")
+            await self.send_command(f"i{number}")
         elif 10 <= number <= 18:
-            await self._send_raw(f"i+{number - 10}")
+            await self.send_command(f"i+{number - 10}")
 
     async def select_memory(self, bank: str) -> None:
         """Select memory bank (A / B / C / D)."""
-        await self._send_raw(bank.lower())
+        await self.send_command(bank.lower())
 
     async def set_aspect(self, aspect: str) -> None:
         """Set source aspect ratio by display name."""
@@ -584,7 +574,7 @@ class LumagenClient:
         if cmd is None:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
-        await self._send_raw(cmd)
+        await self.send_command(cmd)
 
     async def send_remote_command(self, command: str) -> None:
         """Send a named remote-control command."""
@@ -592,7 +582,7 @@ class LumagenClient:
         if cmd is None:
             _LOGGER.warning("Unknown remote command: %s", command)
             return
-        await self._send_raw(cmd)
+        await self.send_command(cmd)
 
     # -- OSD ----------------------------------------------------------------
 
@@ -603,8 +593,8 @@ class LumagenClient:
         *text*: up to 60 chars (two 30-char lines separated by ``\\n``).
         """
         duration = max(0, min(9, duration))
-        await self._send_raw(f"ZT{duration}{text}\r")
+        await self.send_command(f"ZT{duration}{text}\r")
 
     async def clear_message(self) -> None:
         """Clear any OSD message."""
-        await self._send_raw("ZC")
+        await self.send_command("ZC")

@@ -11,11 +11,11 @@ from homeassistant.components.select import SelectEntity, SelectEntityDescriptio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .client import ASPECT_COMMANDS, LumagenState
 from .const import DOMAIN
 from .coordinator import LumagenCoordinator
+from .entity import LumagenEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -114,11 +114,10 @@ async def async_setup_entry(
     )
 
 
-class LumagenSelectEntity(CoordinatorEntity[LumagenCoordinator], SelectEntity):
+class LumagenSelectEntity(LumagenEntity, SelectEntity):
     """A Lumagen select entity."""
 
     entity_description: LumagenSelectEntityDescription
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -130,31 +129,12 @@ class LumagenSelectEntity(CoordinatorEntity[LumagenCoordinator], SelectEntity):
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{description.key}"
 
     @property
-    def device_info(self) -> dict[str, Any]:
-        data = self.coordinator.data
-        return {
-            "identifiers": {(DOMAIN, self.coordinator.entry.entry_id)},
-            "name": f"Lumagen {data.model_name or 'RadiancePro'}",
-            "manufacturer": "Lumagen",
-            "model": data.model_name or "RadiancePro",
-            "sw_version": data.software_revision,
-            "serial_number": data.serial_number,
-        }
-
-    @property
     def options(self) -> list[str]:
         if self.entity_description.static_options:
             return self.entity_description.static_options
         if self.entity_description.options_fn:
             return self.entity_description.options_fn(self.coordinator)
         return []
-
-    @property
-    def available(self) -> bool:
-        if not self.coordinator.last_update_success:
-            return False
-        data = self.coordinator.data
-        return data.connected and data.device_status == "Active"
 
     @property
     def current_option(self) -> str | None:
