@@ -445,7 +445,7 @@ Example responses:
 | `ZB<X>` | Define block char (rendered as `█`) — **no `<CR>`** |
 | `ZC` | Clear OSD message — **no `<CR>`** |
 | `ZTMxxxx<CR>` | Display message (M='0'–'8' timed, '9'=persistent; 2 lines, 30 chars/line) |
-| `ZY418CRRGGBB<CR>` | Message colors (Pro; C: 0=bg, 1=fg, 2=blend; RRGGBB hex; blend last digit 1–f) |
+| `ZY418CRRGGBB<CR>` | Message colors (C: 0=bg, 1=fg, 2=blend; RRGGBB hex; when setting blend value, only last B digit is used so range is 000001-00000f where ‘f’ is opaque messages and ‘1’ is near transparent. |
 
 ### Test Patterns
 

@@ -164,7 +164,8 @@ HELP_TEXT = """\
   a / b / c / d          (select memory bank)
   aspect <name>          (4:3, 16:9, 2.40, NLS, …)
   remote <cmd>           (menu, up, down, ok, exit, …)
-  osd <text>             (display OSD message)
+  osd [0-9] <text>       (OSD message; 0-8=seconds, 9=persistent; \\n for newline)
+  osd                    (clear OSD)
   labels                 (fetch all input labels)
   refresh                (re-query full state)
   help                   (show this message)
@@ -369,11 +370,20 @@ class LumagenTUI(App):
             return
 
         if cmd == "osd":
-            text = raw.split(maxsplit=1)
-            if len(text) > 1:
-                await self._client.display_message(text[1])
-            else:
+            rest = raw.split(maxsplit=1)
+            if len(rest) < 2:
                 await self._client.clear_message()
+                return
+            body = rest[1]
+            # Optional leading digit sets duration (0-8=seconds, 9=persistent)
+            if len(body) >= 2 and body[0].isdigit() and body[1] == " ":
+                duration = int(body[0])
+                body = body[2:]
+            else:
+                duration = 3
+            # Allow \n for line breaks
+            body = body.replace("\\n", "\n")
+            await self._client.display_message(body, duration=duration)
             return
 
         if cmd == "labels":
