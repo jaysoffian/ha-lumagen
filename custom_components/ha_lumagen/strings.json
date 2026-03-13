@@ -11,8 +11,7 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the Lumagen device. Please check your connection settings and ensure the device is powered on.",
-      "unknown": "An unexpected error occurred. Please try again."
+      "cannot_connect": "Failed to connect to the Lumagen device. Please check your connection settings and ensure the device is powered on."
     },
     "abort": {
       "already_configured": "This Lumagen device is already configured."

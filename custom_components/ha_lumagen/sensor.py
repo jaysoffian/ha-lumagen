@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -15,13 +14,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .client import LumagenState
 from .const import DOMAIN
 from .coordinator import LumagenCoordinator
-
-_LOGGER = logging.getLogger(__name__)
+from .entity import LumagenEntity
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -131,11 +128,10 @@ async def async_setup_entry(
     )
 
 
-class LumagenSensorEntity(CoordinatorEntity[LumagenCoordinator], SensorEntity):
+class LumagenSensorEntity(LumagenEntity, SensorEntity):
     """A Lumagen sensor entity."""
 
     entity_description: LumagenSensorEntityDescription
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -145,18 +141,6 @@ class LumagenSensorEntity(CoordinatorEntity[LumagenCoordinator], SensorEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{description.key}"
-
-    @property
-    def device_info(self) -> dict[str, Any]:
-        data = self.coordinator.data
-        return {
-            "identifiers": {(DOMAIN, self.coordinator.entry.entry_id)},
-            "name": f"Lumagen {data.model_name or 'RadiancePro'}",
-            "manufacturer": "Lumagen",
-            "model": data.model_name or "RadiancePro",
-            "sw_version": data.software_revision,
-            "serial_number": data.serial_number,
-        }
 
     @property
     def available(self) -> bool:
