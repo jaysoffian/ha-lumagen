@@ -293,6 +293,7 @@ class LumagenClient:
         self._keepalive_task: asyncio.Task | None = None
         self._reconnect_task: asyncio.Task | None = None
         self._running = False
+        self._disconnecting = False
         self._on_state_changed: Callable[[], None] | None = None
         self._on_connection_changed: Callable[[bool], None] | None = None
         self._alive_event: asyncio.Event | None = None
@@ -356,8 +357,15 @@ class LumagenClient:
 
     async def _handle_disconnect(self) -> None:
         """Tear down current connection and start reconnect loop."""
-        if not self._running:
+        if not self._running or self._disconnecting:
             return
+        self._disconnecting = True
+
+        # Cancel any in-progress reconnect before starting a new one
+        if self._reconnect_task and not self._reconnect_task.done():
+            self._reconnect_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._reconnect_task
 
         if self._keepalive_task and not self._keepalive_task.done():
             self._keepalive_task.cancel()
@@ -377,20 +385,25 @@ class LumagenClient:
             self._notify_state_changed()
 
         # Start reconnect
+        self._disconnecting = False
         self._reconnect_task = asyncio.create_task(self._reconnect_loop())
 
     async def _reconnect_loop(self) -> None:
-        """Retry the TCP connection every 30 s until success or shutdown."""
+        """Retry the TCP connection with exponential backoff (1s → 30s max)."""
+        delay = 1.0
         while self._running:
-            await asyncio.sleep(30)
+            _LOGGER.info(
+                "Attempting reconnect to %s:%s in %.0fs", self._host, self._port, delay
+            )
+            await asyncio.sleep(delay)
             if not self._running:
                 return
-            _LOGGER.info("Attempting reconnect to %s:%s", self._host, self._port)
             await self._open_connection()
             if self.state.connected:
                 _LOGGER.info("Reconnected to %s:%s", self._host, self._port)
                 await self.fetch_full_state()
                 return
+            delay = min(delay * 2, 30.0)
 
     # -- Read loop ----------------------------------------------------------
 
@@ -446,7 +459,7 @@ class LumagenClient:
         name = match.group(1)
         fields = match.group(2).split(",")
 
-        # Alive response — just signal the event, no state change
+        # Alive response — signal the keepalive event, no state change
         if name == "S00":
             if self._alive_event:
                 self._alive_event.set()
@@ -459,6 +472,9 @@ class LumagenClient:
                     self._notify_state_changed()
             except Exception:
                 _LOGGER.debug("Error in handler for %s", name, exc_info=True)
+            # I00 doubles as keepalive response
+            if name == "I00" and self._alive_event:
+                self._alive_event.set()
 
     def _handle_label_response(self, line: str, match: re.Match[str]) -> None:
         """Extract label text and correlate with the pending query."""
@@ -480,7 +496,7 @@ class LumagenClient:
     # -- Keepalive ----------------------------------------------------------
 
     async def _keepalive_loop(self) -> None:
-        """Send ZQS00 every 30 s; reconnect on timeout."""
+        """Send ZQI00 every 30 s; doubles as input state poll + liveness check."""
         while self._running:
             try:
                 await asyncio.sleep(30)
@@ -490,7 +506,7 @@ class LumagenClient:
                 return
             self._alive_event = asyncio.Event()
             try:
-                await self.send_command("ZQS00")
+                await self.send_command("ZQI00")
                 await asyncio.wait_for(self._alive_event.wait(), timeout=5.0)
             except TimeoutError:
                 _LOGGER.warning("Keepalive timeout — reconnecting")
@@ -578,7 +594,11 @@ class LumagenClient:
             self._pending_label_id = None
 
     def get_source_list(self) -> list[str]:
-        """Return ordered source labels for the current memory bank."""
+        """Return ordered source labels for the current memory bank.
+
+        Labels are stored per memory bank at indices 0-9, where label
+        index 0 = logical input 1, index 9 = logical input 10.
+        """
         bank = self.state.input_memory or "A"
         return [
             self.state.input_labels.get(f"{bank}{i}", f"Input {i + 1}")
@@ -596,15 +616,22 @@ class LumagenClient:
         await self.send_command("$")
 
     async def select_input(self, number: int) -> None:
-        """Select logical input (1-based)."""
+        """Select a logical input by number (1-19).
+
+        Physical HDMI port count varies by model (1-10), but logical
+        (virtual) inputs can go up to 19.  RS232 protocol: ``i1``-``i9``
+        for inputs 1-9, ``i+0``-``i+9`` for inputs 10-19.
+        """
         if 1 <= number <= 9:
             await self.send_command(f"i{number}")
-        elif 10 <= number <= 18:
+        elif 10 <= number <= 19:
             await self.send_command(f"i+{number - 10}")
+        await self.send_command("ZQI00")
 
     async def select_memory(self, bank: str) -> None:
         """Select memory bank (A / B / C / D)."""
         await self.send_command(bank.lower())
+        await self.send_command("ZQI00")
 
     async def set_aspect(self, aspect: str) -> None:
         """Set source aspect ratio by display name."""
