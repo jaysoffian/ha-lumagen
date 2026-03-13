@@ -47,6 +47,17 @@ ASPECT_COMMANDS: dict[str, str] = {
     "NLS": "N",
 }
 
+# I20 aspect code → display name
+_I20_ASPECT_CODES: dict[str, str] = {
+    "0": "4:3",
+    "1": "Letterbox",
+    "2": "16:9",
+    "3": "1.85",
+    "4": "2.35",
+    "8": "1.85 ALT",
+    "9": "2.40",
+}
+
 # Remote command name → RS232 byte
 REMOTE_COMMANDS: dict[str, str] = {
     "up": "^",
@@ -127,6 +138,11 @@ class LumagenState:
     output_style: int | None = None
     output_colorspace: str | None = None
     output_aspect: str | None = None
+
+    # Output config (from I18)
+    output_mode: int | None = None  # 0-7 custom mode
+    auto_aspect: bool | None = None
+    game_mode: bool | None = None
 
     # Labels (populated by get_labels)
     input_labels: dict[str, str] = field(default_factory=dict)
@@ -266,14 +282,63 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
     return changed
 
 
+def _handle_output_config(state: LumagenState, fields: list[str]) -> bool:
+    """I18 — output config for current input.
+
+    Response: !I18,<out1>,<out2>,<mode>,<3d>,<cms>,<style>
+    mode is C0-C7 for custom configs or D<name> for direct mode.
+    """
+    if len(fields) < 6:
+        return False
+    changed = False
+    # Parse mode: "C0"-"C7" → int 0-7
+    mode_str = fields[2]
+    if mode_str.startswith("C") and len(mode_str) == 2:
+        changed |= _setattr_changed(state, "output_mode", _safe_int(mode_str[1]))
+    changed |= _setattr_changed(state, "output_cms", _safe_int(fields[4]))
+    changed |= _setattr_changed(state, "output_style", _safe_int(fields[5]))
+    return changed
+
+
+def _handle_game_mode(state: LumagenState, fields: list[str]) -> bool:
+    """I53 — game mode status."""
+    if not fields:
+        return False
+    return _setattr_changed(state, "game_mode", fields[0] == "1")
+
+
+def _handle_aspect_mode(state: LumagenState, fields: list[str]) -> bool:
+    """I20 — input aspect and NLS status.
+
+    Response: !I20,<code><nls> where code=0-9 and nls='N' or '-'.
+    """
+    if not fields:
+        return False
+    val = fields[0]
+    changed = False
+    # Last char is NLS flag
+    if val.endswith("N"):
+        changed |= _setattr_changed(state, "nls_active", True)
+        val = val[:-1]
+    elif val.endswith("-"):
+        changed |= _setattr_changed(state, "nls_active", False)
+        val = val[:-1]
+    if name := _I20_ASPECT_CODES.get(val):
+        changed |= _setattr_changed(state, "source_content_aspect", name)
+    return changed
+
+
 RESPONSE_HANDLERS: dict[str, Callable[[LumagenState, list[str]], bool]] = {
     "S01": _handle_device_id,
     "S02": _handle_power,
     "I00": _handle_input_info,
+    "I18": _handle_output_config,
+    "I20": _handle_aspect_mode,
     "I21": _handle_full_info,
     "I22": _handle_full_info,
     "I23": _handle_full_info,
     "I24": _handle_full_info,
+    "I53": _handle_game_mode,
 }
 
 
@@ -543,8 +608,8 @@ class LumagenClient:
     # -- State queries ------------------------------------------------------
 
     async def fetch_full_state(self) -> None:
-        """Query identity, power, input, and full info."""
-        for cmd in ("ZQS01", "ZQS02", "ZQI00", "ZQI24"):
+        """Query identity, power, input, output config, and full info."""
+        for cmd in ("ZQS01", "ZQS02", "ZQI00", "ZQI18", "ZQI53", "ZQI24"):
             await self.send_command(cmd)
             await asyncio.sleep(0.05)  # brief pause between queries
 
@@ -669,3 +734,55 @@ class LumagenClient:
     async def clear_message(self) -> None:
         """Clear any OSD message."""
         await self.send_command("ZC")
+
+    # -- Output config ------------------------------------------------------
+
+    async def set_output_config(
+        self,
+        mode: int | None = None,
+        cms: int | None = None,
+        style: int | None = None,
+    ) -> None:
+        """Set output mode/CMS/style (0-7 each, None to keep current).
+
+        Uses ZY530MCS where each position is 0-7 or K (keep).
+        """
+        m = str(mode) if mode is not None else "K"
+        c = str(cms) if cms is not None else "K"
+        s = str(style) if style is not None else "K"
+        await self.send_command(f"ZY530{m}{c}{s}\r")
+        await self.send_command("ZQI18")
+
+    async def set_game_mode(self, enabled: bool) -> None:
+        """Enable or disable game mode."""
+        await self.send_command(f"ZY551{'1' if enabled else '0'}\r")
+        await self.send_command("ZQI53")
+
+    async def set_auto_aspect(self, enabled: bool) -> None:
+        """Enable or disable auto aspect detection."""
+        await self.send_command("~" if enabled else "V")
+
+    # -- Labels -------------------------------------------------------------
+
+    async def set_label(self, category: str, index: int, text: str) -> None:
+        """Set a label on the device.
+
+        *category*: 'A'-'D' (input per memory bank), '0' (all input banks),
+                    '1' (custom mode), '2' (CMS), '3' (style).
+        *index*: label index (0-9 for inputs, 0-7 for modes/CMS/styles).
+        *text*: label text.
+        """
+        await self.send_command(f"ZY524{category}{index}{text}\r")
+        # Re-fetch to confirm
+        await self._query_label(f"{category}{index}")
+
+    # -- Misc ---------------------------------------------------------------
+
+    async def save_config(self) -> None:
+        """Save current configuration to flash."""
+        await self.send_command("ZY6SAVECONFIG\r")
+
+    async def trigger_hotplug(self, input_num: int | None = None) -> None:
+        """Toggle HDMI hotplug on an input (or all inputs if None)."""
+        target = str(input_num) if input_num is not None else "A"
+        await self.send_command(f"ZY520{target}\r")

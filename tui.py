@@ -9,11 +9,11 @@ import pathlib
 import sys
 from collections.abc import Callable
 from datetime import datetime
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from textual import work
 from textual.app import App, ComposeResult
-from textual.binding import BindingType
+from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Input, RichLog, Static
 
@@ -32,6 +32,52 @@ from client import (
 # ---------------------------------------------------------------------------
 # Instrumented client — captures raw protocol traffic
 # ---------------------------------------------------------------------------
+
+
+class CommandInput(Input):
+    """Input with readline-style tab completion."""
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("tab", "complete", "Tab completion", show=False),
+    ]
+
+    def __init__(self, completions: list[str], **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._completions = completions
+
+    def action_complete(self) -> None:
+        """Readline-style tab completion."""
+        text = self.value.lower()
+        if not text:
+            return
+
+        matches = [c for c in self._completions if c.lower().startswith(text)]
+        if not matches:
+            return
+
+        if len(matches) == 1:
+            # Unique match — complete it, add trailing space if it's a full command
+            completed = matches[0]
+            if not any(
+                c.lower().startswith(completed.lower()) and c != completed
+                for c in self._completions
+            ):
+                completed += " "
+            self.value = completed
+            self.cursor_position = len(self.value)
+        else:
+            # Multiple matches — complete the common prefix
+            prefix = matches[0]
+            for m in matches[1:]:
+                while not m.lower().startswith(prefix.lower()):
+                    prefix = prefix[:-1]
+            if len(prefix) > len(text):
+                self.value = prefix
+                self.cursor_position = len(self.value)
+            else:
+                # Show options in the log
+                log = self.app.query_one("#log", RichLog)
+                log.write("[dim]  " + "  ".join(sorted(matches)) + "[/]")
 
 
 class InstrumentedClient(LumagenClient):
@@ -89,12 +135,25 @@ def _physical_in(s: LumagenState) -> str:
     return str(s.physical_input) if s.physical_input is not None else "—"
 
 
-def _cms_style(s: LumagenState) -> str:
+def _output_mode(s: LumagenState) -> str:
+    if s.output_mode is None:
+        return "—"
+    label = s.custom_mode_labels.get(f"1{s.output_mode}", f"Custom{s.output_mode + 1}")
+    return f"{s.output_mode + 1}: {label}"
+
+
+def _cms(s: LumagenState) -> str:
     if s.output_cms is None:
         return "—"
-    cms = s.cms_labels.get(f"2{s.output_cms}", str(s.output_cms))
-    style = s.style_labels.get(f"3{s.output_style}", str(s.output_style))
-    return f"{cms} / {style}"
+    cms = s.cms_labels.get(f"2{s.output_cms}", f"CMS{s.output_cms + 1}")
+    return f"{s.output_cms + 1}: {cms}"
+
+
+def _style(s: LumagenState) -> str:
+    if s.output_style is None:
+        return "—"
+    style = s.style_labels.get(f"3{s.output_style}", f"Style{s.output_style + 1}")
+    return f"{s.output_style + 1}: {style}"
 
 
 _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]] = [
@@ -125,7 +184,10 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     ("Output", "_output_summary", _output_summary),
     ("Output Aspect", "output_aspect", lambda s: s.output_aspect or "—"),
     ("Colorspace", "output_colorspace", lambda s: s.output_colorspace or "—"),
-    ("CMS / Style", "_cms_style", _cms_style),
+    ("Mode", "_output_mode", _output_mode),
+    ("CMS", "_cms", _cms),
+    ("Style", "_style", _style),
+    ("Game Mode", "game_mode", lambda s: "On" if s.game_mode else "Off"),
 ]
 
 
@@ -158,27 +220,69 @@ class StatePanel(Static):
 # ---------------------------------------------------------------------------
 
 HELP_TEXT = """\
-[bold]Commands:[/]
-  on / off               (turn Lumagen on or off)
-  <1-19>                 (select input)
-  a / b / c / d          (select memory bank)
-  aspect <name>          (4:3, 16:9, 2.40, NLS, …)
-  remote <cmd>           (menu, up, down, ok, exit, …)
-  osd [0-9] <text>       (OSD message; 0-8=seconds, 9=persistent; \\n for newline)
-  osd                    (clear OSD)
-  labels                 (fetch all input labels)
-  refresh                (re-query full state)
-  help                   (show this message)
-  quit / exit / q        (exit)
+[bold]Power & Input:[/]
+  on / off               turn Lumagen on or off
+  <1-19>                 select input
+  a / b / c / d          select memory bank
+
+[bold]Video Processing:[/]
+  aspect <name>          source aspect (4:3, 16:9, 2.40, NLS, …)
+  mode <1-8>             output custom mode
+  cms <1-8>              output CMS
+  style <1-8>            output style
+  game on / off          game mode
+  autoaspect on / off    auto aspect detection
+
+[bold]Labels & OSD:[/]
+  labels                 show all labels
+  label <id> <text>      set label (e.g. label A1 Apple TV)
+  osd \\[0-9] <text>      OSD message (0-8=seconds, 9=persistent; \\n for newline)
+  osd                    clear OSD
+
+[bold]Navigation & System:[/]
+  remote <cmd>           remote key (menu, up, down, ok, exit, …)
+  save                   save config to flash
+  hotplug \\[input]       toggle HDMI hotplug (all inputs if omitted)
+  refresh                re-query full state
+  refresh labels         re-fetch labels from device
+  help                   show this message
+  quit / q               exit
 
 [bold]Raw RS232:[/]
-  Z...                   (e.g. ZQS01, ZQI24, ZY530MCS)
+  Z...                   e.g. ZQS01, ZQI24, ZY530MCS
 
 [bold]Keyboard shortcuts:[/]
   Ctrl+Q                 quit
   Ctrl+L                 clear protocol log
   Ctrl+R                 refresh state
 """
+
+# All completable command prefixes for the suggester
+_COMMAND_SUGGESTIONS = sorted(
+    {
+        "on",
+        "off",
+        *[f"aspect {a}" for a in ASPECT_COMMANDS],
+        *[f"mode {i}" for i in range(1, 9)],
+        *[f"cms {i}" for i in range(1, 9)],
+        *[f"style {i}" for i in range(1, 9)],
+        "game on",
+        "game off",
+        "autoaspect on",
+        "autoaspect off",
+        "labels",
+        "label ",
+        "osd ",
+        *[f"remote {k}" for k in REMOTE_COMMANDS if not k.isdigit()],
+        "save",
+        "hotplug",
+        "refresh",
+        "refresh labels",
+        "help",
+        "quit",
+        "exit",
+    }
+)
 
 
 class LumagenTUI(App):
@@ -232,7 +336,8 @@ class LumagenTUI(App):
                     markup=True,
                     wrap=True,
                 )
-        yield Input(
+        yield CommandInput(
+            _COMMAND_SUGGESTIONS,
             placeholder="Enter command (type 'help' for list)",
             id="input-bar",
         )
@@ -358,6 +463,98 @@ class LumagenTUI(App):
                 log.write(f"[dim]  Valid: {names}[/]")
             return
 
+        if cmd == "mode" and arg:
+            try:
+                val = int(arg)
+            except ValueError:
+                log.write(f"[red]Invalid mode: {arg} (use 1-8)[/]")
+                return
+            if not 1 <= val <= 8:
+                log.write(f"[red]Mode must be 1-8, got {val}[/]")
+                return
+            await self._client.set_output_config(mode=val - 1)
+            return
+
+        if cmd == "cms" and arg:
+            try:
+                val = int(arg)
+            except ValueError:
+                log.write(f"[red]Invalid CMS: {arg} (use 1-8)[/]")
+                return
+            if not 1 <= val <= 8:
+                log.write(f"[red]CMS must be 1-8, got {val}[/]")
+                return
+            await self._client.set_output_config(cms=val - 1)
+            return
+
+        if cmd == "style" and arg:
+            try:
+                val = int(arg)
+            except ValueError:
+                log.write(f"[red]Invalid style: {arg} (use 1-8)[/]")
+                return
+            if not 1 <= val <= 8:
+                log.write(f"[red]Style must be 1-8, got {val}[/]")
+                return
+            await self._client.set_output_config(style=val - 1)
+            return
+
+        if cmd == "game":
+            if arg in ("on", "1"):
+                await self._client.set_game_mode(True)
+            elif arg in ("off", "0"):
+                await self._client.set_game_mode(False)
+            else:
+                log.write("[red]Usage: game on / game off[/]")
+            return
+
+        if cmd == "autoaspect":
+            if arg in ("on", "1"):
+                await self._client.set_auto_aspect(True)
+            elif arg in ("off", "0"):
+                await self._client.set_auto_aspect(False)
+            else:
+                log.write("[red]Usage: autoaspect on / autoaspect off[/]")
+            return
+
+        if cmd == "label" and arg:
+            label_parts = arg.split(maxsplit=1)
+            if len(label_parts) < 2 or len(label_parts[0]) < 2:
+                log.write("[red]Usage: label <id> <text> (e.g. label A1 Apple TV)[/]")
+                return
+            label_id = label_parts[0].upper()
+            category = label_id[0]
+            try:
+                user_idx = int(label_id[1:])
+            except ValueError:
+                log.write(f"[red]Invalid label id: {label_parts[0]}[/]")
+                return
+            # User-facing is 1-based, protocol is 0-based
+            proto_idx = user_idx - 1
+            if proto_idx < 0:
+                log.write("[red]Label index must be >= 1[/]")
+                return
+            await self._client.set_label(category, proto_idx, label_parts[1])
+            log.write(f"[green]Set label {label_id} = {label_parts[1]}[/]")
+            return
+
+        if cmd == "save":
+            await self._client.save_config()
+            log.write("[green]Config saved to flash[/]")
+            return
+
+        if cmd == "hotplug":
+            if arg:
+                try:
+                    await self._client.trigger_hotplug(int(arg))
+                except ValueError:
+                    log.write(f"[red]Invalid input: {arg}[/]")
+                    return
+            else:
+                await self._client.trigger_hotplug()
+            log.write("[green]Hotplug triggered[/]")
+            return
+
         if cmd == "remote" and arg:
             if arg in REMOTE_COMMANDS:
                 await self._client.send_remote_command(arg)
@@ -386,26 +583,19 @@ class LumagenTUI(App):
             await self._client.display_message(body, duration=duration)
             return
 
-        if cmd == "labels":
-            log.write("[dim]Fetching labels…[/]")
-            labels = await self._client.get_labels()
-            for heading, prefix in (
-                ("Inputs", "ABCD"),
-                ("Custom Modes", "1"),
-                ("CMS", "2"),
-                ("Styles", "3"),
-            ):
-                group = {k: v for k, v in sorted(labels.items()) if k[0] in prefix}
-                if group:
-                    log.write(f"[bold]{heading}:[/]")
-                    for lid, text in group.items():
-                        log.write(f"  {lid}: {text}")
-            self._refresh_state()
+        if cmd == "labels" and not arg:
+            self._show_labels(log)
             return
 
         if cmd == "refresh":
-            await self._client.fetch_full_state()
-            self._refresh_state()
+            if arg == "labels":
+                log.write("[dim]Fetching labels…[/]")
+                await self._client.get_labels()
+                self._refresh_state()
+                self._show_labels(log)
+            else:
+                await self._client.fetch_full_state()
+                self._refresh_state()
             return
 
         # Raw RS232 commands start with Z
@@ -415,6 +605,26 @@ class LumagenTUI(App):
 
         log.write(f"[red]Unknown command: {raw}[/]")
         log.write("[dim]Type 'help' for available commands.[/]")
+
+    def _show_labels(self, log: RichLog) -> None:
+        """Display cached labels in the log panel."""
+        state = self._client.state
+        label_sets: list[tuple[str, str, dict[str, str]]] = [
+            ("Inputs (Mem A)", "A", state.input_labels),
+            ("Inputs (Mem B)", "B", state.input_labels),
+            ("Inputs (Mem C)", "C", state.input_labels),
+            ("Inputs (Mem D)", "D", state.input_labels),
+            ("Custom Modes", "1", state.custom_mode_labels),
+            ("CMS", "2", state.cms_labels),
+            ("Styles", "3", state.style_labels),
+        ]
+        for heading, prefix, labels in label_sets:
+            group = {k: v for k, v in sorted(labels.items()) if k[0] == prefix}
+            if group:
+                log.write(f"[bold]{heading}:[/]")
+                for lid, text in group.items():
+                    display_id = f"{lid[0]}{int(lid[1:]) + 1}"
+                    log.write(f"  {display_id}: {text}")
 
     # -- Actions -----------------------------------------------------------
 
