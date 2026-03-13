@@ -30,7 +30,7 @@ ASPECT_RATIO_NAMES: dict[int, str] = {
     276: "2.76",
 }
 
-# Display name → RS232 command byte for setting aspect
+# Display name → RS232 command for setting aspect
 ASPECT_COMMANDS: dict[str, str] = {
     "4:3": "[",
     "Letterbox": "]",
@@ -38,9 +38,12 @@ ASPECT_COMMANDS: dict[str, str] = {
     "1.85": "/",
     "1.90": "A",
     "2.00": "C",
+    "2.10": "+j",
     "2.20": "E",
     "2.35": "K",
     "2.40": "G",
+    "2.55": "+W",
+    "2.76": "+N",
     "NLS": "N",
 }
 
@@ -73,6 +76,10 @@ _OUTPUT_COLORSPACE = {
 
 # Regex for normal responses: !<letter><2digits>,<fields>
 _RESPONSE_RE = re.compile(r"!([A-Z]\d{2}),(.*)")
+
+# Regex for label responses: !S1<category>,<label text>
+# Category is A-D (input banks) or 1-3 (custom mode / CMS / style).
+_LABEL_RE = re.compile(r"!S1([A-D123]),")
 
 
 # ---------------------------------------------------------------------------
@@ -422,11 +429,10 @@ class LumagenClient:
         if "!" not in line:
             return
 
-        # Label response: !S1,<label text>
-        # Check before the general regex because S1 has only one digit.
-        label_idx = line.find("!S1,")
-        if label_idx != -1:
-            self._handle_label_response(line, label_idx)
+        # Label response: !S1<cat>,<label text>
+        # Check before the general regex because the code is only 2 chars (S1).
+        if label_match := _LABEL_RE.search(line):
+            self._handle_label_response(line, label_match)
             return
 
         # Normal response: !<letter><2 digits>,<fields>
@@ -451,17 +457,16 @@ class LumagenClient:
             except Exception:
                 _LOGGER.debug("Error in handler for %s", name, exc_info=True)
 
-    def _handle_label_response(self, line: str, idx: int) -> None:
+    def _handle_label_response(self, line: str, match: re.Match[str]) -> None:
         """Extract label text and correlate with the pending query."""
-        label_text = line[idx + 4 :]  # everything after "!S1,"
+        label_text = line[match.end() :]  # everything after "!S1<cat>,"
 
         # Determine which label ID this is for
         label_id = self._pending_label_id
         if not label_id:
-            # Try to extract from the echo portion before the '!'
-            echo = line[:idx]
-            id_match = re.search(r"S1(\w{2})", echo)
-            if id_match:
+            # Try to extract the full XY from the echoed query before the '!'
+            echo = line[: match.start()]
+            if id_match := re.search(r"S1(\w{2})", echo):
                 label_id = id_match.group(1)
 
         if label_id:
@@ -522,7 +527,8 @@ class LumagenClient:
         """Query all input labels (A0-D9). Returns ``{id: text}``."""
         labels: dict[str, str] = {}
         for bank in "ABCD":
-            for i in range(10):
+            # Reverse iteration works around a Lumagen firmware bug
+            for i in reversed(range(10)):
                 label_id = f"{bank}{i}"
                 self._pending_label_id = label_id
                 self._label_event = asyncio.Event()
