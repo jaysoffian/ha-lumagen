@@ -1,4 +1,5 @@
 """Async TCP client for Lumagen Radiance Pro."""
+
 from __future__ import annotations
 
 import asyncio
@@ -207,9 +208,7 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
         pass
     # Source vertical resolution (VVVV)
     try:
-        changed |= _setattr_changed(
-            state, "source_vertical_resolution", int(fields[2])
-        )
+        changed |= _setattr_changed(state, "source_vertical_resolution", int(fields[2]))
     except ValueError:
         pass
     # Input config number (X)
@@ -220,9 +219,7 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
     # Source raster aspect (AAA)
     changed |= _setattr_changed(state, "source_raster_aspect", _aspect_name(fields[5]))
     # Source content aspect (SSS)
-    changed |= _setattr_changed(
-        state, "source_content_aspect", _aspect_name(fields[6])
-    )
+    changed |= _setattr_changed(state, "source_content_aspect", _aspect_name(fields[6]))
     # NLS (Y)
     changed |= _setattr_changed(state, "nls_active", fields[7] == "N")
     # Output CMS (C)
@@ -260,9 +257,7 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
             state, "source_dynamic_range", _DYNAMIC_RANGE.get(fields[16])
         )
     if len(fields) > 17:
-        changed |= _setattr_changed(
-            state, "source_mode", _SOURCE_MODE.get(fields[17])
-        )
+        changed |= _setattr_changed(state, "source_mode", _SOURCE_MODE.get(fields[17]))
 
     # v3+ fields — II (virtual/logical input), KK (physical input)
     if len(fields) > 19:
@@ -367,9 +362,7 @@ class LumagenClient:
                 timeout=10.0,
             )
         except (OSError, asyncio.TimeoutError) as err:
-            _LOGGER.error(
-                "Failed to connect to %s:%s: %s", self._host, self._port, err
-            )
+            _LOGGER.error("Failed to connect to %s:%s: %s", self._host, self._port, err)
             self.state.connected = False
             if self._on_connection_changed:
                 self._on_connection_changed(False)
@@ -494,7 +487,7 @@ class LumagenClient:
 
     def _handle_label_response(self, line: str, idx: int) -> None:
         """Extract label text and correlate with the pending query."""
-        label_text = line[idx + 4:]  # everything after "!S1,"
+        label_text = line[idx + 4 :]  # everything after "!S1,"
 
         # Determine which label ID this is for
         label_id = self._pending_label_id

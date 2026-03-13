@@ -1,4 +1,5 @@
 """Constants for the Lumagen integration."""
+
 from homeassistant.exceptions import HomeAssistantError
 
 DOMAIN = "ha_lumagen"
