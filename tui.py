@@ -89,14 +89,20 @@ def _physical_in(s: LumagenState) -> str:
 
 
 def _cms_style(s: LumagenState) -> str:
-    if s.output_cms is not None:
-        return f"{s.output_cms} / {s.output_style}"
-    return "—"
+    if s.output_cms is None:
+        return "—"
+    cms = s.cms_labels.get(f"2{s.output_cms}", str(s.output_cms))
+    style = s.style_labels.get(f"3{s.output_style}", str(s.output_style))
+    return f"{cms} / {style}"
 
 
 _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]] = [
     ("Connected", "connected", lambda s: "Yes" if s.connected else "No"),
-    ("Status", "device_status", lambda s: s.device_status or "—"),
+    (
+        "Power",
+        "device_status",
+        lambda s: {"Active": "On", "Standby": "Off"}.get(s.device_status or "", "—"),
+    ),
     ("Model", "model_name", lambda s: s.model_name or "—"),
     ("Firmware", "software_revision", lambda s: s.software_revision or "—"),
     ("Serial", "serial_number", lambda s: s.serial_number or "—"),
@@ -231,6 +237,7 @@ class LumagenTUI(App):
         self._client._on_line_sent.append(self._log_sent)
         self._client._on_line_received.append(self._log_received)
 
+        self.query_one("#input-bar", Input).focus()
         self._connect_client()
 
     @work(exclusive=True)
@@ -248,6 +255,9 @@ class LumagenTUI(App):
         if self._client.state.connected:
             log.write("[green]Connected.[/]")
             await self._client.fetch_full_state()
+            self._refresh_state()
+            log.write("[dim]Fetching labels…[/]")
+            await self._client.get_labels()
             self._refresh_state()
         else:
             log.write("[red]Connection failed.[/]")
@@ -359,10 +369,19 @@ class LumagenTUI(App):
             return
 
         if cmd == "labels":
-            log.write("[dim]Fetching labels (this takes ~80s)…[/]")
+            log.write("[dim]Fetching labels…[/]")
             labels = await self._client.get_labels()
-            for lid, text in sorted(labels.items()):
-                log.write(f"  {lid}: {text}")
+            for heading, prefix in (
+                ("Inputs", "ABCD"),
+                ("Custom Modes", "1"),
+                ("CMS", "2"),
+                ("Styles", "3"),
+            ):
+                group = {k: v for k, v in sorted(labels.items()) if k[0] in prefix}
+                if group:
+                    log.write(f"[bold]{heading}:[/]")
+                    for lid, text in group.items():
+                        log.write(f"  {lid}: {text}")
             self._refresh_state()
             return
 

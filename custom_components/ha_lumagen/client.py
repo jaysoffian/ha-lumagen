@@ -130,6 +130,9 @@ class LumagenState:
 
     # Labels (populated by get_labels)
     input_labels: dict[str, str] = field(default_factory=dict)
+    custom_mode_labels: dict[str, str] = field(default_factory=dict)
+    cms_labels: dict[str, str] = field(default_factory=dict)
+    style_labels: dict[str, str] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -524,26 +527,55 @@ class LumagenClient:
             await asyncio.sleep(0.05)  # brief pause between queries
 
     async def get_labels(self) -> dict[str, str]:
-        """Query all input labels (A0-D9). Returns ``{id: text}``."""
-        labels: dict[str, str] = {}
+        """Query all labels (inputs A0-D9, custom modes, CMS, styles).
+
+        Returns a combined ``{id: text}`` dict covering all categories.
+        Also populates the per-category state fields.
+        """
+        all_labels: dict[str, str] = {}
+
+        # Input labels: A0-D9 (reverse iteration works around firmware bug)
         for bank in "ABCD":
-            # Reverse iteration works around a Lumagen firmware bug
             for i in reversed(range(10)):
                 label_id = f"{bank}{i}"
-                self._pending_label_id = label_id
-                self._label_event = asyncio.Event()
-                self._last_label_value = None
-                await self.send_command(f"ZQS1{label_id}")
-                try:
-                    await asyncio.wait_for(self._label_event.wait(), timeout=2.0)
-                    if self._last_label_value is not None:
-                        labels[label_id] = self._last_label_value
-                except TimeoutError:
-                    _LOGGER.debug("Timeout waiting for label %s", label_id)
-        self._pending_label_id = None
-        self.state.input_labels = labels
+                val = await self._query_label(label_id)
+                if val is not None:
+                    all_labels[label_id] = val
+        self.state.input_labels = {
+            k: v for k, v in all_labels.items() if k[0] in "ABCD"
+        }
+
+        # Custom mode (1), CMS (2), Style (3) labels: X0-X7
+        for category in "123":
+            for i in range(8):
+                label_id = f"{category}{i}"
+                val = await self._query_label(label_id)
+                if val is not None:
+                    all_labels[label_id] = val
+
+        self.state.custom_mode_labels = {
+            k: v for k, v in all_labels.items() if k[0] == "1"
+        }
+        self.state.cms_labels = {k: v for k, v in all_labels.items() if k[0] == "2"}
+        self.state.style_labels = {k: v for k, v in all_labels.items() if k[0] == "3"}
+
         self._notify_state_changed()
-        return labels
+        return all_labels
+
+    async def _query_label(self, label_id: str) -> str | None:
+        """Query a single label by ID. Returns the text or None on timeout."""
+        self._pending_label_id = label_id
+        self._label_event = asyncio.Event()
+        self._last_label_value = None
+        await self.send_command(f"ZQS1{label_id}")
+        try:
+            await asyncio.wait_for(self._label_event.wait(), timeout=2.0)
+            return self._last_label_value
+        except TimeoutError:
+            _LOGGER.debug("Timeout waiting for label %s", label_id)
+            return None
+        finally:
+            self._pending_label_id = None
 
     def get_source_list(self) -> list[str]:
         """Return ordered source labels for the current memory bank."""
