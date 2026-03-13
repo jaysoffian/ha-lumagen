@@ -155,7 +155,9 @@ def _aspect_name(code: str) -> str | None:
 
 def _setattr_changed(state: LumagenState, attr: str, val: object) -> bool:
     """Set *attr* on *state* if it differs; return True when changed."""
-    if getattr(state, attr) != val:
+    old = getattr(state, attr)
+    if old != val:
+        _LOGGER.debug("state: %s: %r -> %r", attr, old, val)
         setattr(state, attr, val)
         return True
     return False
@@ -347,6 +349,7 @@ class LumagenClient:
                 self._on_connection_changed(False)
             return
 
+        _LOGGER.info("Connected to %s:%s", self._host, self._port)
         self._running = True
         self.state.connected = True
         self._read_task = asyncio.create_task(self._read_loop())
@@ -359,6 +362,7 @@ class LumagenClient:
         """Tear down current connection and start reconnect loop."""
         if not self._running or self._disconnecting:
             return
+        _LOGGER.info("Disconnected from %s:%s", self._host, self._port)
         self._disconnecting = True
 
         # Cancel any in-progress reconnect before starting a new one
@@ -416,6 +420,7 @@ class LumagenClient:
                     break
                 text = line.decode("ascii", errors="ignore").strip()
                 if text:
+                    _LOGGER.debug("recv: %s", text)
                     self._process_line(text)
             except asyncio.CancelledError:
                 return
@@ -524,6 +529,7 @@ class LumagenClient:
             return
         async with self._write_lock:
             try:
+                _LOGGER.debug("send: %s", cmd)
                 self._writer.write(cmd.encode("ascii"))
                 await self._writer.drain()
             except (OSError, ConnectionError) as err:

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import pathlib
 import sys
 from collections.abc import Callable
@@ -439,6 +440,14 @@ def main() -> None:
         help="TCP port (default: 4999)",
     )
     args = parser.parse_args()
+
+    # Log all client protocol traffic to tui.log
+    client_logger = logging.getLogger("client")
+    handler = logging.FileHandler("tui.log")
+    fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    handler.setFormatter(fmt)
+    client_logger.addHandler(handler)
+    client_logger.setLevel(logging.DEBUG)
 
     app = LumagenTUI(args.host, args.port)
     app.run()
