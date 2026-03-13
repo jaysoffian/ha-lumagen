@@ -57,6 +57,50 @@ Extended aspect ratios (MENU → Input → Options → Aspect Setup → Aspect O
 | `0`–`9` | Digit entry |
 | `U` | On-screen help |
 
+## How Lumagen Inputs Work
+
+The Radiance Pro has three layers of input abstraction:
+
+### Physical Inputs
+
+The number of physical HDMI input ports varies by model:
+
+| Model | Physical Inputs | Outputs |
+|-------|----------------|---------|
+| 4140  | 1              | 1       |
+| 4240  | 2              | 2       |
+| 4242  | 4              | 2       |
+| 4244  | 6              | 2       |
+| 4246  | 8              | 2       |
+| 4444  | 6              | 4       |
+| 4446  | 8              | 4       |
+| 5244  | 6              | 2       |
+| 5348  | 10             | 3       |
+
+### Logical (Virtual) Inputs
+
+Each physical input can be mapped to one or more **logical inputs** (also called virtual inputs). The protocol supports up to 19 logical inputs. This allows a single physical port to appear as multiple sources with different settings (e.g. different aspect ratios or color profiles for the same HDMI port).
+
+The remote selects logical inputs: buttons 1–9 select inputs 1–9, and the `+10` prefix accesses inputs 10–19 (e.g. `+10` then `0` selects input 10). On the 5348, pressing `0` without `+10` is a shortcut for input 10.
+
+### Memory Banks
+
+Each logical input has four independent **configuration memories** (MEMA, MEMB, MEMC, MEMD). Switching memory banks changes the active settings for all inputs — useful for day/night modes or different display configurations. Each memory bank has its own set of input labels.
+
+### Input Labels
+
+Labels are stored per memory bank, indexed 0–9 (label index 0 = logical input 1, index 9 = logical input 10). The label query `ZQS1{bank}{index}` retrieves them — e.g. `ZQS1A0` gets the label for input 1 in MEMA.
+
+### Configuration Chain
+
+Each input memory has sub-memories automatically selected by input resolution and 2D/3D mode. Each sub-memory links to an output **Mode** (0–7), **CMS** (0–7), and **Style** (0–7):
+
+```
+Logical Input → Memory Bank (A-D) → Resolution Sub-memory → Mode + CMS + Style
+```
+
+By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and Style 0.
+
 ## Commands — Input Selection
 
 | RS232 | Description |

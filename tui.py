@@ -14,7 +14,7 @@ from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import BindingType
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Footer, Header, Input, RichLog, Static
+from textual.widgets import Header, Input, RichLog, Static
 
 sys.path.insert(
     0,
@@ -158,10 +158,9 @@ class StatePanel(Static):
 
 HELP_TEXT = """\
 [bold]Commands:[/]
-  Any raw RS232 command  (e.g. ZQS01, ZQI24)
-  power on / power off
-  input <1-18>
-  memory <a-d>
+  on / off               (turn Lumagen on or off)
+  <1-19>                 (select input)
+  a / b / c / d          (select memory bank)
   aspect <name>          (4:3, 16:9, 2.40, NLS, …)
   remote <cmd>           (menu, up, down, ok, exit, …)
   osd <text>             (display OSD message)
@@ -169,6 +168,14 @@ HELP_TEXT = """\
   refresh                (re-query full state)
   help                   (show this message)
   quit / exit / q        (exit)
+
+[bold]Raw RS232:[/]
+  Z...                   (e.g. ZQS01, ZQI24, ZY530MCS)
+
+[bold]Keyboard shortcuts:[/]
+  Ctrl+Q                 quit
+  Ctrl+L                 clear protocol log
+  Ctrl+R                 refresh state
 """
 
 
@@ -227,7 +234,6 @@ class LumagenTUI(App):
             placeholder="Enter command (type 'help' for list)",
             id="input-bar",
         )
-        yield Footer()
 
     def on_mount(self) -> None:
         self.title = f"Lumagen — {self._host}:{self._port}"
@@ -259,6 +265,7 @@ class LumagenTUI(App):
             log.write("[dim]Fetching labels…[/]")
             await self._client.get_labels()
             self._refresh_state()
+            log.write(HELP_TEXT)
         else:
             log.write("[red]Connection failed.[/]")
 
@@ -315,29 +322,29 @@ class LumagenTUI(App):
             self.exit()
             return
 
-        if cmd == "help":
+        if cmd in ("help", "?"):
             log.write(HELP_TEXT)
             return
 
-        if lower == "power on":
+        if cmd == "on":
             await self._client.power_on()
             return
-        if lower == "power off":
+        if cmd == "off":
             await self._client.power_off()
             return
 
-        if cmd == "input" and arg:
-            try:
-                await self._client.select_input(int(arg))
-            except ValueError:
-                log.write(f"[red]Invalid input number: {arg}[/]")
+        # Bare letter → memory bank shortcut
+        if cmd in "abcd" and not arg:
+            await self._client.select_memory(cmd)
             return
 
-        if cmd == "memory" and arg:
-            if arg in "abcd":
-                await self._client.select_memory(arg)
-            else:
-                log.write(f"[red]Invalid memory bank: {arg} (use a-d)[/]")
+        # Bare number → input shortcut
+        if cmd.isdigit() and not arg:
+            num = int(cmd)
+            if not 1 <= num <= 19:
+                log.write(f"[red]Input number must be 1-19, got {num}[/]")
+                return
+            await self._client.select_input(num)
             return
 
         if cmd == "aspect" and arg:
@@ -390,8 +397,13 @@ class LumagenTUI(App):
             self._refresh_state()
             return
 
-        # Fall through: send as raw RS232 command
-        await self._client.send_command(raw)
+        # Raw RS232 commands start with Z
+        if raw.startswith("Z"):
+            await self._client.send_command(raw)
+            return
+
+        log.write(f"[red]Unknown command: {raw}[/]")
+        log.write("[dim]Type 'help' for available commands.[/]")
 
     # -- Actions -----------------------------------------------------------
 
