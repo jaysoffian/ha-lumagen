@@ -2,32 +2,16 @@
   "config": {
     "step": {
       "user": {
-        "title": "Select Connection Type",
-        "description": "Choose how to connect to your Lumagen Radiance Pro",
-        "data": {
-          "connection_type": "Connection Type"
-        }
-      },
-      "ip": {
-        "title": "Configure IP Connection",
-        "description": "Enter the network details for your Lumagen device",
+        "title": "Configure Lumagen Connection",
+        "description": "Enter the IP address and port of your Lumagen's TCP-to-serial adapter.",
         "data": {
           "host": "Host IP Address",
           "port": "Port"
-        }
-      },
-      "serial": {
-        "title": "Configure Serial Connection",
-        "description": "Enter the serial port details for your Lumagen device",
-        "data": {
-          "port": "Serial Port Path",
-          "baudrate": "Baud Rate"
         }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect to the Lumagen device. Please check your connection settings and ensure the device is powered on.",
-      "invalid_config": "Invalid configuration provided. Please check your settings.",
       "unknown": "An unexpected error occurred. Please try again."
     },
     "abort": {

@@ -1,95 +1,108 @@
 # Lumagen Radiance Pro Integration for Home Assistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
+Home Assistant custom integration for Lumagen Radiance Pro video processors.
+Communicates directly over TCP via a serial-to-TCP adapter (e.g. Global Cache
+IP2SL, USR-TCP232-302) connected to the Lumagen's RS-232 port.
 
-Home Assistant integration for Lumagen Radiance Pro video processors. Control and monitor your Lumagen device directly from Home Assistant.
+No external libraries — the integration contains its own async TCP client that
+speaks the Lumagen RS-232 protocol natively.
 
-## Features
+## Lumagen Setup
 
-- **Real-Time Updates** - Pure event-driven architecture with instant state updates (<1 second)
-- **Zero Polling Overhead** - No unnecessary network traffic or CPU usage
-- **Power Control** - Turn your Lumagen on/off or put it in standby mode
-- **Input Selection** - Switch between configured input sources
-- **Aspect Ratio Control** - Change source aspect ratio settings
-- **Input Configuration** - Recall saved input configurations
-- **Remote Control** - Send menu navigation commands
-- **Status Monitoring** - View current input, output resolution, and device information
-- **Automatic Reconnection** - Handles connection loss and recovery gracefully
-- **Standby Mode Support** - Proper handling of device standby state
+The Lumagen must be configured for the integration to work correctly.
+
+**MENU → Other → I/O Setup → RS-232 Setup:**
+
+| Setting              | Value     |
+|----------------------|-----------|
+| Echo                 | On        |
+| Delimiters           | Off       |
+| Report mode changes  | Full v4   |
+
+**MENU → Other → OnOff Setup:**
+
+| Setting     | Value    |
+|-------------|----------|
+| OnMessage   | Off      |
+| OffMessage  | Off      |
+
+Optional: enable extended aspect ratios (MENU → Input → Options → Aspect Setup
+→ Aspect Opts → Extended) to detect/select 4:3 Pillarbox, 1.375 Pillarbox,
+1.66 Pillarbox, 2.10, 2.55, and 2.76.
+
+The serial-to-TCP adapter must match the Lumagen's RS-232 settings (default:
+9600 bps, 8N1, no flow control).
 
 ## Installation
 
-### HACS (Recommended)
+### HACS
 
-1. Open HACS in Home Assistant
-2. Click on "Integrations"
-3. Click the three dots in the top right corner
-4. Select "Custom repositories"
-5. Add this repository URL and select "Integration" as the category
-6. Click "Install"
-7. Restart Home Assistant
+1. Open HACS → Integrations
+2. Three-dot menu → Custom repositories
+3. Add this repository URL, category "Integration"
+4. Install and restart Home Assistant
 
-### Manual Installation
+### Manual
 
-1. Copy the `custom_components/ha_lumagen` folder to your Home Assistant `custom_components` directory
-2. Restart Home Assistant
+Copy `custom_components/ha_lumagen` into your Home Assistant
+`custom_components` directory and restart.
 
 ## Configuration
 
-### Prerequisites
-
-- Lumagen Radiance Pro device
-- Network connection (IP) or Serial connection to the device
-- [pylumagen](https://github.com/johncarey70/pylumagen) library (automatically installed)
-
-### Setup
-
-1. Go to **Settings** → **Devices & Services**
-2. Click **+ Add Integration**
-3. Search for "Lumagen"
-4. Select your connection type:
-   - **IP Connection**: Enter hostname/IP and port (default: 4999)
-   - **Serial Connection**: Enter serial port path and baud rate (default: 9600)
-5. Click **Submit**
-
-The integration will automatically discover and create all entities for your device. The device can be in standby mode during setup - device information is retrieved regardless of power state.
+1. **Settings → Devices & Services → Add Integration → Lumagen**
+2. Enter the IP address and port of your serial-to-TCP adapter (default port: 4999)
+3. The integration tests the connection with an alive query before completing setup
 
 ## Entities
 
 ### Switch
-- **Power** - Turn the device on/off (standby mode)
+
+| Entity | Description |
+|--------|-------------|
+| Power  | Turn device on / standby. Optimistic state for instant UI feedback. |
 
 ### Select
-- **Input Source** - Select from configured input sources
-- **Source Aspect Ratio** - Choose aspect ratio (4:3, 16:9, 1.85, 1.90, 2.00, 2.20, 2.35, 2.40, Letterbox)
-- **Input Configuration** - Recall input configurations (0-7)
+
+| Entity             | Description |
+|--------------------|-------------|
+| Input Source       | Select from labeled inputs (labels read from device on power-on) |
+| Source Aspect Ratio | 4:3, Letterbox, 16:9, 1.85, 1.90, 2.00, 2.20, 2.35, 2.40, NLS |
+| Memory Bank        | Recall memory A / B / C / D |
 
 ### Sensors
 
-#### Status Sensors
-- **Logical Input** - Current logical input number
-- **Physical Input** - Current physical input
-- **Output Resolution** - Current output resolution and refresh rate
-- **Source Aspect Ratio** - Current source aspect ratio
-- **Source Dynamic Range** - HDR/SDR status
-- **Input Configuration** - Active input configuration number
-- **Output CMS** - Active color management system
-- **Output Style** - Active output style
+**Status** (available when device is active):
 
-#### Diagnostic Sensors
-- **Model Name** - Device model name
-- **Software Revision** - Firmware version
-- **Model Number** - Device model number
-- **Serial Number** - Device serial number
+| Sensor               | Description |
+|----------------------|-------------|
+| Logical Input        | Current logical input number |
+| Physical Input       | Current physical input |
+| Output Resolution    | Output vertical resolution and refresh rate |
+| Source Aspect Ratio  | Detected source content aspect |
+| Source Dynamic Range | SDR / HDR |
+| Input Configuration  | Active input config number |
+| Output CMS           | Active color management system (0–7) |
+| Output Style         | Active output style (0–7) |
+
+**Diagnostic** (available whenever connected, even in standby):
+
+| Sensor            | Description |
+|-------------------|-------------|
+| Model Name        | e.g. "RadiancePro" |
+| Software Revision | Firmware version |
+| Model Number      | Hardware model number |
+| Serial Number     | Device serial number |
 
 ### Remote
-- **Remote** - Send navigation and control commands
 
-## Usage
+Send navigation and control commands to the Lumagen menu system.
 
-### Power Control
+Available commands: `up`, `down`, `left`, `right`, `menu`, `ok`, `enter`,
+`exit`, `back`, `home`, `info`, `alt`, `clear`, `0`–`9`.
 
-Use the power switch to turn the device on or put it in standby:
+## Usage Examples
+
+### Power
 
 ```yaml
 service: switch.turn_on
@@ -99,8 +112,6 @@ target:
 
 ### Input Selection
 
-Change the input source:
-
 ```yaml
 service: select.select_option
 target:
@@ -109,9 +120,7 @@ data:
   option: "HDMI 1"
 ```
 
-### Aspect Ratio Control
-
-Change the aspect ratio:
+### Aspect Ratio
 
 ```yaml
 service: select.select_option
@@ -122,8 +131,6 @@ data:
 ```
 
 ### Remote Commands
-
-Send menu navigation commands:
 
 ```yaml
 service: remote.send_command
@@ -136,19 +143,11 @@ data:
     - enter
 ```
 
-Available commands:
-- **Navigation**: `up`, `down`, `left`, `right`
-- **Menu Control**: `menu`, `ok`, `exit`, `enter`, `back`, `home`
-- **Utility**: `help`, `prev`, `alt`, `clear`, `info`
-- **Number Pad**: `0`, `1`, `2`, `3`, `4`, `5`, `6`, `7`, `8`, `9`
-
-### Automations
-
-Example automation to switch input when a media player starts:
+### Automation Example
 
 ```yaml
 automation:
-  - alias: "Switch to Apple TV Input"
+  - alias: "Switch to Apple TV"
     trigger:
       - platform: state
         entity_id: media_player.apple_tv
@@ -161,71 +160,88 @@ automation:
           option: "HDMI 2"
 ```
 
+## Architecture
+
+The integration has no external dependencies. Communication with the Lumagen is
+handled by `client.py`, a self-contained async TCP client (~400 lines).
+
+```
+┌──────────────────────────────────────────────────┐
+│                  LumagenClient                   │
+│                                                  │
+│  asyncio.open_connection(host, port)             │
+│  ┌────────────┐  ┌─────────────┐  ┌──────────┐  │
+│  │ _read_loop │  │ send_command│  │ _keepalive│  │
+│  └─────┬──────┘  └─────────────┘  └──────────┘  │
+│        │ parses lines, updates state             │
+│        ▼                                         │
+│  LumagenState (dataclass)                        │
+│        │ calls on_state_changed callback         │
+│        ▼                                         │
+│  LumagenCoordinator.async_set_updated_data()     │
+└──────────────────────────────────────────────────┘
+```
+
+### Protocol
+
+Commands are bare ASCII sent over TCP — no framing, no delimiters:
+
+- **Queries** (`ZQS00`, `ZQI24`, …): sent as raw bytes, no terminator.
+  With echo on, the response line is `<echoed cmd>!<name>,<fields>\r\n`.
+- **Single-character commands** (`%` power on, `$` standby, `*` 16:9, …):
+  sent as a single byte.
+- **Set commands** (`ZT`, `ZY`): terminated with `\r`.
+- **Unsolicited messages**: the Lumagen sends `!I24,…` on mode changes
+  (with "Report mode changes: Full v4") and `Power-up complete.\r\n` /
+  `POWER OFF.\r\n` on power state changes.
+
+### Event-Driven Updates
+
+The coordinator sets `update_interval=None` — no polling. All state updates
+come from the TCP stream:
+
+- **Mode changes**: the Lumagen pushes `!I24,…` unsolicited
+- **Power changes**: `Power-up complete.` / `POWER OFF.` sentinels
+- **Keepalive**: `ZQS00` sent every 30 s; if no `!S00,Ok` within 5 s,
+  the client reconnects
+
+On power-on (standby → active), the integration waits 5 seconds then
+re-queries full device state and fetches all input labels.
+
+### State Queries
+
+On connect and after power-on, the client sends:
+
+| Query   | Response | Data |
+|---------|----------|------|
+| `ZQS01` | `!S01,…` | Model, firmware, model #, serial # |
+| `ZQS02` | `!S02,…` | Power state (0/1) |
+| `ZQI00` | `!I00,…` | Logical input, memory bank, physical input |
+| `ZQI24` | `!I24,…` | Full v4 info (aspect, resolution, HDR, CMS, …) |
+
+Input labels (`ZQS1A0`–`ZQS1D9`, 40 queries) are fetched once after power-on.
+
 ## Troubleshooting
 
-### Connection Issues
+### Connection fails during setup
 
-- Verify the device is powered on and connected to the network
-- Check firewall settings allow connections on the configured port
-- For serial connections, ensure the correct port and baud rate
-- Check Home Assistant logs for detailed error messages
+- Verify the serial-to-TCP adapter is reachable at the configured IP/port
+- Confirm the adapter's serial settings match the Lumagen (9600 8N1)
+- Check that the Lumagen is powered on (the alive query needs a response)
 
-### Entity Availability
+### Entities show unavailable
 
-- All entities retain their cached values when the device is in standby or disconnected
-- Entities remain available showing last known state
-- Real-time updates resume immediately when device becomes active
-- Diagnostic sensors remain available even in standby mode
+- Status sensors require the device to be active (not in standby)
+- Diagnostic sensors only require a TCP connection
+- Check Home Assistant logs for keepalive timeouts or reconnect messages
 
-### Input Source Dropdown Empty
+### Input source dropdown shows "Input 1", "Input 2", …
 
-If the input source dropdown is empty:
-1. Check that input sources are configured on the device with custom labels
-2. Verify the device is connected (check connection status in logs)
-3. Input labels are fetched automatically 1 second after connection is established
-4. If labels are updated on the device, the integration will receive an `input_labels` event and update automatically
-
-
-## Development
-
-### Built With
-
-- **[pylumagen](https://github.com/johncarey70/pylumagen)** - Python library providing device communication and control
-- **[Kiro](https://kiro.ai)** - AI-powered development assistant used to build this integration
-
-### Architecture
-
-This integration implements a **pure event-driven architecture** for real-time responsiveness:
-
-**Event-Driven Updates:**
-- Subscribes to pylumagen dispatcher events for all device state changes
-- Updates appear in Home Assistant UI within 1 second of device changes
-- Zero polling overhead (`update_interval=None`)
-- Minimal resource usage - only processes actual state changes
-
-**Key Features:**
-- Automatic reconnection handling via pylumagen
-- Entities retain cached values when device is in standby or disconnected
-- Input labels fetched once on connection, then updated via events
-- Proper device info handling even in standby mode
-
-**Design Inspiration:**
-- Event-driven approach inspired by the [Unfolded Circle Lumagen Integration](https://github.com/johncarey70/uc-integration-lumagen)
-- Follows Home Assistant best practices for custom integrations
-
-## Support
-
-For issues, feature requests, or questions:
-- Open an issue on [GitHub](https://github.com/vishketan-ha/ha-lumagen)
-- Check the [Home Assistant Community Forum](https://community.home-assistant.io/)
-
-## Credits
-
-- Integration developed for Home Assistant
-- Uses the [pylumagen](https://github.com/johncarey70/pylumagen) library
-- Event-driven architecture inspired by the [Unfolded Circle Lumagen Integration](https://github.com/johncarey70/uc-integration-lumagen)
-- Lumagen Radiance Pro is a product of Lumagen, Inc.
+Labels are fetched from the device on power-on. If you see default names:
+1. Confirm you have custom labels configured on the Lumagen
+2. Power-cycle the device (or toggle the power switch) to trigger a label fetch
+3. Labels are per memory bank — switching banks shows that bank's labels
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
+Apache License 2.0

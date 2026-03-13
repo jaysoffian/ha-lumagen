@@ -2,32 +2,16 @@
   "config": {
     "step": {
       "user": {
-        "title": "Select Connection Type",
-        "description": "Choose how to connect to your Lumagen Radiance Pro",
-        "data": {
-          "connection_type": "Connection Type"
-        }
-      },
-      "ip": {
-        "title": "Configure IP Connection",
-        "description": "Enter the network details for your Lumagen device",
+        "title": "Configure Lumagen Connection",
+        "description": "Enter the IP address and port of your Lumagen's TCP-to-serial adapter.",
         "data": {
           "host": "Host IP Address",
           "port": "Port"
-        }
-      },
-      "serial": {
-        "title": "Configure Serial Connection",
-        "description": "Enter the serial port details for your Lumagen device",
-        "data": {
-          "port": "Serial Port Path",
-          "baudrate": "Baud Rate"
         }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect to the Lumagen device. Please check your connection settings and ensure the device is powered on.",
-      "invalid_config": "Invalid configuration provided. Please check your settings.",
       "unknown": "An unexpected error occurred. Please try again."
     },
     "abort": {
@@ -36,53 +20,23 @@
   },
   "entity": {
     "sensor": {
-      "logical_input": {
-        "name": "Logical Input"
-      },
-      "physical_input": {
-        "name": "Physical Input"
-      },
-      "output_resolution": {
-        "name": "Output Resolution"
-      },
-      "source_aspect_ratio": {
-        "name": "Source Aspect Ratio"
-      },
-      "source_dynamic_range": {
-        "name": "Source Dynamic Range"
-      },
-      "input_configuration": {
-        "name": "Input Configuration"
-      },
-      "output_cms": {
-        "name": "Output CMS"
-      },
-      "output_style": {
-        "name": "Output Style"
-      },
-      "model_name": {
-        "name": "Model Name"
-      },
-      "software_revision": {
-        "name": "Software Revision"
-      },
-      "model_number": {
-        "name": "Model Number"
-      },
-      "serial_number": {
-        "name": "Serial Number"
-      }
+      "logical_input": { "name": "Logical Input" },
+      "physical_input": { "name": "Physical Input" },
+      "output_resolution": { "name": "Output Resolution" },
+      "source_aspect_ratio": { "name": "Source Aspect Ratio" },
+      "source_dynamic_range": { "name": "Source Dynamic Range" },
+      "input_configuration": { "name": "Input Configuration" },
+      "output_cms": { "name": "Output CMS" },
+      "output_style": { "name": "Output Style" },
+      "model_name": { "name": "Model Name" },
+      "software_revision": { "name": "Software Revision" },
+      "model_number": { "name": "Model Number" },
+      "serial_number": { "name": "Serial Number" }
     },
     "select": {
-      "input_source": {
-        "name": "Input Source"
-      },
-      "source_aspect_ratio": {
-        "name": "Source Aspect Ratio"
-      },
-      "input_configuration": {
-        "name": "Input Configuration"
-      }
+      "input_source": { "name": "Input Source" },
+      "source_aspect_ratio": { "name": "Source Aspect Ratio" },
+      "memory_bank": { "name": "Memory Bank" }
     }
   }
 }

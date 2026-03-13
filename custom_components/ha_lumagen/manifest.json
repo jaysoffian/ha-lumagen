@@ -6,6 +6,6 @@
   "documentation": "https://github.com/vishketan-ha/ha-lumagen",
   "integration_type": "device",
   "iot_class": "local_push",
-  "requirements": ["pylumagen @ git+https://github.com/johncarey70/pylumagen.git@main"],
-  "version": "0.2.0"
+  "requirements": [],
+  "version": "0.3.0"
 }
