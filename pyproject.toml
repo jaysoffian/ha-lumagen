@@ -30,6 +30,5 @@ ignore = [
     "PLR09",  # too-many-* (arguments, branches, statements) — not useful for HA entities
     "PLR2004", # magic-value-comparison — too noisy for protocol code with numeric constants
     "PLW2901", # redefined-loop-variable — common pattern in asyncio
-    "SIM105",  # use-contextlib-suppress — try/except/pass is clearer for protocol int-parsing
-    "SIM108",  # use-ternary-expression — often less readable
+"SIM108",  # use-ternary-expression — often less readable
 ]

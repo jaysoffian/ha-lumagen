@@ -6,6 +6,7 @@ import asyncio
 import logging
 import re
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass, field
 
 _LOGGER = logging.getLogger(__name__)
@@ -175,16 +176,17 @@ def _handle_input_info(state: LumagenState, fields: list[str]) -> bool:
     if len(fields) < 3:
         return False
     changed = False
-    try:
-        changed |= _setattr_changed(state, "logical_input", int(fields[0]))
-    except ValueError:
-        pass
+    changed |= _setattr_changed(state, "logical_input", _safe_int(fields[0]))
     changed |= _setattr_changed(state, "input_memory", fields[1])
-    try:
-        changed |= _setattr_changed(state, "physical_input", int(fields[2]))
-    except ValueError:
-        pass
+    changed |= _setattr_changed(state, "physical_input", _safe_int(fields[2]))
     return changed
+
+
+def _safe_int(s: str) -> int | None:
+    """Parse an int, returning None on failure."""
+    with suppress(ValueError):
+        return int(s)
+    return None
 
 
 def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
@@ -196,90 +198,64 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
       15=E 16=F   17=G    18=H          (v2+)
       19=II 20=KK                       (v3+)
       21=JJJ 22=LLL                     (v4)
+
+    Fields are ordered by protocol version. We parse as many as are
+    present; an IndexError means we've reached the end of what this
+    firmware version provides.
     """
-    if len(fields) < 15:
-        return False
     changed = False
 
-    # Source vertical rate (RRR)
-    try:
-        changed |= _setattr_changed(state, "source_vertical_rate", int(fields[1]))
-    except ValueError:
-        pass
-    # Source vertical resolution (VVVV)
-    try:
-        changed |= _setattr_changed(state, "source_vertical_resolution", int(fields[2]))
-    except ValueError:
-        pass
-    # Input config number (X)
-    try:
-        changed |= _setattr_changed(state, "input_config_number", int(fields[4]))
-    except ValueError:
-        pass
-    # Source raster aspect (AAA)
-    changed |= _setattr_changed(state, "source_raster_aspect", _aspect_name(fields[5]))
-    # Source content aspect (SSS)
-    changed |= _setattr_changed(state, "source_content_aspect", _aspect_name(fields[6]))
-    # NLS (Y)
+    # v1 fields (0-14)
+    if len(fields) < 15:
+        return changed
+    changed |= _setattr_changed(state, "source_vertical_rate", _safe_int(fields[1]))
+    changed |= _setattr_changed(
+        state, "source_vertical_resolution", _safe_int(fields[2])
+    )
+    changed |= _setattr_changed(state, "input_config_number", _safe_int(fields[4]))
+    changed |= _setattr_changed(
+        state, "source_raster_aspect", _aspect_name(fields[5])
+    )
+    changed |= _setattr_changed(
+        state, "source_content_aspect", _aspect_name(fields[6])
+    )
     changed |= _setattr_changed(state, "nls_active", fields[7] == "N")
-    # Output CMS (C)
-    try:
-        changed |= _setattr_changed(state, "output_cms", int(fields[10]))
-    except ValueError:
-        pass
-    # Output style (B)
-    try:
-        changed |= _setattr_changed(state, "output_style", int(fields[11]))
-    except ValueError:
-        pass
-    # Output vertical rate (PPP)
-    try:
-        changed |= _setattr_changed(state, "output_vertical_rate", int(fields[12]))
-    except ValueError:
-        pass
-    # Output vertical resolution (QQQQ)
-    try:
-        changed |= _setattr_changed(
-            state, "output_vertical_resolution", int(fields[13])
-        )
-    except ValueError:
-        pass
-    # Output aspect (ZZZ)
+    changed |= _setattr_changed(state, "output_cms", _safe_int(fields[10]))
+    changed |= _setattr_changed(state, "output_style", _safe_int(fields[11]))
+    changed |= _setattr_changed(
+        state, "output_vertical_rate", _safe_int(fields[12])
+    )
+    changed |= _setattr_changed(
+        state, "output_vertical_resolution", _safe_int(fields[13])
+    )
     changed |= _setattr_changed(state, "output_aspect", _aspect_name(fields[14]))
 
-    # v2+ fields
-    if len(fields) > 15:
-        changed |= _setattr_changed(
-            state, "output_colorspace", _OUTPUT_COLORSPACE.get(fields[15])
-        )
-    if len(fields) > 16:
-        changed |= _setattr_changed(
-            state, "source_dynamic_range", _DYNAMIC_RANGE.get(fields[16])
-        )
-    if len(fields) > 17:
-        changed |= _setattr_changed(state, "source_mode", _SOURCE_MODE.get(fields[17]))
+    # v2+ fields (15-18)
+    if len(fields) < 18:
+        return changed
+    changed |= _setattr_changed(
+        state, "output_colorspace", _OUTPUT_COLORSPACE.get(fields[15])
+    )
+    changed |= _setattr_changed(
+        state, "source_dynamic_range", _DYNAMIC_RANGE.get(fields[16])
+    )
+    changed |= _setattr_changed(state, "source_mode", _SOURCE_MODE.get(fields[17]))
 
-    # v3+ fields — II (virtual/logical input), KK (physical input)
-    if len(fields) > 19:
-        try:
-            changed |= _setattr_changed(state, "logical_input", int(fields[19]))
-        except ValueError:
-            pass
-    if len(fields) > 20:
-        try:
-            changed |= _setattr_changed(state, "physical_input", int(fields[20]))
-        except ValueError:
-            pass
+    # v3+ fields (19-20) — II (virtual/logical input), KK (physical input)
+    if len(fields) < 21:
+        return changed
+    changed |= _setattr_changed(state, "logical_input", _safe_int(fields[19]))
+    changed |= _setattr_changed(state, "physical_input", _safe_int(fields[20]))
 
-    # v4 fields — JJJ (detected raster aspect), LLL (detected content aspect)
-    if len(fields) > 21:
-        changed |= _setattr_changed(
-            state, "detected_raster_aspect", _aspect_name(fields[21])
-        )
-    if len(fields) > 22:
-        changed |= _setattr_changed(
-            state, "detected_content_aspect", _aspect_name(fields[22])
-        )
+    # v4 fields (21-22) — detected raster/content aspect
+    if len(fields) < 23:
+        return changed
+    changed |= _setattr_changed(
+        state, "detected_raster_aspect", _aspect_name(fields[21])
+    )
+    changed |= _setattr_changed(
+        state, "detected_content_aspect", _aspect_name(fields[22])
+    )
 
     return changed
 
@@ -345,11 +321,9 @@ class LumagenClient:
             if task and not task.done():
                 task.cancel()
         if self._writer:
-            try:
+            with suppress(Exception):
                 self._writer.close()
                 await self._writer.wait_closed()
-            except Exception:
-                pass
         self._reader = None
         self._writer = None
         self.state.connected = False
@@ -384,10 +358,8 @@ class LumagenClient:
         if self._keepalive_task and not self._keepalive_task.done():
             self._keepalive_task.cancel()
         if self._writer:
-            try:
+            with suppress(Exception):
                 self._writer.close()
-            except Exception:
-                pass
         self._reader = None
         self._writer = None
 

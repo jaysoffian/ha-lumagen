@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextlib import suppress
 from typing import Any
 
 import voluptuous as vol
@@ -72,8 +73,6 @@ class LumagenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return False
         finally:
             if writer:
-                try:
+                with suppress(Exception):
                     writer.close()
                     await writer.wait_closed()
-                except Exception:
-                    pass
