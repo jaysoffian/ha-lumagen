@@ -1,4 +1,5 @@
 """Switch platform for Lumagen integration."""
+
 from __future__ import annotations
 
 import logging

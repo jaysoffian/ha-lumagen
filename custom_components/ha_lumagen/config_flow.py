@@ -1,4 +1,5 @@
 """Config flow for Lumagen integration."""
+
 from __future__ import annotations
 
 import asyncio
@@ -9,7 +10,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.config_entries import ConfigFlowResult
 
 from .const import DEFAULT_PORT, DOMAIN, ERROR_CANNOT_CONNECT
 
@@ -32,7 +33,7 @@ class LumagenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle user configuration — host and port."""
         errors: dict[str, str] = {}
 
