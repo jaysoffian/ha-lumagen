@@ -141,7 +141,6 @@ secrets.yaml
 .tox/
 .pytest_cache/
 htmlcov/
-tests/
 
 # Temporary files
 *.tmp
