@@ -236,7 +236,7 @@ HELP_TEXT = """\
 [bold]Labels & OSD:[/]
   labels                 show all labels
   label <id> <text>      set label (e.g. label A1 Apple TV)
-  osd \\[0-9] <text>      OSD message (0-8=seconds, 9=persistent; \\n for newline)
+  osd \\[0-9] <text>       OSD message (0-8=seconds, 9=persistent; \\n for newline)
   osd                    clear OSD
 
 [bold]Navigation & System:[/]
