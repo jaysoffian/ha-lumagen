@@ -101,7 +101,7 @@ class LumagenState:
     serial_number: str | None = None
 
     # Power
-    device_status: str | None = None  # "Active" / "Standby"
+    power: str | None = None  # "on" / "off"
 
     # Input (from I00 and I24)
     logical_input: int | None = None
@@ -179,8 +179,8 @@ def _handle_power(state: LumagenState, fields: list[str]) -> bool:
     """S02 — 0 = standby, 1 = active."""
     if not fields:
         return False
-    new = "Active" if fields[0] == "1" else "Standby"
-    return _setattr_changed(state, "device_status", new)
+    new = "on" if fields[0] == "1" else "off"
+    return _setattr_changed(state, "power", new)
 
 
 def _handle_input_info(state: LumagenState, fields: list[str]) -> bool:
@@ -381,7 +381,7 @@ class LumagenClient:
 
         was_connected = self.state.connected
         self.state.connected = False
-        self.state.device_status = None  # ensure power-on detected on reconnect
+        self.state.power = None  # ensure power-on detected on reconnect
 
         if was_connected:
             if self._on_connection_changed:
@@ -437,11 +437,11 @@ class LumagenClient:
         """Parse a single line from the TCP stream."""
         # Special power messages
         if "Power-up complete" in line:
-            if _setattr_changed(self.state, "device_status", "Active"):
+            if _setattr_changed(self.state, "power", "on"):
                 self._notify_state_changed()
             return
         if "POWER OFF" in line:
-            if _setattr_changed(self.state, "device_status", "Standby"):
+            if _setattr_changed(self.state, "power", "off"):
                 self._notify_state_changed()
             return
 

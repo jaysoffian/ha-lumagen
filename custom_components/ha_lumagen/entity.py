@@ -35,4 +35,4 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
         if not self.coordinator.last_update_success:
             return False
         data = self.coordinator.data
-        return data.connected and data.device_status == "Active"
+        return data.connected and data.power == "on"

@@ -47,7 +47,7 @@ class LumagenRemoteEntity(LumagenEntity, RemoteEntity):
         await self.coordinator.client.power_off()
 
     async def async_send_command(self, command: Iterable[str], **kwargs: Any) -> None:
-        if self.coordinator.data.device_status != "Active":
+        if self.coordinator.data.power != "on":
             _LOGGER.warning("Cannot send commands while device is in standby")
             return
 

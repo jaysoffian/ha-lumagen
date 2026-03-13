@@ -101,8 +101,8 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     ("Connected", "connected", lambda s: "Yes" if s.connected else "No"),
     (
         "Power",
-        "device_status",
-        lambda s: {"Active": "On", "Standby": "Off"}.get(s.device_status or "", "—"),
+        "power",
+        lambda s: {"on": "On", "off": "Off"}.get(s.power or "", "—"),
     ),
     ("Model", "model_name", lambda s: s.model_name or "—"),
     ("Firmware", "software_revision", lambda s: s.software_revision or "—"),

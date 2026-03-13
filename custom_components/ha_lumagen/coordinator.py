@@ -41,8 +41,8 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         new_data = copy.copy(self.client.state)
 
         # Detect standby → active transition
-        old_status = self.data.device_status if self.data else None
-        if new_data.device_status == "Active" and old_status != "Active":
+        old_power = self.data.power if self.data else None
+        if new_data.power == "on" and old_power != "on":
             _LOGGER.info("Device powered on — scheduling full refresh")
             self.hass.async_create_task(self._handle_power_on())
 
