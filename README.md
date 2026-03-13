@@ -182,19 +182,6 @@ handled by `client.py`, a self-contained async TCP client (~400 lines).
 └──────────────────────────────────────────────────┘
 ```
 
-### Protocol
-
-Commands are bare ASCII sent over TCP — no framing, no delimiters:
-
-- **Queries** (`ZQS00`, `ZQI24`, …): sent as raw bytes, no terminator.
-  With echo on, the response line is `<echoed cmd>!<name>,<fields>\r\n`.
-- **Single-character commands** (`%` power on, `$` standby, `*` 16:9, …):
-  sent as a single byte.
-- **Set commands** (`ZT`, `ZY`): terminated with `\r`.
-- **Unsolicited messages**: the Lumagen sends `!I24,…` on mode changes
-  (with "Report mode changes: Full v4") and `Power-up complete.\r\n` /
-  `POWER OFF.\r\n` on power state changes.
-
 ### Event-Driven Updates
 
 The coordinator sets `update_interval=None` — no polling. All state updates
@@ -208,18 +195,8 @@ come from the TCP stream:
 On power-on (standby → active), the integration waits 5 seconds then
 re-queries full device state and fetches all input labels.
 
-### State Queries
-
-On connect and after power-on, the client sends:
-
-| Query   | Response | Data |
-|---------|----------|------|
-| `ZQS01` | `!S01,…` | Model, firmware, model #, serial # |
-| `ZQS02` | `!S02,…` | Power state (0/1) |
-| `ZQI00` | `!I00,…` | Logical input, memory bank, physical input |
-| `ZQI24` | `!I24,…` | Full v4 info (aspect, resolution, HDR, CMS, …) |
-
-Input labels (`ZQS1A0`–`ZQS1D9`, 40 queries) are fetched once after power-on.
+For the full RS-232 command and query reference, see
+[docs/rs232_command_reference.md](docs/rs232_command_reference.md).
 
 ## Troubleshooting
 
