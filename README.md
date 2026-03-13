@@ -224,20 +224,37 @@ Labels are fetched from the device on power-on. If you see default names:
 Requires [uv](https://docs.astral.sh/uv/).
 
 ```bash
+# Set up the dev environment
+uv sync
+
 # Run tests
-uv run --with pytest --with homeassistant pytest tests/ -v
+uv run pytest tests/ -v
 
 # Lint + format
-uvx ruff check custom_components/ tests/
-uvx ruff format custom_components/ tests/
+uv run ruff check custom_components/ tests/
+uv run ruff format custom_components/ tests/
 
 # Type check
-uvx --with homeassistant ty check
+uv run ty check
 
-# Install pre-commit hooks (ruff, ty, trailing whitespace, etc.)
-uv tool install pre-commit
-pre-commit install
+# Run all checks (ruff, ty, pytest, trailing whitespace, etc.)
+uv run pre-commit run --all-files
+
+# Install pre-commit as a git hook
+uv run pre-commit install
 ```
+
+### TUI
+
+A standalone Textual TUI for exercising the client against a real Lumagen:
+
+```bash
+./tui.py <host> [port]
+```
+
+Split-pane interface with live device state on the left, protocol log on the
+right, and a command input at the bottom. Type `help` for available commands
+(raw RS-232, power, input, memory, aspect, remote, OSD, labels, etc.).
 
 ### Repo layout
 
@@ -252,6 +269,7 @@ custom_components/ha_lumagen/
   switch.py        — power on/off
   remote.py        — menu navigation commands
   const.py         — domain, defaults, errors
+tui.py             — standalone Textual TUI for interactive testing
 docs/
   rs232_command_reference.md — full Lumagen RS-232 command + query reference
 tests/
