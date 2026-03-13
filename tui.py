@@ -242,7 +242,7 @@ HELP_TEXT = """\
 [bold]Navigation & System:[/]
   remote <cmd>           remote key (menu, up, down, ok, exit, …)
   save                   save config to flash
-  hotplug \\[input]       toggle HDMI hotplug (all inputs if omitted)
+  hotplug \\[input]        toggle HDMI hotplug (all inputs if omitted)
   refresh                re-query full state
   refresh labels         re-fetch labels from device
   help                   show this message
