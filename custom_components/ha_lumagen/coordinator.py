@@ -47,20 +47,11 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         new_data = copy.copy(self.client.state)
 
         old_power = self.data.power if self.data else None
-        old_input = self.data.logical_input if self.data else None
 
         # Detect standby → active transition (not initial state discovery)
         if new_data.power == "on" and old_power == "off":
             _LOGGER.info("Device powered on — scheduling runtime state refresh")
             self.hass.async_create_task(self._handle_power_on())
-
-        # Detect input change — fetch per-input output config
-        if (
-            new_data.logical_input is not None
-            and new_data.logical_input != old_input
-            and old_input is not None
-        ):
-            self.hass.async_create_task(self.client.send_command("ZQI18"))
 
         self.async_set_updated_data(new_data)
 

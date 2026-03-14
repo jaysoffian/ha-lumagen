@@ -135,13 +135,6 @@ def _physical_in(s: LumagenState) -> str:
     return str(s.physical_input) if s.physical_input is not None else "—"
 
 
-def _output_mode(s: LumagenState) -> str:
-    if s.output_mode is None:
-        return "—"
-    label = s.custom_mode_labels.get(f"1{s.output_mode}", f"Custom{s.output_mode + 1}")
-    return f"{s.output_mode + 1}: {label}"
-
-
 def _cms(s: LumagenState) -> str:
     if s.output_cms is None:
         return "—"
@@ -184,7 +177,6 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     ("Output", "_output_summary", _output_summary),
     ("Output Aspect", "output_aspect", lambda s: s.output_aspect or "—"),
     ("Colorspace", "output_colorspace", lambda s: s.output_colorspace or "—"),
-    ("Mode", "_output_mode", _output_mode),
     ("CMS", "_cms", _cms),
     ("Style", "_style", _style),
     ("Game Mode", "game_mode", lambda s: "On" if s.game_mode else "Off"),
