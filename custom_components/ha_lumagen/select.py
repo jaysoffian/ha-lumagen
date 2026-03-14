@@ -129,6 +129,7 @@ class LumagenSelectEntity(LumagenEntity, SelectEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{description.key}"
+        self._optimistic_option: str | None = None
 
     @property
     def options(self) -> list[str]:
@@ -140,9 +141,17 @@ class LumagenSelectEntity(LumagenEntity, SelectEntity):
 
     @property
     def current_option(self) -> str | None:
+        if self._optimistic_option is not None:
+            return self._optimistic_option
         return self.entity_description.current_option_fn(
             self.coordinator.data, self.coordinator
         )
 
+    def _handle_coordinator_update(self) -> None:
+        self._optimistic_option = None
+        super()._handle_coordinator_update()
+
     async def async_select_option(self, option: str) -> None:
+        self._optimistic_option = option
+        self.async_write_ha_state()
         await self.entity_description.select_option_fn(self.coordinator, option)
