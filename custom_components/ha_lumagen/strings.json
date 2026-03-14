@@ -33,9 +33,9 @@
       "serial_number": { "name": "Serial Number" }
     },
     "select": {
-      "input_source": { "name": "Input Source" },
-      "source_aspect_ratio": { "name": "Source Aspect Ratio" },
-      "memory_bank": { "name": "Memory Bank" }
+      "input": { "name": "Input" },
+      "input_aspect_ratio": { "name": "Input Aspect Ratio" },
+      "memory": { "name": "Memory" }
     }
   }
 }

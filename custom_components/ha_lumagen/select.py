@@ -65,39 +65,41 @@ async def _select_aspect(coord: LumagenCoordinator, option: str) -> None:
 
 
 def _current_memory(data: LumagenState, _coord: LumagenCoordinator) -> str | None:
-    return data.input_memory
+    if data.input_memory is None:
+        return None
+    return f"MEM{data.input_memory}"
 
 
 async def _select_memory(coord: LumagenCoordinator, option: str) -> None:
-    await coord.client.select_memory(option)
+    await coord.client.select_memory(option[-1])  # "MEMA" → "A"
 
 
 # -- Entity descriptions ----------------------------------------------------
 
 SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
     LumagenSelectEntityDescription(
-        key="input_source",
-        name="Input Source",
+        key="input",
+        name="Input",
         icon="mdi:video-input-hdmi",
         current_option_fn=_current_input_source,
         select_option_fn=_select_input_source,
         options_fn=lambda coord: coord.client.get_source_list(),
     ),
     LumagenSelectEntityDescription(
-        key="source_aspect_ratio",
-        name="Source Aspect Ratio",
+        key="input_aspect_ratio",
+        name="Input Aspect Ratio",
         icon="mdi:aspect-ratio",
         current_option_fn=_current_aspect,
         select_option_fn=_select_aspect,
         static_options=list(ASPECT_COMMANDS.keys()),
     ),
     LumagenSelectEntityDescription(
-        key="memory_bank",
-        name="Memory Bank",
+        key="memory",
+        name="Memory",
         icon="mdi:memory",
         current_option_fn=_current_memory,
         select_option_fn=_select_memory,
-        static_options=["A", "B", "C", "D"],
+        static_options=["MEMA", "MEMB", "MEMC", "MEMD"],
     ),
 )
 
