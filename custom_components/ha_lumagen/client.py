@@ -230,12 +230,14 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
     Fields are ordered by protocol version. We parse as many as are
     present; an IndexError means we've reached the end of what this
     firmware version provides.
-    """
-    changed = False
 
+    Always returns True so the coordinator updates even when no values
+    changed — this clears optimistic state on select entities.
+    """
     # v1 fields (0-14)
     if len(fields) < 15:
-        return changed
+        return False
+    changed = False
     changed |= _setattr_changed(state, "source_vertical_rate", _safe_int(fields[1]))
     changed |= _setattr_changed(
         state, "source_vertical_resolution", _safe_int(fields[2])
@@ -254,7 +256,7 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
 
     # v2+ fields (15-18)
     if len(fields) < 18:
-        return changed
+        return True
     changed |= _setattr_changed(
         state, "output_colorspace", _OUTPUT_COLORSPACE.get(fields[15])
     )
@@ -265,13 +267,13 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
 
     # v3+ fields (19-20) — II (virtual/logical input), KK (physical input)
     if len(fields) < 21:
-        return changed
+        return True
     changed |= _setattr_changed(state, "logical_input", _safe_int(fields[19]))
     changed |= _setattr_changed(state, "physical_input", _safe_int(fields[20]))
 
     # v4 fields (21-22) — detected raster/content aspect
     if len(fields) < 23:
-        return changed
+        return True
     changed |= _setattr_changed(
         state, "detected_raster_aspect", _aspect_name(fields[21])
     )
@@ -279,7 +281,7 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
         state, "detected_content_aspect", _aspect_name(fields[22])
     )
 
-    return changed
+    return True
 
 
 def _handle_game_mode(state: LumagenState, fields: list[str]) -> bool:
@@ -728,14 +730,13 @@ class LumagenClient:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
         await self.send_command(cmd)
-        changed = False
         if aspect == "NLS":
             changed = _setattr_changed(self.state, "nls_active", True)
-        elif aspect == "Auto":
-            changed = _setattr_changed(self.state, "nls_active", False)
-        else:
+        elif aspect != "Auto":
             changed = _setattr_changed(self.state, "nls_active", False)
             changed |= _setattr_changed(self.state, "source_content_aspect", aspect)
+        else:
+            changed = _setattr_changed(self.state, "nls_active", False)
         if changed:
             self._notify_state_changed()
 
