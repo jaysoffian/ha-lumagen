@@ -46,15 +46,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not client.state.connected:
             raise ConfigEntryNotReady("Device not connected")
 
-        # Fetch initial state
-        await client.fetch_full_state()
-        await asyncio.sleep(2)
+        # Load stored identity + labels, or fetch from device
+        has_stored = await coordinator.async_load_stored_state()
+
+        if not has_stored:
+            # First-ever setup — fetch identity and save
+            await client.fetch_identity()
+            await asyncio.sleep(1)
+
+        # Always query power (runtime)
+        await client.fetch_power()
+        await asyncio.sleep(1)
+
+        # If device is on, fetch runtime state
+        if client.state.power == "on":
+            await client.fetch_runtime_state()
+            await asyncio.sleep(1)
 
     except ConfigEntryNotReady:
         raise
     except Exception as err:
         _LOGGER.error("Failed to connect to Lumagen at %s:%s: %s", host, port, err)
         raise ConfigEntryNotReady(f"Failed to connect: {err}") from err
+
+    # Save identity if we just fetched it
+    if client.state.model_name:
+        await coordinator.async_save_stored_state()
 
     await coordinator.async_config_entry_first_refresh()
 
@@ -63,8 +80,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Fetch labels once on first setup (runs in background so it won't block)
-    if not client.state.input_labels:
+    # Fetch labels from device if none stored
+    if not has_stored:
         hass.async_create_task(coordinator.fetch_labels_with_backoff())
 
     _LOGGER.info("Lumagen integration ready (%s:%s)", host, port)
