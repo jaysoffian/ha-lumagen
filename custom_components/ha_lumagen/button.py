@@ -19,19 +19,19 @@ async def async_setup_entry(
 ) -> None:
     """Set up Lumagen buttons."""
     coordinator: LumagenCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([LumagenRefreshLabelsButton(coordinator)])
+    async_add_entities([LumagenRefreshConfigButton(coordinator)])
 
 
-class LumagenRefreshLabelsButton(LumagenEntity, ButtonEntity):
-    """Button to refresh all Lumagen labels."""
+class LumagenRefreshConfigButton(LumagenEntity, ButtonEntity):
+    """Button to refresh identity and labels from the device."""
 
-    _attr_name = "Refresh labels"
-    _attr_icon = "mdi:label-multiple"
+    _attr_name = "Refresh config"
+    _attr_icon = "mdi:refresh"
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.entry.entry_id}_refresh_labels"
 
     async def async_press(self) -> None:
-        """Fetch all labels from the device."""
-        await self.coordinator.fetch_labels_with_backoff()
+        """Fetch identity and labels from the device."""
+        await self.coordinator.refresh_config()

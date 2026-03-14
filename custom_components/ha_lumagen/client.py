@@ -622,7 +622,7 @@ class LumagenClient:
 
     async def fetch_runtime_state(self) -> None:
         """Query current input, output config, and signal info."""
-        for cmd in ("ZQI00", "ZQI18", "ZQI53", "ZQI24"):
+        for cmd in ("ZQI00", "ZQI18", "ZQI24"):
             await self.send_command(cmd)
             await asyncio.sleep(0.05)
 
