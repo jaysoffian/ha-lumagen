@@ -17,6 +17,7 @@ from .coordinator import LumagenCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [
+    Platform.BUTTON,
     Platform.SENSOR,
     Platform.SELECT,
     Platform.SWITCH,
@@ -61,6 +62,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Fetch labels once on first setup (runs in background so it won't block)
+    if not client.state.input_labels:
+        hass.async_create_task(coordinator.fetch_labels_with_backoff())
+
     _LOGGER.info("Lumagen integration ready (%s:%s)", host, port)
     return True
 

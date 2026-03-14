@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import time
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -363,7 +364,7 @@ class LumagenClient:
         self._disconnecting = False
         self._on_state_changed: Callable[[], None] | None = None
         self._on_connection_changed: Callable[[bool], None] | None = None
-        self._alive_event: asyncio.Event | None = None
+        self._last_recv: float = 0.0
         self._write_lock = asyncio.Lock()
         # Label query correlation
         self._pending_label_id: str | None = None
@@ -485,6 +486,7 @@ class LumagenClient:
                     break
                 text = line.decode("ascii", errors="ignore").strip()
                 if text:
+                    self._last_recv = time.monotonic()
                     _LOGGER.debug("recv: %s", text)
                     self._process_line(text)
             except asyncio.CancelledError:
@@ -529,10 +531,8 @@ class LumagenClient:
         name = match.group(1)
         fields = match.group(2).split(",")
 
-        # Alive response — signal the keepalive event, no state change
+        # S00 is a no-op alive response — no state to update
         if name == "S00":
-            if self._alive_event:
-                self._alive_event.set()
             return
 
         handler = RESPONSE_HANDLERS.get(name)
@@ -542,9 +542,6 @@ class LumagenClient:
                     self._notify_state_changed()
             except Exception:
                 _LOGGER.debug("Error in handler for %s", name, exc_info=True)
-            # I00 doubles as keepalive response
-            if name == "I00" and self._alive_event:
-                self._alive_event.set()
 
     def _handle_label_response(self, line: str, match: re.Match[str]) -> None:
         """Extract label text and correlate with the pending query."""
@@ -566,23 +563,30 @@ class LumagenClient:
     # -- Keepalive ----------------------------------------------------------
 
     async def _keepalive_loop(self) -> None:
-        """Send ZQI00 every 30 s; doubles as input state poll + liveness check."""
+        """Poll input state when the connection has been idle for 30 s."""
+        interval = 30
+        probe_timeout = 5
         while self._running:
             try:
-                await asyncio.sleep(30)
+                await asyncio.sleep(interval)
             except asyncio.CancelledError:
                 return
             if not self._running:
                 return
-            self._alive_event = asyncio.Event()
+            # If we received data recently, no probe needed
+            idle = time.monotonic() - self._last_recv
+            if idle < interval:
+                continue
+            # Connection has been idle — send a probe
+            before = self._last_recv
             try:
                 await self.send_command("ZQI00")
-                await asyncio.wait_for(self._alive_event.wait(), timeout=5.0)
-            except TimeoutError:
+                await asyncio.sleep(probe_timeout)
+            except asyncio.CancelledError:
+                return
+            if self._last_recv == before:
                 _LOGGER.warning("Keepalive timeout — reconnecting")
                 await self._handle_disconnect()
-                return
-            except asyncio.CancelledError:
                 return
 
     # -- Sending ------------------------------------------------------------
@@ -613,33 +617,36 @@ class LumagenClient:
             await self.send_command(cmd)
             await asyncio.sleep(0.05)  # brief pause between queries
 
-    async def get_labels(self) -> dict[str, str]:
+    async def get_labels(self) -> int:
         """Query all labels (inputs A0-D9, custom modes, CMS, styles).
 
-        Returns a combined ``{id: text}`` dict covering all categories.
-        Also populates the per-category state fields.
+        Populates the per-category state fields and returns the number of
+        labels that failed to resolve (0 = complete success).
         """
         all_labels: dict[str, str] = {}
+        expected = 0
 
         # Input labels: A0-D9 (reverse iteration works around firmware bug)
         for bank in "ABCD":
             for i in reversed(range(10)):
+                expected += 1
                 label_id = f"{bank}{i}"
                 val = await self._query_label(label_id)
                 if val is not None:
                     all_labels[label_id] = val
-        self.state.input_labels = {
-            k: v for k, v in all_labels.items() if k[0] in "ABCD"
-        }
 
         # Custom mode (1), CMS (2), Style (3) labels: X0-X7
         for category in "123":
             for i in range(8):
+                expected += 1
                 label_id = f"{category}{i}"
                 val = await self._query_label(label_id)
                 if val is not None:
                     all_labels[label_id] = val
 
+        self.state.input_labels = {
+            k: v for k, v in all_labels.items() if k[0] in "ABCD"
+        }
         self.state.custom_mode_labels = {
             k: v for k, v in all_labels.items() if k[0] == "1"
         }
@@ -647,7 +654,7 @@ class LumagenClient:
         self.state.style_labels = {k: v for k, v in all_labels.items() if k[0] == "3"}
 
         self._notify_state_changed()
-        return all_labels
+        return expected - len(all_labels)
 
     async def _query_label(self, label_id: str) -> str | None:
         """Query a single label by ID. Returns the text or None on timeout."""

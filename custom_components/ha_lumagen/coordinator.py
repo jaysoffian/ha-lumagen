@@ -57,12 +57,30 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
 
     async def _handle_power_on(self) -> None:
         """After power-on, wait for the device to settle then refresh."""
-        await asyncio.sleep(5)
+        await asyncio.sleep(10)
         try:
             await self.client.fetch_full_state()
-            await self.client.get_labels()
         except Exception:
             _LOGGER.exception("Error during power-on refresh")
+
+    async def fetch_labels_with_backoff(self, max_attempts: int = 5) -> None:
+        """Fetch labels, retrying with backoff until all resolve."""
+        for attempt in range(max_attempts):
+            failed = await self.client.get_labels()
+            if failed == 0:
+                return
+            delay = 5 * (attempt + 1)
+            _LOGGER.warning(
+                "%d label(s) failed — retrying in %ds (attempt %d/%d)",
+                failed,
+                delay,
+                attempt + 1,
+                max_attempts,
+            )
+            await asyncio.sleep(delay)
+        _LOGGER.error(
+            "Some labels could not be fetched after %d attempts", max_attempts
+        )
 
     async def _async_update_data(self) -> LumagenState:
         """Fallback for first refresh — returns current state snapshot."""
