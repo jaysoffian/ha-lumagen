@@ -502,9 +502,9 @@ class LumagenTUI(App):
 
         if cmd == "autoaspect":
             if arg in ("on", "1"):
-                await self._client.set_auto_aspect(True)
+                await self._client.set_aspect("Auto")
             elif arg in ("off", "0"):
-                await self._client.set_auto_aspect(False)
+                await self._client.send_command("V")
             else:
                 log.write("[red]Usage: autoaspect on / autoaspect off[/]")
             return

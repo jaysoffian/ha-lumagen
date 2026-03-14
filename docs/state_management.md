@@ -50,21 +50,20 @@ when configured with "Report mode changes: Full v4" (unsolicited ZQI24).
 | Output Style                | ZQI24 unsolicited |
 
 **Keepalive:** When the connection has been idle for 30 seconds (no data
-received at all), a ZQI00 probe is sent. Any received data — including
+received at all), a probe is sent. The probe depends on power state:
+- **Device on:** ZQI24 + ZQI00 — full signal state plus input memory
+- **Device off:** ZQS02 — power status check
+
+Both ZQI24 and ZQI00 are needed when on because ZQI24 provides all signal
+state but not the memory letter, and memory changes from the remote do
+not generate unsolicited reports. Any received data — including
 unsolicited ZQI24 reports — resets the idle timer. This means during
 active use (source changes, input switches), no keepalive traffic is
-generated; the device's own reports prove liveness. ZQI00 also serves
-as the only way to track input memory changes (e.g. from the remote).
+generated; the device's own reports prove liveness.
 
-**Input change detection:** When `logical_input` changes (from either an
-unsolicited ZQI24 or a ZQI00 keepalive response), the coordinator:
-1. Sends ZQI00 to get the new input's memory (A/B/C/D).
-2. Schedules a ZQI24 query after a 1-second delay — but cancels it if
-   an unsolicited ZQI24 arrived in the meantime (tracked via a timestamp).
-
-This avoids redundant queries when the Lumagen already reported the change
-via an unsolicited ZQI24, while still ensuring we get full signal info
-when the change was detected via ZQI00 keepalive.
+**Input change detection:** When `logical_input` changes (from an
+unsolicited ZQI24 or keepalive), the coordinator sends ZQI00 to get
+the new input's memory (A/B/C/D), since ZQI24 does not include it.
 
 ## Startup sequence
 
@@ -75,11 +74,11 @@ when the change was detected via ZQI00 keepalive.
 5. If no stored config exists (first setup), schedule background
    `refresh_config` to fetch identity, game mode, and all labels.
 
-On power-on (off to on transition detected from S02 response or
+On power-on (off → on transition detected from ZQS02 poll response or
 `Power-up complete.` sentinel):
 
 1. Wait 10 seconds for the device to finish initialization.
-2. Fetch runtime state (ZQI24 + ZQI00).
+2. Send ZQI24 + ZQI00 to get full signal state and input memory.
 
 Note: `None` to `on` transitions (initial state discovery after HA
 restart or reconnect) do NOT trigger the power-on handler — the startup
@@ -87,12 +86,13 @@ sequence already handles this case.
 
 ## Connection lifecycle
 
-- **Keepalive timeout:** If the ZQI00 probe gets no response within
-  5 seconds (and no other data arrives), the connection is considered
-  dead and a reconnect is initiated.
+- **Keepalive timeout:** If the probe gets no response within 5 seconds
+  (and no other data arrives), the connection is considered dead and a
+  reconnect is initiated.
 - **Reconnect:** Exponential backoff (1s, 2s, 4s, ... up to 30s). On
-  reconnect, power + runtime state are re-fetched. Power state is NOT
-  reset to None on disconnect, avoiding spurious power-on detection.
+  reconnect, power is re-fetched; if on, ZQI00 is sent for input/memory
+  and the keepalive handles ZQI24. Power state is NOT reset to None on
+  disconnect, avoiding spurious power-on detection.
 - **Idle tracking:** Uses `time.monotonic()` timestamp updated on every
   received line, not per-response events. This prevents false keepalive
   timeouts when the device is slow to respond (e.g., after boot).
