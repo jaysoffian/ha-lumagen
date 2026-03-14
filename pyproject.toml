@@ -46,3 +46,6 @@ extra-paths = ["custom_components", "custom_components/ha_lumagen"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+filterwarnings = [
+    "ignore:Inheritance class HomeAssistantApplication from web.Application is discouraged:DeprecationWarning",
+]
