@@ -553,23 +553,23 @@ class TestGetSourceList:
             "A2": "Cable",
         }
         sources = client.get_source_list()
-        assert sources[0] == "Apple TV"
-        assert sources[1] == "Blu-ray"
-        assert sources[2] == "Cable"
-        assert sources[3] == "Input 4"  # fallback
+        assert sources[0] == "1: Apple TV"
+        assert sources[1] == "2: Blu-ray"
+        assert sources[2] == "3: Cable"
+        assert sources[3] == "4: Input"  # fallback
         assert len(sources) == 10
 
     def test_defaults_to_bank_a(self):
         client = _make_client()
         client.state.input_memory = None
         client.state.input_labels = {"A0": "HDMI 1"}
-        assert client.get_source_list()[0] == "HDMI 1"
+        assert client.get_source_list()[0] == "1: HDMI 1"
 
     def test_respects_current_bank(self):
         client = _make_client()
         client.state.input_memory = "B"
         client.state.input_labels = {"A0": "Wrong", "B0": "Right"}
-        assert client.get_source_list()[0] == "Right"
+        assert client.get_source_list()[0] == "1: Right"
 
 
 # ---------------------------------------------------------------------------
