@@ -46,11 +46,21 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         """Called (sync) by the client whenever device state changes."""
         new_data = copy.copy(self.client.state)
 
-        # Detect standby → active transition (not initial state discovery)
         old_power = self.data.power if self.data else None
+        old_input = self.data.logical_input if self.data else None
+
+        # Detect standby → active transition (not initial state discovery)
         if new_data.power == "on" and old_power == "off":
             _LOGGER.info("Device powered on — scheduling runtime state refresh")
             self.hass.async_create_task(self._handle_power_on())
+
+        # Detect input change — fetch per-input output config
+        if (
+            new_data.logical_input is not None
+            and new_data.logical_input != old_input
+            and old_input is not None
+        ):
+            self.hass.async_create_task(self.client.send_command("ZQI18"))
 
         self.async_set_updated_data(new_data)
 
@@ -80,6 +90,9 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         s.software_revision = data.get("software_revision")
         s.model_number = data.get("model_number")
         s.serial_number = data.get("serial_number")
+        # Config
+        if "game_mode" in data:
+            s.game_mode = data["game_mode"]
         # Labels
         s.input_labels = data.get("input_labels", {})
         s.custom_mode_labels = data.get("custom_mode_labels", {})
@@ -98,6 +111,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
                 "software_revision": s.software_revision,
                 "model_number": s.model_number,
                 "serial_number": s.serial_number,
+                "game_mode": s.game_mode,
                 "input_labels": s.input_labels,
                 "custom_mode_labels": s.custom_mode_labels,
                 "cms_labels": s.cms_labels,
@@ -105,8 +119,12 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
             }
         )
 
-    async def fetch_labels_with_backoff(self, max_attempts: int = 5) -> None:
-        """Fetch labels from device, retrying with backoff until all resolve."""
+    async def refresh_config(self, max_attempts: int = 5) -> None:
+        """Fetch identity, game mode, and labels from device."""
+        await self.client.fetch_identity()
+        await asyncio.sleep(0.05)
+        await self.client.send_command("ZQI53")
+        await asyncio.sleep(1)
         for attempt in range(max_attempts):
             failed = await self.client.get_labels()
             if failed == 0:

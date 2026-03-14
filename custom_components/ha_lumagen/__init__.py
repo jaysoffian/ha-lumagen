@@ -80,9 +80,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Fetch labels from device if none stored
+    # Fetch identity + labels from device if none stored
     if not has_stored:
-        hass.async_create_task(coordinator.fetch_labels_with_backoff())
+        hass.async_create_task(coordinator.refresh_config())
 
     _LOGGER.info("Lumagen integration ready (%s:%s)", host, port)
     return True
