@@ -19,7 +19,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up Lumagen buttons."""
     coordinator: LumagenCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([LumagenRefreshConfigButton(coordinator)])
+    async_add_entities(
+        [
+            LumagenRefreshConfigButton(coordinator),
+            LumagenResetAutoAspectButton(coordinator),
+        ]
+    )
 
 
 class LumagenRefreshConfigButton(LumagenEntity, ButtonEntity):
@@ -40,3 +45,18 @@ class LumagenRefreshConfigButton(LumagenEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Fetch identity and labels from the device."""
         await self.coordinator.refresh_config()
+
+
+class LumagenResetAutoAspectButton(LumagenEntity, ButtonEntity):
+    """Button to reset auto aspect detection."""
+
+    _attr_name = "Reset auto aspect"
+    _attr_icon = "mdi:aspect-ratio"
+
+    def __init__(self, coordinator: LumagenCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_reset_auto_aspect"
+
+    async def async_press(self) -> None:
+        """Reset auto aspect detection on the device."""
+        await self.coordinator.client.send_command("ZY550\r")

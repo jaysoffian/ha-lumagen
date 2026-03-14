@@ -33,6 +33,7 @@ ASPECT_RATIO_NAMES: dict[int, str] = {
 
 # Display name → RS232 command for setting aspect
 ASPECT_COMMANDS: dict[str, str] = {
+    "Auto": "~",
     "4:3": "[",
     "Letterbox": "]",
     "16:9": "*",
@@ -344,7 +345,6 @@ class LumagenClient:
         self._on_state_changed: Callable[[], None] | None = None
         self._on_connection_changed: Callable[[bool], None] | None = None
         self._last_recv: float = 0.0
-        self.last_i24_time: float = 0.0
         self._write_lock = asyncio.Lock()
         # Label query correlation
         self._pending_label_id: str | None = None
@@ -452,7 +452,8 @@ class LumagenClient:
                 _LOGGER.info("Reconnected to %s:%s", self._host, self._port)
                 await self.fetch_power()
                 await asyncio.sleep(0.05)
-                await self.fetch_runtime_state()
+                if self.state.power == "on":
+                    await self.send_command("ZQI00")
                 return
             delay = min(delay * 2, 30.0)
 
@@ -519,8 +520,6 @@ class LumagenClient:
         handler = RESPONSE_HANDLERS.get(name)
         if handler:
             try:
-                if name in ("I21", "I22", "I23", "I24"):
-                    self.last_i24_time = time.monotonic()
                 if handler(self.state, fields):
                     self._notify_state_changed()
             except Exception:
@@ -546,7 +545,11 @@ class LumagenClient:
     # -- Keepalive ----------------------------------------------------------
 
     async def _keepalive_loop(self) -> None:
-        """Probe connection with a power-status query after 30 s of idle."""
+        """Probe connection after 30 s of idle.
+
+        When the device is on, poll with ZQI24 (full signal state).
+        When off, poll with ZQS02 (power status).
+        """
         interval = 30
         probe_timeout = 5
         while self._running:
@@ -560,11 +563,14 @@ class LumagenClient:
             idle = time.monotonic() - self._last_recv
             if idle < interval:
                 continue
-            # Connection has been idle — probe with ZQI00 to also track
-            # input memory changes (not reported unsolicited by the device)
+            # Pick probe based on power state
             before = self._last_recv
             try:
-                await self.send_command("ZQI00")
+                if self.state.power == "on":
+                    await self.send_command("ZQI24")
+                    await self.send_command("ZQI00")
+                else:
+                    await self.send_command("ZQS02")
                 await asyncio.sleep(probe_timeout)
             except asyncio.CancelledError:
                 return
@@ -722,8 +728,11 @@ class LumagenClient:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
         await self.send_command(cmd)
+        changed = False
         if aspect == "NLS":
             changed = _setattr_changed(self.state, "nls_active", True)
+        elif aspect == "Auto":
+            changed = _setattr_changed(self.state, "nls_active", False)
         else:
             changed = _setattr_changed(self.state, "nls_active", False)
             changed |= _setattr_changed(self.state, "source_content_aspect", aspect)
@@ -775,10 +784,6 @@ class LumagenClient:
         """Enable or disable game mode."""
         await self.send_command(f"ZY551{'1' if enabled else '0'}\r")
         await self.send_command("ZQI53")
-
-    async def set_auto_aspect(self, enabled: bool) -> None:
-        """Enable or disable auto aspect detection."""
-        await self.send_command("~" if enabled else "V")
 
     # -- Labels -------------------------------------------------------------
 

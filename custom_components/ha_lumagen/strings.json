@@ -42,6 +42,10 @@
       "model_number": { "name": "Model Number" },
       "serial_number": { "name": "Serial Number" }
     },
+    "button": {
+      "refresh_config": { "name": "Refresh Config" },
+      "reset_auto_aspect": { "name": "Reset Auto Aspect" }
+    },
     "select": {
       "input": { "name": "Input" },
       "input_aspect_ratio": { "name": "Input Aspect Ratio" },
