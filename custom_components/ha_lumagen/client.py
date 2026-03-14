@@ -704,10 +704,16 @@ class LumagenClient:
             await self.send_command(f"i{number}")
         elif 10 <= number <= 19:
             await self.send_command(f"i+{number - 10}")
+        else:
+            return
+        if _setattr_changed(self.state, "logical_input", number):
+            self._notify_state_changed()
 
     async def select_memory(self, memory: str) -> None:
         """Select input memory (A / B / C / D)."""
         await self.send_command(memory.lower())
+        if _setattr_changed(self.state, "input_memory", memory.upper()):
+            self._notify_state_changed()
 
     async def set_aspect(self, aspect: str) -> None:
         """Set source aspect ratio by display name."""
@@ -716,6 +722,13 @@ class LumagenClient:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
         await self.send_command(cmd)
+        if aspect == "NLS":
+            changed = _setattr_changed(self.state, "nls_active", True)
+        else:
+            changed = _setattr_changed(self.state, "nls_active", False)
+            changed |= _setattr_changed(self.state, "source_content_aspect", aspect)
+        if changed:
+            self._notify_state_changed()
 
     async def send_remote_command(self, command: str) -> None:
         """Send a named remote-control command."""
