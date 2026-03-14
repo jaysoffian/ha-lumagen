@@ -83,13 +83,15 @@ Each physical input can be mapped to one or more **logical inputs** (also called
 
 The remote selects logical inputs: buttons 1–9 select inputs 1–9, and the `+10` prefix accesses inputs 10–19 (e.g. `+10` then `0` selects input 10). On the 5348, pressing `0` without `+10` is a shortcut for input 10.
 
-### Memory Banks
+### Input (Configuration) Memories
 
-Each logical input has four independent **configuration memories** (MEMA, MEMB, MEMC, MEMD). Switching memory banks changes the active settings for all inputs — useful for day/night modes or different display configurations. Each memory bank has its own set of input labels.
+The Radiance Pro has four input memories (MEMA, MEMB, MEMC and MEMD). Each input memory has sub-memories for each supported input resolution and rate which are automatically selected based on the input resolution and vertical-rate. The “Other” entry is selected for input resolutions and vertical rates not specified explicitly. Each input resolution and vertical rate has 8 sub-memories which are programmable on a per-input and per-input-memory basis. Different inputs and input memories can each be independently programed to one of the 8 sub-memories for each listed resolution and vertical rate.
+
+Each input memory, and sub-memory, is independent of the other memories. To allow the memories to be used for mode selection (i.e. day/night), by default, the memory type remains unchanged when a new input is selected. (i.e. If input 2 memory B is active, pressing “INPUT, 3” selects input 3 memory B).
 
 ### Input Labels
 
-Labels are stored per memory bank, indexed 0–9 (label index 0 = logical input 1, index 9 = logical input 10). The label query `ZQS1{bank}{index}` retrieves them — e.g. `ZQS1A0` gets the label for input 1 in MEMA.
+Labels are stored per input memory, indexed 0–9 (label index 0 = logical input 1, index 9 = logical input 10). The label query `ZQS1{memory}{index}` retrieves them — e.g. `ZQS1A0` gets the label for input 1 in MEMA.
 
 ### Configuration Chain
 
