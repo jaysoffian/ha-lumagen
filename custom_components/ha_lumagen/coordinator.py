@@ -49,20 +49,29 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
 
         old_power = self.data.power if self.data else None
         old_input = self.data.logical_input if self.data else None
+        old_memory = self.data.input_memory if self.data else None
 
         # Detect standby → active transition (not initial state discovery)
         if new_data.power == "on" and old_power == "off":
             _LOGGER.info("Device powered on — scheduling runtime state refresh")
             self.hass.async_create_task(self._handle_power_on())
 
-        # Detect input change — fetch input memory and (if needed) signal info
-        if (
+        # Detect input or memory change — schedule ZQI24 if stale
+        input_changed = (
             new_data.logical_input is not None
             and new_data.logical_input != old_input
             and old_input is not None
-        ):
-            self.hass.async_create_task(self.client.send_command("ZQI00"))
+        )
+        memory_changed = (
+            new_data.input_memory is not None
+            and new_data.input_memory != old_memory
+            and old_memory is not None
+        )
+        if input_changed or memory_changed:
             self._schedule_i24_if_needed()
+        # Input change may come from ZQI24 which lacks memory — fetch it
+        if input_changed:
+            self.hass.async_create_task(self.client.send_command("ZQI00"))
 
         self.async_set_updated_data(new_data)
 
