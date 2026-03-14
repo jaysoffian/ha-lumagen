@@ -39,6 +39,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         self._store: Store = Store(
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.info"
         )
+        self._pending_i24_task: asyncio.Task | None = None
 
     # -- Callbacks wired to LumagenClient -----------------------------------
 
@@ -47,11 +48,21 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         new_data = copy.copy(self.client.state)
 
         old_power = self.data.power if self.data else None
+        old_input = self.data.logical_input if self.data else None
 
         # Detect standby → active transition (not initial state discovery)
         if new_data.power == "on" and old_power == "off":
             _LOGGER.info("Device powered on — scheduling runtime state refresh")
             self.hass.async_create_task(self._handle_power_on())
+
+        # Detect input change — fetch memory bank and (if needed) signal info
+        if (
+            new_data.logical_input is not None
+            and new_data.logical_input != old_input
+            and old_input is not None
+        ):
+            self.hass.async_create_task(self.client.send_command("ZQI00"))
+            self._schedule_i24_if_needed()
 
         self.async_set_updated_data(new_data)
 
@@ -61,6 +72,19 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         self.async_set_updated_data(copy.copy(self.client.state))
 
     # -- Internal -----------------------------------------------------------
+
+    def _schedule_i24_if_needed(self) -> None:
+        """Schedule a ZQI24 query, skipping it if an unsolicited one arrives first."""
+        if self._pending_i24_task and not self._pending_i24_task.done():
+            self._pending_i24_task.cancel()
+        self._pending_i24_task = self.hass.async_create_task(self._fetch_i24_if_stale())
+
+    async def _fetch_i24_if_stale(self) -> None:
+        """Wait briefly, then send ZQI24 only if none arrived in the meantime."""
+        before = self.client.last_i24_time
+        await asyncio.sleep(1)
+        if self.client.last_i24_time == before:
+            await self.client.send_command("ZQI24")
 
     async def _handle_power_on(self) -> None:
         """After power-on, wait for the device to settle then refresh."""

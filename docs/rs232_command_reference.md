@@ -244,7 +244,7 @@ Example responses:
 | `ZQI16` | Vertical shift | `<index>,<value>` (0=off, 1–15; -511 to 511) |
 | `ZQI17` | Reinterlacing | `<enable>,<allow_keys>,<active>` (each 1/0) |
 | `ZQI18` | Output config for current input | `!I18,<out1>,<out2>,<mode>,<3d>,<cms>,<style>` |
-| `ZQI20` | Input aspect (recommended) | `!I20,<code><nls>` — code=0–9, nls='N' or '-' |
+| `ZQI20` | Input aspect | `!I20,<code><nls>` — code=0–9, nls='N' or '-' |
 | `ZQI30` | Sharpness | Values per ZY521ELS format |
 | `ZQI50` | Rec 2020 support (Pro) | `!I50,Y` or `!I50,N` |
 | `ZQI52` | HDR status (Pro) | `!I52,<V>,<Min>,<Max>,<Cll>` (V: 0=SDR, 1=HDR) |

@@ -1,6 +1,6 @@
 # State Management Design
 
-The HA integration categorizes Lumagen device state into three tiers based
+The HA integration categorizes Lumagen device state into two tiers based
 on how often each piece of data changes, which determines when and how it
 is fetched.
 
@@ -27,53 +27,51 @@ with 2-second timeouts each. The device can be slow to respond after
 boot, causing timeouts and retries. Since these values almost never
 change, caching them avoids unnecessary device traffic and startup delays.
 
-## 2. Per-input runtime state (fetched on input change and power-on)
-
-Output configuration that depends on which input is selected. The Lumagen
-stores different output settings per input, so these must be re-fetched
-when the user switches inputs.
-
-| Data           | Command | Notes                          |
-|----------------|---------|--------------------------------|
-| Output mode    | ZQI18   | Custom mode C0-C7 or direct    |
-| Output CMS     | ZQI18   | Also in ZQI24 unsolicited      |
-| Output style   | ZQI18   | Also in ZQI24 unsolicited      |
-
-**When fetched:**
-- On power-on (as part of `fetch_runtime_state`).
-- Automatically when the coordinator detects `logical_input` has changed.
-- On reconnect after connection loss.
-
-## 3. Signal state (unsolicited + keepalive)
+## 2. Signal state (unsolicited + keepalive)
 
 Volatile state that changes as the source signal changes or the user
-switches inputs. The Lumagen reports this automatically when configured
-with "Report mode changes: Full v4".
+switches inputs/memory. The Lumagen reports most of this automatically
+when configured with "Report mode changes: Full v4" (unsolicited ZQI24).
 
 | Data                        | Source       |
 |-----------------------------|--------------|
 | Power on/off                | Unsolicited sentinels (`Power-up complete.` / `POWER OFF.`) |
 | Input selection             | ZQI24 unsolicited (v3+ fields II/KK), ZQI00 keepalive |
-| Input memory bank           | ZQI00 keepalive only |
+| Input memory bank           | ZQI00 keepalive (not in ZQI24) |
+| Input configuration         | ZQI24 unsolicited |
 | Source resolution/rate      | ZQI24 unsolicited |
 | Source aspect (raster/content/detected) | ZQI24 unsolicited |
 | Source dynamic range (SDR/HDR) | ZQI24 unsolicited |
+| Source mode (progressive/interlaced) | ZQI24 unsolicited |
+| NLS status                  | ZQI24 unsolicited |
 | Output resolution/rate/aspect | ZQI24 unsolicited |
 | Output colorspace           | ZQI24 unsolicited |
-| NLS status                  | ZQI24 unsolicited |
+| Output CMS                  | ZQI24 unsolicited |
+| Output Style                | ZQI24 unsolicited |
 
 **Keepalive:** When the connection has been idle for 30 seconds (no data
 received at all), a ZQI00 probe is sent. Any received data — including
 unsolicited ZQI24 reports — resets the idle timer. This means during
 active use (source changes, input switches), no keepalive traffic is
-generated; the device's own reports prove liveness.
+generated; the device's own reports prove liveness. ZQI00 also serves
+as the only way to track memory bank changes (e.g. from the remote).
+
+**Input change detection:** When `logical_input` changes (from either an
+unsolicited ZQI24 or a ZQI00 keepalive response), the coordinator:
+1. Sends ZQI00 to get the new input's memory bank.
+2. Schedules a ZQI24 query after a 1-second delay — but cancels it if
+   an unsolicited ZQI24 arrived in the meantime (tracked via a timestamp).
+
+This avoids redundant queries when the Lumagen already reported the change
+via an unsolicited ZQI24, while still ensuring we get full signal info
+when the change was detected via ZQI00 keepalive.
 
 ## Startup sequence
 
 1. Connect to device, wait 3 seconds for TCP session to establish.
 2. Load config state from HA storage (identity, game mode, labels).
 3. Query power (ZQS02) — always needed, it's volatile.
-4. If power is on, fetch runtime state (ZQI00 + ZQI18 + ZQI24).
+4. If power is on, fetch runtime state (ZQI24 + ZQI00).
 5. If no stored config exists (first setup), schedule background
    `refresh_config` to fetch identity, game mode, and all labels.
 
@@ -81,7 +79,7 @@ On power-on (off to on transition detected from S02 response or
 `Power-up complete.` sentinel):
 
 1. Wait 10 seconds for the device to finish initialization.
-2. Fetch runtime state (ZQI00 + ZQI18 + ZQI24).
+2. Fetch runtime state (ZQI24 + ZQI00).
 
 Note: `None` to `on` transitions (initial state discovery after HA
 restart or reconnect) do NOT trigger the power-on handler — the startup
