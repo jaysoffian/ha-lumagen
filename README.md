@@ -63,32 +63,43 @@ Copy `custom_components/ha_lumagen` into your Home Assistant
 
 ### Button
 
-| Entity         | Description |
-|----------------|-------------|
-| Refresh config | Re-fetch identity, game mode, and all labels from the device and save to disk. |
+| Entity             | Description |
+|--------------------|-------------|
+| Refresh Config     | Re-fetch identity, game mode, and all labels from the device and save to disk. |
+| Reset Auto Aspect  | Reset auto aspect detection (ZY550). |
 
 ### Select
 
 | Entity             | Description |
 |--------------------|-------------|
-| Input Source       | Select from labeled inputs (cached on disk; press Refresh config to update) |
-| Source Aspect Ratio | 4:3, Letterbox, 16:9, 1.85, 1.90, 2.00, 2.20, 2.35, 2.40, NLS |
+| Input              | Select from labeled inputs (cached on disk; press Refresh Config to update) |
+| Input Aspect Ratio | Auto, 4:3, Letterbox, 16:9, 1.85, 1.90, 2.00, 2.10, 2.20, 2.35, 2.40, 2.55, 2.76, NLS |
 | Memory             | Select input memory A / B / C / D |
 
 ### Sensors
 
 **Status** (available when device is active):
 
-| Sensor               | Description |
-|----------------------|-------------|
-| Logical Input        | Current logical input number |
-| Physical Input       | Current physical input |
-| Output Resolution    | Output vertical resolution and refresh rate |
-| Source Aspect Ratio  | Detected source content aspect |
-| Source Dynamic Range | SDR / HDR |
-| Input Configuration  | Active input config number |
-| Output CMS           | Active color management system (0–7) |
-| Output Style         | Active output style (0–7) |
+| Sensor                       | Description |
+|------------------------------|-------------|
+| Logical Input                | Current logical input number |
+| Physical Input               | Current physical input |
+| Input Configuration          | Active input config number |
+| Source Resolution             | Source vertical resolution |
+| Source Refresh Rate           | Source vertical refresh rate |
+| Source Content Aspect Ratio   | Detected source content aspect |
+| Source Raster Aspect Ratio    | Source raster aspect |
+| Source Dynamic Range          | SDR / HDR |
+| Source Mode                   | Progressive / Interlaced |
+| NLS Active                   | Non-linear stretch active |
+| Detected Content Aspect Ratio | Auto-detected content aspect (v4 firmware) |
+| Detected Raster Aspect Ratio  | Auto-detected raster aspect (v4 firmware) |
+| Output Resolution             | Output vertical resolution |
+| Output Refresh Rate           | Output vertical refresh rate |
+| Output Aspect Ratio           | Output aspect ratio |
+| Output Colorspace             | Output colorspace (e.g. BT.709, BT.2020) |
+| Output CMS                    | Active color management system (0–7) |
+| Output Style                  | Active output style (0–7) |
 
 **Diagnostic** (available whenever connected, even in standby):
 
@@ -277,7 +288,7 @@ custom_components/ha_lumagen/
   sensor.py        — status + diagnostic sensors
   select.py        — input, aspect ratio, memory
   switch.py        — power on/off
-  button.py        — refresh config button
+  button.py        — refresh config, reset auto aspect buttons
   remote.py        — menu navigation commands
   const.py         — domain, defaults, errors
 tui.py             — standalone Textual TUI for interactive testing
