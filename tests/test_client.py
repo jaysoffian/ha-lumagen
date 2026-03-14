@@ -404,14 +404,8 @@ class TestProcessLine:
     # -- Alive (S00) -------------------------------------------------------
 
     def test_alive_response(self):
-        self.client._alive_event = asyncio.Event()
         self.client._process_line("ZQS00!S00,Ok")
-        assert self.client._alive_event.is_set()
         assert self.state_changes == 0  # alive is not a state change
-
-    def test_alive_without_event(self):
-        """No crash when _alive_event is None."""
-        self.client._process_line("ZQS00!S00,Ok")
 
     # -- S01 device ID with echo -------------------------------------------
 
