@@ -344,6 +344,7 @@ class LumagenClient:
         self._on_state_changed: Callable[[], None] | None = None
         self._on_connection_changed: Callable[[bool], None] | None = None
         self._last_recv: float = 0.0
+        self.last_i24_time: float = 0.0
         self._write_lock = asyncio.Lock()
         # Label query correlation
         self._pending_label_id: str | None = None
@@ -518,6 +519,8 @@ class LumagenClient:
         handler = RESPONSE_HANDLERS.get(name)
         if handler:
             try:
+                if name in ("I21", "I22", "I23", "I24"):
+                    self.last_i24_time = time.monotonic()
                 if handler(self.state, fields):
                     self._notify_state_changed()
             except Exception:
@@ -543,7 +546,7 @@ class LumagenClient:
     # -- Keepalive ----------------------------------------------------------
 
     async def _keepalive_loop(self) -> None:
-        """Poll input state when the connection has been idle for 30 s."""
+        """Probe connection with a power-status query after 30 s of idle."""
         interval = 30
         probe_timeout = 5
         while self._running:
@@ -557,7 +560,8 @@ class LumagenClient:
             idle = time.monotonic() - self._last_recv
             if idle < interval:
                 continue
-            # Connection has been idle — send a probe
+            # Connection has been idle — probe with ZQI00 to also track
+            # memory bank changes (not reported unsolicited by the device)
             before = self._last_recv
             try:
                 await self.send_command("ZQI00")
@@ -600,10 +604,10 @@ class LumagenClient:
         await self.send_command("ZQS02")
 
     async def fetch_runtime_state(self) -> None:
-        """Query current input, output config, and signal info."""
-        for cmd in ("ZQI00", "ZQI24"):
-            await self.send_command(cmd)
-            await asyncio.sleep(0.05)
+        """Query signal info and memory bank. Called at startup and power-on."""
+        await self.send_command("ZQI24")
+        await asyncio.sleep(0.05)
+        await self.send_command("ZQI00")
 
     async def fetch_full_state(self) -> None:
         """Query identity, power, input, output config, and full info."""
@@ -707,6 +711,7 @@ class LumagenClient:
         await self.send_command(bank.lower())
         await asyncio.sleep(0.5)
         await self.send_command("ZQI00")
+        await self.send_command("ZQI24")
 
     async def set_aspect(self, aspect: str) -> None:
         """Set source aspect ratio by display name."""
@@ -715,6 +720,8 @@ class LumagenClient:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
         await self.send_command(cmd)
+        await asyncio.sleep(0.5)
+        await self.send_command("ZQI24")
 
     async def send_remote_command(self, command: str) -> None:
         """Send a named remote-control command."""
