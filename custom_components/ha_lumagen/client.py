@@ -704,14 +704,10 @@ class LumagenClient:
             await self.send_command(f"i{number}")
         elif 10 <= number <= 19:
             await self.send_command(f"i+{number - 10}")
-        await self.send_command("ZQI00")
 
     async def select_memory(self, bank: str) -> None:
         """Select memory bank (A / B / C / D)."""
         await self.send_command(bank.lower())
-        await asyncio.sleep(0.5)
-        await self.send_command("ZQI00")
-        await self.send_command("ZQI24")
 
     async def set_aspect(self, aspect: str) -> None:
         """Set source aspect ratio by display name."""
@@ -720,8 +716,6 @@ class LumagenClient:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
         await self.send_command(cmd)
-        await asyncio.sleep(0.5)
-        await self.send_command("ZQI24")
 
     async def send_remote_command(self, command: str) -> None:
         """Send a named remote-control command."""
