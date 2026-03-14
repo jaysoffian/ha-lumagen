@@ -355,12 +355,11 @@ class TestHandleFullInfo:
         state = LumagenState()
         assert _handle_full_info(state, ["1"] * 10) is False
 
-    def test_no_change_still_returns_true(self):
-        """I24 always returns True to clear optimistic state on entities."""
+    def test_no_change_returns_false(self):
         fields = _make_i24_fields()
         state = LumagenState()
         _handle_full_info(state, fields)
-        assert _handle_full_info(state, fields) is True
+        assert _handle_full_info(state, fields) is False
 
     def test_extra_fields_tolerated(self):
         """Future firmware may append additional fields."""
