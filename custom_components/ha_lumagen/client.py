@@ -90,7 +90,7 @@ _OUTPUT_COLORSPACE = {
 _RESPONSE_RE = re.compile(r"!([A-Z]\d{2}),(.*)")
 
 # Regex for label responses: !S1<category>,<label text>
-# Category is A-D (input banks) or 1-3 (custom mode / CMS / style).
+# Category is A-D (input memories) or 1-3 (custom mode / CMS / style).
 _LABEL_RE = re.compile(r"!S1([A-D123]),")
 
 
@@ -199,7 +199,7 @@ def _handle_power(state: LumagenState, fields: list[str]) -> bool:
 
 
 def _handle_input_info(state: LumagenState, fields: list[str]) -> bool:
-    """I00 — logical input, memory bank, physical input."""
+    """I00 — logical input, input memory, physical input."""
     if len(fields) < 3:
         return False
     changed = False
@@ -561,7 +561,7 @@ class LumagenClient:
             if idle < interval:
                 continue
             # Connection has been idle — probe with ZQI00 to also track
-            # memory bank changes (not reported unsolicited by the device)
+            # input memory changes (not reported unsolicited by the device)
             before = self._last_recv
             try:
                 await self.send_command("ZQI00")
@@ -604,7 +604,7 @@ class LumagenClient:
         await self.send_command("ZQS02")
 
     async def fetch_runtime_state(self) -> None:
-        """Query signal info and memory bank. Called at startup and power-on."""
+        """Query signal info and input memory. Called at startup and power-on."""
         await self.send_command("ZQI24")
         await asyncio.sleep(0.05)
         await self.send_command("ZQI00")
@@ -627,10 +627,10 @@ class LumagenClient:
         expected = 0
 
         # Input labels: A0-D9 (reverse iteration works around firmware bug)
-        for bank in "ABCD":
+        for mem in "ABCD":
             for i in reversed(range(10)):
                 expected += 1
-                label_id = f"{bank}{i}"
+                label_id = f"{mem}{i}"
                 val = await self._query_label(label_id)
                 if val is not None:
                     all_labels[label_id] = val
@@ -672,14 +672,14 @@ class LumagenClient:
             self._pending_label_id = None
 
     def get_source_list(self) -> list[str]:
-        """Return ordered source labels for the current memory bank.
+        """Return ordered source labels for the current input memory.
 
-        Labels are stored per memory bank at indices 0-9, where label
+        Labels are stored per input memory at indices 0-9, where label
         index 0 = logical input 1, index 9 = logical input 10.
         """
-        bank = self.state.input_memory or "A"
+        mem = self.state.input_memory or "A"
         return [
-            f"{self.state.input_labels.get(f'{bank}{i}', 'Input')} ({i + 1})"
+            f"{self.state.input_labels.get(f'{mem}{i}', 'Input')} ({i + 1})"
             for i in range(10)
         ]
 
@@ -705,9 +705,9 @@ class LumagenClient:
         elif 10 <= number <= 19:
             await self.send_command(f"i+{number - 10}")
 
-    async def select_memory(self, bank: str) -> None:
-        """Select memory bank (A / B / C / D)."""
-        await self.send_command(bank.lower())
+    async def select_memory(self, memory: str) -> None:
+        """Select input memory (A / B / C / D)."""
+        await self.send_command(memory.lower())
 
     async def set_aspect(self, aspect: str) -> None:
         """Set source aspect ratio by display name."""
@@ -772,7 +772,7 @@ class LumagenClient:
     async def set_label(self, category: str, index: int, text: str) -> None:
         """Set a label on the device.
 
-        *category*: 'A'-'D' (input per memory bank), '0' (all input banks),
+        *category*: 'A'-'D' (input per input memory), '0' (all input memories),
                     '1' (custom mode), '2' (CMS), '3' (style).
         *index*: label index (0-9 for inputs, 0-7 for modes/CMS/styles).
         *text*: label text.

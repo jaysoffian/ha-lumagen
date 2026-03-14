@@ -55,7 +55,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
             _LOGGER.info("Device powered on — scheduling runtime state refresh")
             self.hass.async_create_task(self._handle_power_on())
 
-        # Detect input change — fetch memory bank and (if needed) signal info
+        # Detect input change — fetch input memory and (if needed) signal info
         if (
             new_data.logical_input is not None
             and new_data.logical_input != old_input

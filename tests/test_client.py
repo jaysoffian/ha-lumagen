@@ -485,13 +485,13 @@ class TestProcessLine:
         self.client._process_line("ZQS1B3!S1B,Blu-ray")
         assert self.client._last_label_value == "Blu-ray"
 
-    def test_label_all_banks(self):
-        """Labels from all four input banks are recognized."""
-        for bank in "ABCD":
+    def test_label_all_memories(self):
+        """Labels from all four input memories are recognized."""
+        for mem in "ABCD":
             client = _make_client()
-            client._pending_label_id = f"{bank}0"
+            client._pending_label_id = f"{mem}0"
             client._label_event = asyncio.Event()
-            client._process_line(f"ZQS1{bank}0!S1{bank},Test")
+            client._process_line(f"ZQS1{mem}0!S1{mem},Test")
             assert client._last_label_value == "Test"
 
     def test_label_custom_mode(self):
@@ -559,13 +559,13 @@ class TestGetSourceList:
         assert sources[3] == "Input (4)"  # fallback
         assert len(sources) == 10
 
-    def test_defaults_to_bank_a(self):
+    def test_defaults_to_memory_a(self):
         client = _make_client()
         client.state.input_memory = None
         client.state.input_labels = {"A0": "HDMI 1"}
         assert client.get_source_list()[0] == "HDMI 1 (1)"
 
-    def test_respects_current_bank(self):
+    def test_respects_current_memory(self):
         client = _make_client()
         client.state.input_memory = "B"
         client.state.input_labels = {"A0": "Wrong", "B0": "Right"}

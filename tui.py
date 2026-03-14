@@ -120,9 +120,9 @@ def _output_summary(s: LumagenState) -> str:
 
 
 def _input_label(s: LumagenState) -> str:
-    bank = s.input_memory or "A"
+    mem = s.input_memory or "A"
     idx = (s.logical_input or 1) - 1
-    return s.input_labels.get(f"{bank}{idx}", "—")
+    return s.input_labels.get(f"{mem}{idx}", "—")
 
 
 def _input_summary(s: LumagenState) -> str:
@@ -215,7 +215,7 @@ HELP_TEXT = """\
 [bold]Power & Input:[/]
   on / off               turn Lumagen on or off
   <1-19>                 select input
-  a / b / c / d          select memory bank
+  a / b / c / d          select input memory
 
 [bold]Video Processing:[/]
   aspect <name>          source aspect (4:3, 16:9, 2.40, NLS, …)
@@ -432,7 +432,7 @@ class LumagenTUI(App):
             await self._client.power_off()
             return
 
-        # Bare letter → memory bank shortcut
+        # Bare letter → input memory shortcut
         if cmd in "abcd" and not arg:
             await self._client.select_memory(cmd)
             return

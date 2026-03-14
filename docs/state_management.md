@@ -37,7 +37,7 @@ when configured with "Report mode changes: Full v4" (unsolicited ZQI24).
 |-----------------------------|--------------|
 | Power on/off                | Unsolicited sentinels (`Power-up complete.` / `POWER OFF.`) |
 | Input selection             | ZQI24 unsolicited (v3+ fields II/KK), ZQI00 keepalive |
-| Input memory bank           | ZQI00 keepalive (not in ZQI24) |
+| Input memory (A/B/C/D)      | ZQI00 keepalive (not in ZQI24) |
 | Input configuration         | ZQI24 unsolicited |
 | Source resolution/rate      | ZQI24 unsolicited |
 | Source aspect (raster/content/detected) | ZQI24 unsolicited |
@@ -54,11 +54,11 @@ received at all), a ZQI00 probe is sent. Any received data — including
 unsolicited ZQI24 reports — resets the idle timer. This means during
 active use (source changes, input switches), no keepalive traffic is
 generated; the device's own reports prove liveness. ZQI00 also serves
-as the only way to track memory bank changes (e.g. from the remote).
+as the only way to track input memory changes (e.g. from the remote).
 
 **Input change detection:** When `logical_input` changes (from either an
 unsolicited ZQI24 or a ZQI00 keepalive response), the coordinator:
-1. Sends ZQI00 to get the new input's memory bank.
+1. Sends ZQI00 to get the new input's memory (A/B/C/D).
 2. Schedules a ZQI24 query after a 1-second delay — but cancels it if
    an unsolicited ZQI24 arrived in the meantime (tracked via a timestamp).
 
