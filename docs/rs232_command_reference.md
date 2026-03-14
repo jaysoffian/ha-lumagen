@@ -98,7 +98,7 @@ Labels are stored per input memory, indexed 0–9 (label index 0 = logical input
 Each input memory has sub-memories automatically selected by input resolution and 2D/3D mode. Each sub-memory links to an output **Mode** (0–7), **CMS** (0–7), and **Style** (0–7):
 
 ```
-Logical Input → Memory Bank (A-D) → Resolution Sub-memory → Mode + CMS + Style
+Logical Input → Input Memory (A-D) → Resolution Sub-memory → Mode + CMS + Style
 ```
 
 By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and Style 0.

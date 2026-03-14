@@ -73,7 +73,7 @@ Copy `custom_components/ha_lumagen` into your Home Assistant
 |--------------------|-------------|
 | Input Source       | Select from labeled inputs (cached on disk; press Refresh config to update) |
 | Source Aspect Ratio | 4:3, Letterbox, 16:9, 1.85, 1.90, 2.00, 2.20, 2.35, 2.40, NLS |
-| Memory Bank        | Recall memory A / B / C / D |
+| Memory             | Select input memory A / B / C / D |
 
 ### Sensors
 
@@ -227,7 +227,7 @@ For the full RS-232 command and query reference, see
 Labels are cached on disk. If you see default names:
 1. Confirm you have custom labels configured on the Lumagen
 2. Press the **Refresh config** button entity to fetch labels from the device
-3. Labels are per memory bank — switching banks shows that bank's labels
+3. Labels are per input memory — switching memories shows that memory's labels
 
 ## Development
 
@@ -275,7 +275,7 @@ custom_components/ha_lumagen/
   entity.py        — shared base entity (device_info, availability)
   config_flow.py   — single-step IP/port config flow
   sensor.py        — status + diagnostic sensors
-  select.py        — input source, aspect ratio, memory bank
+  select.py        — input, aspect ratio, memory
   switch.py        — power on/off
   button.py        — refresh config button
   remote.py        — menu navigation commands
