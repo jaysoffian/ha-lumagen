@@ -61,11 +61,17 @@ Copy `custom_components/ha_lumagen` into your Home Assistant
 |--------|-------------|
 | Power  | Turn device on / standby. Optimistic state for instant UI feedback. |
 
+### Button
+
+| Entity         | Description |
+|----------------|-------------|
+| Refresh config | Re-fetch identity, game mode, and all labels from the device and save to disk. |
+
 ### Select
 
 | Entity             | Description |
 |--------------------|-------------|
-| Input Source       | Select from labeled inputs (labels read from device on power-on) |
+| Input Source       | Select from labeled inputs (cached on disk; press Refresh config to update) |
 | Source Aspect Ratio | 4:3, Letterbox, 16:9, 1.85, 1.90, 2.00, 2.20, 2.35, 2.40, NLS |
 | Memory Bank        | Recall memory A / B / C / D |
 
@@ -189,11 +195,15 @@ come from the TCP stream:
 
 - **Mode changes**: the Lumagen pushes `!I24,…` unsolicited
 - **Power changes**: `Power-up complete.` / `POWER OFF.` sentinels
-- **Keepalive**: `ZQS00` sent every 30 s; if no `!S00,Ok` within 5 s,
-  the client reconnects
+- **Input changes**: detected from ZQI00/ZQI24, triggers ZQI18 fetch for
+  per-input output config
+- **Keepalive**: `ZQI00` sent after 30 s of idle; any received data resets
+  the timer
 
-On power-on (standby → active), the integration waits 5 seconds then
-re-queries full device state and fetches all input labels.
+Device state is split into three tiers — config (stored on disk), per-input
+runtime, and signal (unsolicited). See
+[docs/state_management.md](docs/state_management.md) for details on what is
+fetched when and why.
 
 For the full RS-232 command and query reference, see
 [docs/rs232_command_reference.md](docs/rs232_command_reference.md).
@@ -214,9 +224,9 @@ For the full RS-232 command and query reference, see
 
 ### Input source dropdown shows "Input 1", "Input 2", …
 
-Labels are fetched from the device on power-on. If you see default names:
+Labels are cached on disk. If you see default names:
 1. Confirm you have custom labels configured on the Lumagen
-2. Power-cycle the device (or toggle the power switch) to trigger a label fetch
+2. Press the **Refresh config** button entity to fetch labels from the device
 3. Labels are per memory bank — switching banks shows that bank's labels
 
 ## Development
@@ -267,11 +277,13 @@ custom_components/ha_lumagen/
   sensor.py        — status + diagnostic sensors
   select.py        — input source, aspect ratio, memory bank
   switch.py        — power on/off
+  button.py        — refresh config button
   remote.py        — menu navigation commands
   const.py         — domain, defaults, errors
 tui.py             — standalone Textual TUI for interactive testing
 docs/
   rs232_command_reference.md — full Lumagen RS-232 command + query reference
+  state_management.md        — state tier design, startup sequence, connection lifecycle
 tests/
   test_client.py   — response parsing and protocol tests
 ```
