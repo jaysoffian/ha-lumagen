@@ -696,7 +696,7 @@ class LumagenClient:
         """
         bank = self.state.input_memory or "A"
         return [
-            f"{i + 1}: {self.state.input_labels.get(f'{bank}{i}', 'Input')}"
+            f"{self.state.input_labels.get(f'{bank}{i}', 'Input')} ({i + 1})"
             for i in range(10)
         ]
 
