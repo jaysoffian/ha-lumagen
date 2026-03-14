@@ -447,7 +447,6 @@ class LumagenClient:
 
         was_connected = self.state.connected
         self.state.connected = False
-        self.state.power = None  # ensure power-on detected on reconnect
 
         if was_connected:
             if self._on_connection_changed:
@@ -471,7 +470,9 @@ class LumagenClient:
             await self._open_connection()
             if self.state.connected:
                 _LOGGER.info("Reconnected to %s:%s", self._host, self._port)
-                await self.fetch_full_state()
+                await self.fetch_power()
+                await asyncio.sleep(0.05)
+                await self.fetch_runtime_state()
                 return
             delay = min(delay * 2, 30.0)
 
@@ -611,11 +612,27 @@ class LumagenClient:
 
     # -- State queries ------------------------------------------------------
 
+    async def fetch_identity(self) -> None:
+        """Query device identity (model, firmware, serial)."""
+        await self.send_command("ZQS01")
+
+    async def fetch_power(self) -> None:
+        """Query power state."""
+        await self.send_command("ZQS02")
+
+    async def fetch_runtime_state(self) -> None:
+        """Query current input, output config, and signal info."""
+        for cmd in ("ZQI00", "ZQI18", "ZQI53", "ZQI24"):
+            await self.send_command(cmd)
+            await asyncio.sleep(0.05)
+
     async def fetch_full_state(self) -> None:
         """Query identity, power, input, output config, and full info."""
-        for cmd in ("ZQS01", "ZQS02", "ZQI00", "ZQI18", "ZQI53", "ZQI24"):
-            await self.send_command(cmd)
-            await asyncio.sleep(0.05)  # brief pause between queries
+        await self.fetch_identity()
+        await asyncio.sleep(0.05)
+        await self.fetch_power()
+        await asyncio.sleep(0.05)
+        await self.fetch_runtime_state()
 
     async def get_labels(self) -> int:
         """Query all labels (inputs A0-D9, custom modes, CMS, styles).
