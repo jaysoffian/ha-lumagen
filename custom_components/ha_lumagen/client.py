@@ -140,9 +140,7 @@ class LumagenState:
     output_colorspace: str | None = None
     output_aspect: str | None = None
 
-    # Output config (from I18)
-    output_mode: int | None = None  # 0-7 custom mode
-    auto_aspect: bool | None = None
+    # Config (from I53)
     game_mode: bool | None = None
 
     # Labels (populated by get_labels)
@@ -283,24 +281,6 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
     return changed
 
 
-def _handle_output_config(state: LumagenState, fields: list[str]) -> bool:
-    """I18 — output config for current input.
-
-    Response: !I18,<out1>,<out2>,<mode>,<3d>,<cms>,<style>
-    mode is C0-C7 for custom configs or D<name> for direct mode.
-    """
-    if len(fields) < 6:
-        return False
-    changed = False
-    # Parse mode: "C0"-"C7" → int 0-7
-    mode_str = fields[2]
-    if mode_str.startswith("C") and len(mode_str) == 2:
-        changed |= _setattr_changed(state, "output_mode", _safe_int(mode_str[1]))
-    changed |= _setattr_changed(state, "output_cms", _safe_int(fields[4]))
-    changed |= _setattr_changed(state, "output_style", _safe_int(fields[5]))
-    return changed
-
-
 def _handle_game_mode(state: LumagenState, fields: list[str]) -> bool:
     """I53 — game mode status."""
     if not fields:
@@ -333,7 +313,6 @@ RESPONSE_HANDLERS: dict[str, Callable[[LumagenState, list[str]], bool]] = {
     "S01": _handle_device_id,
     "S02": _handle_power,
     "I00": _handle_input_info,
-    "I18": _handle_output_config,
     "I20": _handle_aspect_mode,
     "I21": _handle_full_info,
     "I22": _handle_full_info,
@@ -622,7 +601,7 @@ class LumagenClient:
 
     async def fetch_runtime_state(self) -> None:
         """Query current input, output config, and signal info."""
-        for cmd in ("ZQI00", "ZQI18", "ZQI24"):
+        for cmd in ("ZQI00", "ZQI24"):
             await self.send_command(cmd)
             await asyncio.sleep(0.05)
 
@@ -726,6 +705,7 @@ class LumagenClient:
     async def select_memory(self, bank: str) -> None:
         """Select memory bank (A / B / C / D)."""
         await self.send_command(bank.lower())
+        await asyncio.sleep(0.5)
         await self.send_command("ZQI00")
 
     async def set_aspect(self, aspect: str) -> None:
@@ -775,7 +755,7 @@ class LumagenClient:
         c = str(cms) if cms is not None else "K"
         s = str(style) if style is not None else "K"
         await self.send_command(f"ZY530{m}{c}{s}\r")
-        await self.send_command("ZQI18")
+        await self.send_command("ZQI24")
 
     async def set_game_mode(self, enabled: bool) -> None:
         """Enable or disable game mode."""

@@ -28,14 +28,6 @@ class LumagenSensorEntityDescription(SensorEntityDescription):
     value_fn: Callable[[LumagenState], Any]
 
 
-def _format_output_resolution(data: LumagenState) -> str | None:
-    """Format output resolution as a human-readable string."""
-    if not data.output_vertical_resolution:
-        return None
-    rate = data.output_vertical_rate or 0
-    return f"{data.output_vertical_resolution}@{rate}Hz"
-
-
 STATUS_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (
     LumagenSensorEntityDescription(
         key="logical_input",
@@ -50,16 +42,35 @@ STATUS_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (
         value_fn=lambda data: data.physical_input,
     ),
     LumagenSensorEntityDescription(
-        key="output_resolution",
-        name="Output Resolution",
-        icon="mdi:monitor",
-        value_fn=_format_output_resolution,
+        key="input_configuration",
+        name="Input Configuration",
+        icon="mdi:cog",
+        value_fn=lambda data: data.input_config_number,
+    ),
+    # Source
+    LumagenSensorEntityDescription(
+        key="source_vertical_resolution",
+        name="Source Resolution",
+        icon="mdi:video",
+        value_fn=lambda data: data.source_vertical_resolution,
     ),
     LumagenSensorEntityDescription(
-        key="source_aspect_ratio",
-        name="Source Aspect Ratio",
+        key="source_vertical_rate",
+        name="Source Refresh Rate",
+        icon="mdi:timer-outline",
+        value_fn=lambda data: data.source_vertical_rate,
+    ),
+    LumagenSensorEntityDescription(
+        key="source_content_aspect",
+        name="Source Content Aspect Ratio",
         icon="mdi:aspect-ratio",
         value_fn=lambda data: data.source_content_aspect,
+    ),
+    LumagenSensorEntityDescription(
+        key="source_raster_aspect",
+        name="Source Raster Aspect Ratio",
+        icon="mdi:aspect-ratio",
+        value_fn=lambda data: data.source_raster_aspect,
     ),
     LumagenSensorEntityDescription(
         key="source_dynamic_range",
@@ -68,10 +79,53 @@ STATUS_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (
         value_fn=lambda data: data.source_dynamic_range,
     ),
     LumagenSensorEntityDescription(
-        key="input_configuration",
-        name="Input Configuration",
-        icon="mdi:cog",
-        value_fn=lambda data: data.input_config_number,
+        key="source_mode",
+        name="Source Mode",
+        icon="mdi:scan-helper",
+        value_fn=lambda data: data.source_mode,
+    ),
+    LumagenSensorEntityDescription(
+        key="nls_active",
+        name="NLS Active",
+        icon="mdi:arrow-expand-horizontal",
+        value_fn=lambda data: data.nls_active,
+    ),
+    LumagenSensorEntityDescription(
+        key="detected_content_aspect",
+        name="Detected Content Aspect Ratio",
+        icon="mdi:aspect-ratio",
+        value_fn=lambda data: data.detected_content_aspect,
+    ),
+    LumagenSensorEntityDescription(
+        key="detected_raster_aspect",
+        name="Detected Raster Aspect Ratio",
+        icon="mdi:aspect-ratio",
+        value_fn=lambda data: data.detected_raster_aspect,
+    ),
+    # Output
+    LumagenSensorEntityDescription(
+        key="output_vertical_resolution",
+        name="Output Resolution",
+        icon="mdi:monitor",
+        value_fn=lambda data: data.output_vertical_resolution,
+    ),
+    LumagenSensorEntityDescription(
+        key="output_vertical_rate",
+        name="Output Refresh Rate",
+        icon="mdi:timer-outline",
+        value_fn=lambda data: data.output_vertical_rate,
+    ),
+    LumagenSensorEntityDescription(
+        key="output_aspect",
+        name="Output Aspect Ratio",
+        icon="mdi:aspect-ratio",
+        value_fn=lambda data: data.output_aspect,
+    ),
+    LumagenSensorEntityDescription(
+        key="output_colorspace",
+        name="Output Colorspace",
+        icon="mdi:palette",
+        value_fn=lambda data: data.output_colorspace,
     ),
     LumagenSensorEntityDescription(
         key="output_cms",
