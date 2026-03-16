@@ -1,6 +1,8 @@
 # Lumagen Radiance Pro — RS-232 Command Reference
 
-Source: [Tech Tip 11 - Radiance RS-232 control (11/20/2023)](https://www.lumagen.com/s/Tip0011_RS232CommandInterface_111023.pdf)
+Sources:
+- [Tech Tip 11 - Radiance RS-232 control (11/20/2023)](https://www.lumagen.com/s/Tip0011_RS232CommandInterface_111023.pdf)
+- [Radiance Pro firmware changelog](https://www.lumagen.com/software-updates/radiance-pro-updates)
 
 This is a reference for building a TCP client (e.g. for Home Assistant / Homebridge) that talks to a Lumagen Radiance Pro via a TCP-to-serial adapter (e.g. Global Cache IP2SL or USR-TCP232-302) connected to its RS-232 port. It is assumed that by connecting to the TCP-to-serial adapter over TCP, the connection faithfully echoes data to the RS-232 port and vice-versa.
 
@@ -251,6 +253,7 @@ Example responses:
 | `ZQI50` | Rec 2020 support (Pro) | `!I50,Y` or `!I50,N` |
 | `ZQI52` | HDR status (Pro) | `!I52,<V>,<Min>,<Max>,<Cll>` (V: 0=SDR, 1=HDR) |
 | `ZQI53` | Game mode | 0=off, 1=on |
+| `ZQI54` | Auto aspect status (fw ≥041824) | `!I54,0` (disabled) / `!I54,1` (enabled) |
 
 \* Input setting is combined with output setting; final value clamped to register max.
 
@@ -442,6 +445,8 @@ Example responses:
 |---------|-------------|
 | `ZY550<CR>` | Reset auto aspect detection |
 | `ZY551X<CR>` | Game mode (0=off, 1=on) |
+| `ZY552X<CR>` | Set minimum fan speed (X=0–9 for speeds 1–10; fw ≥041824) |
+| `ZY553X<CR>` | Subtitle shift (0=disable, 1=shift 3%, 2=shift 6%; fw ≥092025) |
 
 ### Display / OSD
 
@@ -450,6 +455,7 @@ Example responses:
 | `ZB<X>` | Define block char (rendered as `█`) — **no `<CR>`** |
 | `ZC` | Clear OSD message — **no `<CR>`** |
 | `ZTMxxxx<CR>` | Display message (M='0'–'8' timed, '9'=persistent; 2 lines, 30 chars/line) |
+| `ZY811<CR>` | Pop up input and aspect on OSD (fw ≥030424) |
 | `ZY418CRRGGBB<CR>` | Message colors (C: 0=bg, 1=fg, 2=blend; RRGGBB hex; when setting blend value, only last B digit is used so range is 000001-00000f where ‘f’ is opaque messages and ‘1’ is near transparent. |
 
 ### Test Patterns
