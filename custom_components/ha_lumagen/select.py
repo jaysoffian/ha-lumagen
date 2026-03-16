@@ -133,6 +133,8 @@ class LumagenSelectEntity(LumagenEntity, SelectEntity):
 
     def _update_attrs(self) -> None:
         super()._update_attrs()
+        if self.coordinator.data is None:
+            return
         if self.entity_description.static_options:
             self._attr_options = self.entity_description.static_options
         elif self.entity_description.options_fn:

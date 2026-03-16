@@ -198,10 +198,12 @@ class LumagenSensorEntity(LumagenEntity, SensorEntity):
 
     def _update_attrs(self) -> None:
         super()._update_attrs()
+        data = self.coordinator.data
+        if data is None:
+            return
+        # Diagnostic sensors available whenever connected (even in standby)
         if self.entity_description.entity_category == EntityCategory.DIAGNOSTIC:
             self._attr_available = (
-                self.coordinator.last_update_success and self.coordinator.data.connected
+                self.coordinator.last_update_success and data.connected
             )
-        self._attr_native_value = self.entity_description.value_fn(
-            self.coordinator.data
-        )
+        self._attr_native_value = self.entity_description.value_fn(data)
