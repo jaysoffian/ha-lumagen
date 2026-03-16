@@ -84,6 +84,8 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         # Config
         if "game_mode" in data:
             s.game_mode = data["game_mode"]
+        if "auto_aspect" in data:
+            s.auto_aspect = data["auto_aspect"]
         # Labels
         s.input_labels = data.get("input_labels", {})
         s.custom_mode_labels = data.get("custom_mode_labels", {})
@@ -103,6 +105,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
                 "model_number": s.model_number,
                 "serial_number": s.serial_number,
                 "game_mode": s.game_mode,
+                "auto_aspect": s.auto_aspect,
                 "input_labels": s.input_labels,
                 "custom_mode_labels": s.custom_mode_labels,
                 "cms_labels": s.cms_labels,
@@ -115,6 +118,8 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         await self.client.fetch_identity()
         await asyncio.sleep(0.05)
         await self.client.send_command("ZQI53")
+        await asyncio.sleep(0.05)
+        await self.client.send_command("ZQI54")
         await asyncio.sleep(1)
         for attempt in range(max_attempts):
             failed = await self.client.get_labels()

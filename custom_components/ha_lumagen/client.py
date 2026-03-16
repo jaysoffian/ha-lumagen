@@ -355,6 +355,13 @@ def _handle_game_mode(state: LumagenState, fields: list[str]) -> None:
     state.game_mode = fields[0] == "1"
 
 
+def _handle_auto_aspect(state: LumagenState, fields: list[str]) -> None:
+    """I54 — auto aspect status (fw ≥041824)."""
+    if not fields:
+        return
+    state.auto_aspect = fields[0] == "1"
+
+
 def _handle_aspect_mode(state: LumagenState, fields: list[str]) -> None:
     """I20 — input aspect and NLS status.
 
@@ -385,6 +392,7 @@ RESPONSE_HANDLERS: dict[str, Callable[[LumagenState, list[str]], None]] = {
     "I24": _handle_full_info,
     "I25": _handle_full_info,
     "I53": _handle_game_mode,
+    "I54": _handle_auto_aspect,
 }
 
 
@@ -894,6 +902,11 @@ class LumagenClient:
         s = str(style) if style is not None else "K"
         await self.send_command(f"ZY530{m}{c}{s}\r")
         await self.send_command("ZQI25")
+
+    async def set_auto_aspect(self, enabled: bool) -> None:
+        """Enable or disable auto aspect detection."""
+        await self.send_command("~" if enabled else "V")
+        await self.send_command("ZQI54")
 
     async def set_game_mode(self, enabled: bool) -> None:
         """Enable or disable game mode."""
