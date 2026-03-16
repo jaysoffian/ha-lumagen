@@ -197,7 +197,7 @@ class LumagenState:
     output_aspect: str | None = None
     output_3d_mode: ThreeDMode | None = None
     output_mode: OutputMode | None = None
-    outputs_on: dict[str, bool] | None = None  # {"out1": True, "out2": False, …}
+    outputs_on: int | None = None  # raw bitmask from WWWW field
 
     # Config (from I53, I54)
     game_mode: bool | None = None
@@ -286,13 +286,12 @@ def _safe_int(s: str) -> int | None:
     return None
 
 
-def _parse_outputs_on(hex_str: str) -> dict[str, bool]:
-    """Parse WWWW hex bitmask into per-output on/off dict."""
+def _parse_outputs_on(hex_str: str) -> int | None:
+    """Parse WWWW hex bitmask into an integer."""
     try:
-        val = int(hex_str, 16)
+        return int(hex_str, 16)
     except ValueError:
-        return {}
-    return {f"out{i + 1}": bool(val & (1 << i)) for i in range(4)}
+        return None
 
 
 def _handle_full_info(state: LumagenState, fields: list[str]) -> None:
