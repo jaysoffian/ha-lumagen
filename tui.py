@@ -122,12 +122,17 @@ def _output_summary(s: LumagenState) -> str:
     return f"{s.output_vertical_resolution}{mode}{rate}"
 
 
-def _outputs_on(s: LumagenState) -> str:
-    if s.outputs_on is None:
-        return "—"
-    return ", ".join(
-        f"{k}: {'On' if v else 'Off'}" for k, v in sorted(s.outputs_on.items())
-    )
+def _output_on(n: int) -> Callable[[LumagenState], str]:
+    """Return a formatter for a single output's on/off status."""
+    key = f"out{n}"
+
+    def _fmt(s: LumagenState) -> str:
+        if s.outputs_on is None:
+            return "—"
+        v = s.outputs_on.get(key)
+        return "On" if v else "Off"
+
+    return _fmt
 
 
 def _input_label(s: LumagenState) -> str:
@@ -191,7 +196,10 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     ("Output Aspect", "output_aspect", lambda s: s.output_aspect or "—"),
     ("Colorspace", "output_colorspace", lambda s: s.output_colorspace or "—"),
     ("Output 3D", "output_3d_mode", lambda s: s.output_3d_mode or "—"),
-    ("Outputs On", "_outputs_on", _outputs_on),
+    ("Output 1", "outputs_on_1", _output_on(1)),
+    ("Output 2", "outputs_on_2", _output_on(2)),
+    ("Output 3", "outputs_on_3", _output_on(3)),
+    ("Output 4", "outputs_on_4", _output_on(4)),
     ("CMS", "_cms", _cms),
     ("Style", "_style", _style),
     ("", "", None),
