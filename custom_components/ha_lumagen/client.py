@@ -162,6 +162,15 @@ class LumagenState:
     cms_labels: dict[str, str] = field(default_factory=dict)
     style_labels: dict[str, str] = field(default_factory=dict)
 
+    def set_if_changed(self, attr: str, val: object) -> bool:
+        """Set *attr* if it differs from the current value; return True when changed."""
+        old = getattr(self, attr)
+        if old != val:
+            _LOGGER.debug("state: %s: %r -> %r", attr, old, val)
+            setattr(self, attr, val)
+            return True
+        return False
+
 
 # ---------------------------------------------------------------------------
 # Response handlers — each returns True if state changed
@@ -181,25 +190,15 @@ def _aspect_name(code: str) -> str | None:
     return None
 
 
-def _setattr_changed(state: LumagenState, attr: str, val: object) -> bool:
-    """Set *attr* on *state* if it differs; return True when changed."""
-    old = getattr(state, attr)
-    if old != val:
-        _LOGGER.debug("state: %s: %r -> %r", attr, old, val)
-        setattr(state, attr, val)
-        return True
-    return False
-
-
 def _handle_device_id(state: LumagenState, fields: list[str]) -> bool:
     """S01 — model, sw_revision, model_number, serial_number."""
     if len(fields) < 4:
         return False
     changed = False
-    changed |= _setattr_changed(state, "model_name", fields[0])
-    changed |= _setattr_changed(state, "software_revision", fields[1])
-    changed |= _setattr_changed(state, "model_number", fields[2])
-    changed |= _setattr_changed(state, "serial_number", fields[3])
+    changed |= state.set_if_changed("model_name", fields[0])
+    changed |= state.set_if_changed("software_revision", fields[1])
+    changed |= state.set_if_changed("model_number", fields[2])
+    changed |= state.set_if_changed("serial_number", fields[3])
     return changed
 
 
@@ -208,7 +207,7 @@ def _handle_power(state: LumagenState, fields: list[str]) -> bool:
     if not fields:
         return False
     new = "on" if fields[0] == "1" else "off"
-    return _setattr_changed(state, "power", new)
+    return state.set_if_changed("power", new)
 
 
 def _handle_input_info(state: LumagenState, fields: list[str]) -> bool:
@@ -216,9 +215,9 @@ def _handle_input_info(state: LumagenState, fields: list[str]) -> bool:
     if len(fields) < 3:
         return False
     changed = False
-    changed |= _setattr_changed(state, "logical_input", _safe_int(fields[0]))
-    changed |= _setattr_changed(state, "input_memory", fields[1])
-    changed |= _setattr_changed(state, "physical_input", _safe_int(fields[2]))
+    changed |= state.set_if_changed("logical_input", _safe_int(fields[0]))
+    changed |= state.set_if_changed("input_memory", fields[1])
+    changed |= state.set_if_changed("physical_input", _safe_int(fields[2]))
     return changed
 
 
@@ -248,57 +247,49 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
     if len(fields) < 15:
         return False
     changed = False
-    changed |= _setattr_changed(state, "source_vertical_rate", _safe_int(fields[1]))
-    changed |= _setattr_changed(
-        state, "source_vertical_resolution", _safe_int(fields[2])
-    )
-    changed |= _setattr_changed(state, "input_config_number", _safe_int(fields[4]))
-    changed |= _setattr_changed(state, "source_raster_aspect", _aspect_name(fields[5]))
-    changed |= _setattr_changed(state, "source_content_aspect", _aspect_name(fields[6]))
-    changed |= _setattr_changed(state, "nls_active", fields[7] == "N")
-    changed |= _setattr_changed(state, "output_cms", _safe_int(fields[10]))
-    changed |= _setattr_changed(state, "output_style", _safe_int(fields[11]))
-    changed |= _setattr_changed(state, "output_vertical_rate", _safe_int(fields[12]))
-    changed |= _setattr_changed(
-        state, "output_vertical_resolution", _safe_int(fields[13])
-    )
-    changed |= _setattr_changed(state, "output_aspect", _aspect_name(fields[14]))
+    changed |= state.set_if_changed("source_vertical_rate", _safe_int(fields[1]))
+    changed |= state.set_if_changed("source_vertical_resolution", _safe_int(fields[2]))
+    changed |= state.set_if_changed("input_config_number", _safe_int(fields[4]))
+    changed |= state.set_if_changed("source_raster_aspect", _aspect_name(fields[5]))
+    changed |= state.set_if_changed("source_content_aspect", _aspect_name(fields[6]))
+    changed |= state.set_if_changed("nls_active", fields[7] == "N")
+    changed |= state.set_if_changed("output_cms", _safe_int(fields[10]))
+    changed |= state.set_if_changed("output_style", _safe_int(fields[11]))
+    changed |= state.set_if_changed("output_vertical_rate", _safe_int(fields[12]))
+    changed |= state.set_if_changed("output_vertical_resolution", _safe_int(fields[13]))
+    changed |= state.set_if_changed("output_aspect", _aspect_name(fields[14]))
 
     # v2+ fields (15-18)
     if len(fields) < 18:
         return changed
-    changed |= _setattr_changed(
-        state, "output_colorspace", _OUTPUT_COLORSPACE.get(fields[15])
+    changed |= state.set_if_changed(
+        "output_colorspace", _OUTPUT_COLORSPACE.get(fields[15])
     )
-    changed |= _setattr_changed(
-        state, "source_dynamic_range", _DYNAMIC_RANGE.get(fields[16])
+    changed |= state.set_if_changed(
+        "source_dynamic_range", _DYNAMIC_RANGE.get(fields[16])
     )
-    changed |= _setattr_changed(state, "source_mode", _SOURCE_MODE.get(fields[17]))
+    changed |= state.set_if_changed("source_mode", _SOURCE_MODE.get(fields[17]))
 
     # v3+ fields (19-20) — II (virtual/logical input), KK (physical input)
     if len(fields) < 21:
         return changed
-    changed |= _setattr_changed(state, "logical_input", _safe_int(fields[19]))
-    changed |= _setattr_changed(state, "physical_input", _safe_int(fields[20]))
+    changed |= state.set_if_changed("logical_input", _safe_int(fields[19]))
+    changed |= state.set_if_changed("physical_input", _safe_int(fields[20]))
 
     # v4 fields (21-22) — detected raster/content aspect
     if len(fields) < 23:
         return changed
-    changed |= _setattr_changed(
-        state, "detected_raster_aspect", _aspect_name(fields[21])
-    )
-    changed |= _setattr_changed(
-        state, "detected_content_aspect", _aspect_name(fields[22])
-    )
+    changed |= state.set_if_changed("detected_raster_aspect", _aspect_name(fields[21]))
+    changed |= state.set_if_changed("detected_content_aspect", _aspect_name(fields[22]))
 
     # v5 fields (23-24) — input memory, power status
     if len(fields) < 25:
         return changed
     mem = fields[23]
     if mem in ("A", "B", "C", "D"):
-        changed |= _setattr_changed(state, "input_memory", mem)
+        changed |= state.set_if_changed("input_memory", mem)
     power = "on" if fields[24] == "1" else "off"
-    changed |= _setattr_changed(state, "power", power)
+    changed |= state.set_if_changed("power", power)
 
     return changed
 
@@ -307,7 +298,7 @@ def _handle_game_mode(state: LumagenState, fields: list[str]) -> bool:
     """I53 — game mode status."""
     if not fields:
         return False
-    return _setattr_changed(state, "game_mode", fields[0] == "1")
+    return state.set_if_changed("game_mode", fields[0] == "1")
 
 
 def _handle_aspect_mode(state: LumagenState, fields: list[str]) -> bool:
@@ -321,13 +312,13 @@ def _handle_aspect_mode(state: LumagenState, fields: list[str]) -> bool:
     changed = False
     # Last char is NLS flag
     if val.endswith("N"):
-        changed |= _setattr_changed(state, "nls_active", True)
+        changed |= state.set_if_changed("nls_active", True)
         val = val[:-1]
     elif val.endswith("-"):
-        changed |= _setattr_changed(state, "nls_active", False)
+        changed |= state.set_if_changed("nls_active", False)
         val = val[:-1]
     if name := _I20_ASPECT_CODES.get(val):
-        changed |= _setattr_changed(state, "source_content_aspect", name)
+        changed |= state.set_if_changed("source_content_aspect", name)
     return changed
 
 
@@ -514,11 +505,11 @@ class LumagenClient:
         """Parse a single line from the TCP stream."""
         # Special power messages
         if "Power-up complete" in line:
-            if _setattr_changed(self.state, "power", "on"):
+            if self.state.set_if_changed("power", "on"):
                 self._notify_state_changed()
             return
         if "POWER OFF" in line:
-            if _setattr_changed(self.state, "power", "off"):
+            if self.state.set_if_changed("power", "off"):
                 self._notify_state_changed()
             return
 
@@ -763,7 +754,7 @@ class LumagenClient:
             await self.send_command(f"i+{number - 10}")
         else:
             return
-        if _setattr_changed(self.state, "logical_input", number):
+        if self.state.set_if_changed("logical_input", number):
             self._notify_state_changed()
 
     async def select_memory(self, memory: InputMemory) -> None:
@@ -772,7 +763,7 @@ class LumagenClient:
         if upper not in ("A", "B", "C", "D"):
             raise ValueError(f"Invalid input memory: {memory!r}")
         await self.send_command(upper.lower())
-        if _setattr_changed(self.state, "input_memory", upper):
+        if self.state.set_if_changed("input_memory", upper):
             self._notify_state_changed()
 
     async def set_aspect(self, aspect: str) -> None:
@@ -783,12 +774,12 @@ class LumagenClient:
             return
         await self.send_command(cmd)
         if aspect == "NLS":
-            changed = _setattr_changed(self.state, "nls_active", True)
+            changed = self.state.set_if_changed("nls_active", True)
         elif aspect != "Auto":
-            changed = _setattr_changed(self.state, "nls_active", False)
-            changed |= _setattr_changed(self.state, "source_content_aspect", aspect)
+            changed = self.state.set_if_changed("nls_active", False)
+            changed |= self.state.set_if_changed("source_content_aspect", aspect)
         else:
-            changed = _setattr_changed(self.state, "nls_active", False)
+            changed = self.state.set_if_changed("nls_active", False)
         if changed:
             self._notify_state_changed()
 
