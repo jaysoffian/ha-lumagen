@@ -154,4 +154,10 @@ class LumagenSelectEntity(LumagenEntity, SelectEntity):
         self._optimistic_option = option
         self._attr_current_option = option
         self.async_write_ha_state()
-        await self.entity_description.select_option_fn(self.coordinator, option)
+        try:
+            await self.entity_description.select_option_fn(self.coordinator, option)
+        except Exception:
+            self._optimistic_option = None
+            self._update_attrs()
+            self.async_write_ha_state()
+            raise
