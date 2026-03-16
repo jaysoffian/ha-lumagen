@@ -92,6 +92,16 @@ REMOTE_COMMANDS: dict[str, str] = {
     "info": "U",
     "alt": "#",
     "clear": "!",
+    "previous": "P",
+    "pip_off": "e",
+    "pip_select": "p",
+    "pip_swap": "r",
+    "pip_mode": "m",
+    "save": "S",
+    "hdr_setup": "Y",
+    "test_pattern": "H",
+    "osd_on": "g",
+    "osd_off": "s",
     **{str(i): str(i) for i in range(10)},
 }
 
