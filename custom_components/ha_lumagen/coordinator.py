@@ -44,7 +44,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
 
     def handle_state_changed(self) -> None:
         """Called (sync) by the client whenever device state changes."""
-        new_data = copy.copy(self.client.state)
+        new_data = copy.deepcopy(self.client.state)
 
         old_power = self.data.power if self.data else None
 
@@ -58,7 +58,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
     def handle_connection_changed(self, connected: bool) -> None:
         """Called (sync) by the client on connect / disconnect."""
         _LOGGER.info("Connection %s", "established" if connected else "lost")
-        self.async_set_updated_data(copy.copy(self.client.state))
+        self.async_set_updated_data(copy.deepcopy(self.client.state))
 
     # -- Internal -----------------------------------------------------------
 
@@ -89,7 +89,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         s.custom_mode_labels = data.get("custom_mode_labels", {})
         s.cms_labels = data.get("cms_labels", {})
         s.style_labels = data.get("style_labels", {})
-        self.async_set_updated_data(copy.copy(s))
+        self.async_set_updated_data(copy.deepcopy(s))
         _LOGGER.debug("Loaded identity and labels from storage")
         return True
 
@@ -136,7 +136,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
 
     async def _async_update_data(self) -> LumagenState:
         """Fallback for first refresh — returns current state snapshot."""
-        return copy.copy(self.client.state)
+        return copy.deepcopy(self.client.state)
 
     async def async_shutdown(self) -> None:
         """Disconnect the client."""
