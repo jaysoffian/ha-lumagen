@@ -738,12 +738,16 @@ class LumagenClient:
         await self.send_command("ZQI25")
 
     async def fetch_full_state(self) -> None:
-        """Query identity, power, input, output config, and full info."""
+        """Query identity, power, signal info, and config state."""
         await self.fetch_identity()
         await asyncio.sleep(0.05)
         await self.fetch_power()
         await asyncio.sleep(0.05)
         await self.fetch_runtime_state()
+        await asyncio.sleep(0.05)
+        await self.send_command("ZQI53")
+        await asyncio.sleep(0.05)
+        await self.send_command("ZQI54")
 
     async def get_labels(self) -> int:
         """Query all labels (inputs A0-D9, custom modes, CMS, styles).
