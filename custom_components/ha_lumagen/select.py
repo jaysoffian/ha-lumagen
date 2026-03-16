@@ -147,6 +147,14 @@ class LumagenSelectEntity(LumagenEntity, SelectEntity):
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{description.key}"
         self._optimistic_option: str | None = None
+        # HA reads options during entity registration, before the first
+        # coordinator update calls _update_attrs, so seed them here.
+        if description.static_options:
+            self._attr_options = description.static_options
+        elif description.options_fn:
+            self._attr_options = description.options_fn(coordinator)
+        else:
+            self._attr_options = []
 
     def _update_attrs(self) -> None:
         super()._update_attrs()
