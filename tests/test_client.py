@@ -166,7 +166,8 @@ class TestHandleDeviceId:
         state = LumagenState()
         # Example from ref: !S01,RadianceXD,102308,1009,745
         fields = ["RadiancePro", "102308", "1009", "745"]
-        assert _handle_device_id(state, fields) is True
+        _handle_device_id(state, fields)
+        assert state._changed
         assert state.model_name == "RadiancePro"
         assert state.software_revision == "102308"
         assert state.model_number == "1009"
@@ -179,12 +180,16 @@ class TestHandleDeviceId:
             model_number="1009",
             serial_number="745",
         )
+        state.clear_changed()
         fields = ["RadiancePro", "102308", "1009", "745"]
-        assert _handle_device_id(state, fields) is False
+        _handle_device_id(state, fields)
+        assert not state._changed
 
     def test_too_few_fields(self):
         state = LumagenState()
-        assert _handle_device_id(state, ["RadiancePro", "102308"]) is False
+        state.clear_changed()
+        _handle_device_id(state, ["RadiancePro", "102308"])
+        assert not state._changed
         assert state.model_name is None
 
 
@@ -196,26 +201,33 @@ class TestHandleDeviceId:
 class TestHandlePower:
     def test_active(self):
         state = LumagenState()
-        assert _handle_power(state, ["1"]) is True
+        _handle_power(state, ["1"])
+        assert state._changed
         assert state.power == "on"
 
     def test_standby(self):
         state = LumagenState()
-        assert _handle_power(state, ["0"]) is True
+        _handle_power(state, ["0"])
+        assert state._changed
         assert state.power == "off"
 
     def test_unknown_value_treated_as_standby(self):
         state = LumagenState()
-        assert _handle_power(state, ["2"]) is True
+        _handle_power(state, ["2"])
+        assert state._changed
         assert state.power == "off"
 
     def test_empty_fields(self):
         state = LumagenState()
-        assert _handle_power(state, []) is False
+        state.clear_changed()
+        _handle_power(state, [])
+        assert not state._changed
 
     def test_no_change(self):
         state = LumagenState(power="on")
-        assert _handle_power(state, ["1"]) is False
+        state.clear_changed()
+        _handle_power(state, ["1"])
+        assert not state._changed
 
 
 # ---------------------------------------------------------------------------
@@ -228,18 +240,23 @@ class TestHandleInputInfo:
         state = LumagenState()
         # !I00,3,A,5
         fields = ["3", "A", "5"]
-        assert _handle_input_info(state, fields) is True
+        _handle_input_info(state, fields)
+        assert state._changed
         assert state.logical_input == 3
         assert state.input_memory == "A"
         assert state.physical_input == 5
 
     def test_too_few_fields(self):
         state = LumagenState()
-        assert _handle_input_info(state, ["3", "A"]) is False
+        state.clear_changed()
+        _handle_input_info(state, ["3", "A"])
+        assert not state._changed
 
     def test_no_change(self):
         state = LumagenState(logical_input=3, input_memory="A", physical_input=5)
-        assert _handle_input_info(state, ["3", "A", "5"]) is False
+        state.clear_changed()
+        _handle_input_info(state, ["3", "A", "5"])
+        assert not state._changed
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +274,8 @@ class TestHandleFullInfo:
         )
         assert len(fields) == 15
         state = LumagenState()
-        assert _handle_full_info(state, fields) is True
+        _handle_full_info(state, fields)
+        assert state._changed
         assert state.source_vertical_rate == 60
         assert state.source_vertical_resolution == 2160
         assert state.input_config_number == 0
@@ -284,7 +302,8 @@ class TestHandleFullInfo:
         )
         assert len(fields) == 19
         state = LumagenState()
-        assert _handle_full_info(state, fields) is True
+        _handle_full_info(state, fields)
+        assert state._changed
         assert state.output_colorspace == "BT.2020"
         assert state.source_dynamic_range == "HDR"
         assert state.source_mode == "Progressive"
@@ -300,7 +319,8 @@ class TestHandleFullInfo:
         )
         assert len(fields) == 21
         state = LumagenState()
-        assert _handle_full_info(state, fields) is True
+        _handle_full_info(state, fields)
+        assert state._changed
         assert state.logical_input == 5
         assert state.physical_input == 7
         # v4 should be untouched
@@ -314,7 +334,8 @@ class TestHandleFullInfo:
         )
         assert len(fields) == 23
         state = LumagenState()
-        assert _handle_full_info(state, fields) is True
+        _handle_full_info(state, fields)
+        assert state._changed
         assert state.detected_raster_aspect == "16:9"
         assert state.detected_content_aspect == "2.40"
 
@@ -323,7 +344,8 @@ class TestHandleFullInfo:
         fields = _make_i24_fields(input_memory="B", power_status="1")
         assert len(fields) == 25
         state = LumagenState()
-        assert _handle_full_info(state, fields) is True
+        _handle_full_info(state, fields)
+        assert state._changed
         assert state.input_memory == "B"
         assert state.power == "on"
 
@@ -378,13 +400,17 @@ class TestHandleFullInfo:
 
     def test_too_few_fields(self):
         state = LumagenState()
-        assert _handle_full_info(state, ["1"] * 10) is False
+        state.clear_changed()
+        _handle_full_info(state, ["1"] * 10)
+        assert not state._changed
 
-    def test_no_change_returns_false(self):
+    def test_no_change(self):
         fields = _make_i24_fields()
         state = LumagenState()
         _handle_full_info(state, fields)
-        assert _handle_full_info(state, fields) is False
+        state.clear_changed()
+        _handle_full_info(state, fields)
+        assert not state._changed
 
     def test_extra_fields_tolerated(self):
         """Future firmware may append additional fields."""
@@ -394,7 +420,8 @@ class TestHandleFullInfo:
             "extra2",
         ]
         state = LumagenState()
-        assert _handle_full_info(state, fields) is True
+        _handle_full_info(state, fields)
+        assert state._changed
         assert state.power == "on"
 
 
@@ -427,6 +454,7 @@ class TestProcessLine:
 
     def test_power_up_no_duplicate_notify(self):
         self.client.state.power = "on"
+        self.client.state.clear_changed()
         self.client._process_line("Power-up complete.")
         assert self.state_changes == 0
 
