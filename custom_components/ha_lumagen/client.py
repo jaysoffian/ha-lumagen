@@ -21,7 +21,12 @@ PowerState = Literal["on", "off"]
 InputMemory = Literal["A", "B", "C", "D", "a", "b", "c", "d"]
 DynamicRange = Literal["SDR", "HDR"]
 SourceMode = Literal["Progressive", "Interlaced"]
+OutputMode = Literal["Progressive", "Interlaced"]
+InputVideoStatus = Literal["No Source", "Active Video", "Test Pattern"]
 OutputColorspace = Literal["BT.601", "BT.709", "BT.2020", "BT.2100"]
+ThreeDMode = Literal[
+    "Off", "Frame Sequential", "Frame Packed", "Top-Bottom", "Side-by-Side"
+]
 LabelCategory = Literal["A", "B", "C", "D", "0", "1", "2", "3"]
 
 # ---------------------------------------------------------------------------
@@ -96,11 +101,24 @@ _SOURCE_MODE: dict[str, SourceMode | None] = {
     "p": "Progressive",
     "-": None,
 }
+_OUTPUT_MODE: dict[str, OutputMode] = {"I": "Interlaced", "P": "Progressive"}
 _OUTPUT_COLORSPACE: dict[str, OutputColorspace] = {
     "0": "BT.601",
     "1": "BT.709",
     "2": "BT.2020",
     "3": "BT.2100",
+}
+_INPUT_VIDEO_STATUS: dict[str, InputVideoStatus] = {
+    "0": "No Source",
+    "1": "Active Video",
+    "2": "Test Pattern",
+}
+_3D_MODE: dict[str, ThreeDMode] = {
+    "0": "Off",
+    "1": "Frame Sequential",
+    "2": "Frame Packed",
+    "4": "Top-Bottom",
+    "8": "Side-by-Side",
 }
 
 # Regex for normal responses: !<letter><2digits>,<fields>
@@ -145,6 +163,9 @@ class LumagenState:
     physical_input: int | None = None
     input_config_number: int | None = None
 
+    # Video status (from I2x field 0)
+    input_video_status: InputVideoStatus | None = None
+
     # Source (from I24)
     source_content_aspect: str | None = None  # "4:3", "16:9", "2.40", …
     source_raster_aspect: str | None = None
@@ -152,6 +173,7 @@ class LumagenState:
     detected_raster_aspect: str | None = None
     source_dynamic_range: DynamicRange | None = None
     source_mode: SourceMode | None = None
+    source_3d_mode: ThreeDMode | None = None
     source_vertical_rate: int | None = None
     source_vertical_resolution: int | None = None
     nls_active: bool = False
@@ -163,9 +185,13 @@ class LumagenState:
     output_style: int | None = None
     output_colorspace: OutputColorspace | None = None
     output_aspect: str | None = None
+    output_3d_mode: ThreeDMode | None = None
+    output_mode: OutputMode | None = None
+    outputs_on: dict[str, bool] | None = None  # {"out1": True, "out2": False, …}
 
-    # Config (from I53)
+    # Config (from I53, I54)
     game_mode: bool | None = None
+    auto_aspect: bool | None = None
 
     # Labels (populated by get_labels)
     input_labels: dict[str, str] = field(default_factory=dict)
@@ -250,6 +276,15 @@ def _safe_int(s: str) -> int | None:
     return None
 
 
+def _parse_outputs_on(hex_str: str) -> dict[str, bool]:
+    """Parse WWWW hex bitmask into per-output on/off dict."""
+    try:
+        val = int(hex_str, 16)
+    except ValueError:
+        return {}
+    return {f"out{i + 1}": bool(val & (1 << i)) for i in range(4)}
+
+
 def _handle_full_info(state: LumagenState, fields: list[str]) -> None:
     """I21/I22/I23/I24/I25 — full device info.
 
@@ -268,12 +303,16 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> None:
     # v1 fields (0-14)
     if len(fields) < 15:
         return
+    state.input_video_status = _INPUT_VIDEO_STATUS.get(fields[0])
     state.source_vertical_rate = _safe_int(fields[1])
     state.source_vertical_resolution = _safe_int(fields[2])
+    state.source_3d_mode = _3D_MODE.get(fields[3])
     state.input_config_number = _safe_int(fields[4])
     state.source_raster_aspect = _aspect_name(fields[5])
     state.source_content_aspect = _aspect_name(fields[6])
     state.nls_active = fields[7] == "N"
+    state.output_3d_mode = _3D_MODE.get(fields[8])
+    state.outputs_on = _parse_outputs_on(fields[9])
     state.output_cms = _safe_int(fields[10])
     state.output_style = _safe_int(fields[11])
     state.output_vertical_rate = _safe_int(fields[12])
@@ -281,11 +320,12 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> None:
     state.output_aspect = _aspect_name(fields[14])
 
     # v2+ fields (15-18)
-    if len(fields) < 18:
+    if len(fields) < 19:
         return
     state.output_colorspace = _OUTPUT_COLORSPACE.get(fields[15])
     state.source_dynamic_range = _DYNAMIC_RANGE.get(fields[16])
     state.source_mode = _SOURCE_MODE.get(fields[17])
+    state.output_mode = _OUTPUT_MODE.get(fields[18])
 
     # v3+ fields (19-20) — II (virtual/logical input), KK (physical input)
     if len(fields) < 21:
