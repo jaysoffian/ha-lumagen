@@ -19,7 +19,7 @@ The customer must also configure the Lumagen with the following RS-232 port rela
 - **MENU → Other → I/O Setup → RS-232 Setup**:
     - **Echo**: On (The Radiance will echo all characters sent to it.)
     - **Delimiters**: Off
-    - **Report mode changes**: Full v4 (The Radiance will send a string upon mode changes as if the respective query command was sent.)
+    - **Report mode changes**: Full v5 (The Radiance will send a string upon mode changes as if the respective query command was sent.)
 - **MENU → Other → OnOff Setup**:
     - **OnMessage**: Off / Disabled (If set, turns off echoing of the original query command.)
     - **OffMessage**: Off / Disabled (If set, turns off echoing of the original query command.)
@@ -276,7 +276,7 @@ Example responses:
 | 8 | ALT-1.85 (1.85 in 1.78 letterbox) |
 | 9 | ALT-2.35 (= 2.40) |
 
-## Query Commands — Information (ZQI21, ZQI22, ZQI23, ZQI24)
+## Query Commands — Information (ZQI21, ZQI22, ZQI23, ZQI24, ZQI25)
 
 | Command | Description | Response |
 |-------|-------------|-------------|
@@ -284,6 +284,7 @@ Example responses:
 | `ZQI22` | Full v2 |  Full + `,E,F,G,H` |
 | `ZQI23` | Full v3 |  Full v2 + `,II,KK` |
 | `ZQI24` | Full v4 |  Full v3 + `,JJJ,LLL` |
+| `ZQI25` | Full v5 |  Full v4 + `,MEM,PWR` |
 
 ### Information Response Fields
 
@@ -312,10 +313,12 @@ Example responses:
 | KK | Physical input (1–19) | v3, v4 |
 | JJJ | Detected raster aspect (e.g. 178 for HD or UHD) | v4 |
 | LLL | Detected content aspect (e.g. 240=2.40) | v4 |
+| MEM | Input memory (A, B, C, or D) | v5 |
+| PWR | Power status (0=off, 1=on) | v5 |
 
 **Notes**:
-- Parsers should tolerate additional comma-delimited fields appended to the `ZQI24` (Full v4) response that may be present in future firmware.
-- The `ZQI21`, `ZQI22`, `ZQI23`, or `ZQI24` response is also sent by the Lumagen unsolicited whenever it detects mode changes depending upon the "report mode changes" setting.
+- Parsers should tolerate additional comma-delimited fields appended to the latest full info response that may be present in future firmware.
+- The `ZQI21`, `ZQI22`, `ZQI23`, `ZQI24`, or `ZQI25` response is also sent by the Lumagen unsolicited whenever it detects mode changes depending upon the "report mode changes" setting.
 
 ## Query Commands — Output (ZQO)
 

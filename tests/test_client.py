@@ -55,11 +55,14 @@ def _make_i24_fields(
     # v3+
     logical_input: str | None = "01",
     physical_input: str | None = "03",
-    # v4
+    # v4+
     detected_raster: str | None = "178",
     detected_content: str | None = "240",
+    # v5
+    input_memory: str | None = None,
+    power_status: str | None = None,
 ) -> list[str]:
-    """Build an I24 field list with sensible defaults."""
+    """Build an I24/I25 field list with sensible defaults."""
     fields = [
         mode,
         vrate,
@@ -83,6 +86,10 @@ def _make_i24_fields(
         fields.extend([logical_input, physical_input])
     if detected_raster is not None:
         fields.extend([detected_raster, detected_content])
+    if input_memory is not None:
+        fields.append(input_memory)
+    if power_status is not None:
+        fields.append(power_status)
     return fields
 
 
@@ -309,6 +316,22 @@ class TestHandleFullInfo:
         assert state.detected_raster_aspect == "16:9"
         assert state.detected_content_aspect == "2.40"
 
+    def test_v5_fields(self):
+        """25 fields — full v5 (input memory + power)."""
+        fields = _make_i24_fields(input_memory="B", power_status="1")
+        assert len(fields) == 25
+        state = LumagenState()
+        assert _handle_full_info(state, fields) is True
+        assert state.input_memory == "B"
+        assert state.power == "on"
+
+    def test_v5_power_off(self):
+        """v5 power status field: 0 = off."""
+        fields = _make_i24_fields(input_memory="A", power_status="0")
+        state = LumagenState()
+        _handle_full_info(state, fields)
+        assert state.power == "off"
+
     def test_nls_active(self):
         fields = _make_i24_fields(nls="N")
         state = LumagenState()
@@ -363,10 +386,14 @@ class TestHandleFullInfo:
 
     def test_extra_fields_tolerated(self):
         """Future firmware may append additional fields."""
-        fields = [*_make_i24_fields(), "extra1", "extra2"]
+        fields = [
+            *_make_i24_fields(input_memory="A", power_status="1"),
+            "extra1",
+            "extra2",
+        ]
         state = LumagenState()
         assert _handle_full_info(state, fields) is True
-        assert state.detected_content_aspect == "2.40"
+        assert state.power == "on"
 
 
 # ---------------------------------------------------------------------------
@@ -461,9 +488,9 @@ class TestProcessLine:
         self.client._process_line(f"!I24,{fields}")
         assert self.client.state.source_content_aspect == "2.35"
 
-    def test_i21_i22_i23_also_handled(self):
-        """All four I2x variants use the same handler."""
-        for cmd in ("I21", "I22", "I23", "I24"):
+    def test_i21_i22_i23_i25_also_handled(self):
+        """All five I2x variants use the same handler."""
+        for cmd in ("I21", "I22", "I23", "I24", "I25"):
             client = _make_client()
             fields = ",".join(_make_i24_fields())
             client._process_line(f"ZQ{cmd}!{cmd},{fields}")

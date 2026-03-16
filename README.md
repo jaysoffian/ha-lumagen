@@ -17,7 +17,7 @@ The Lumagen must be configured for the integration to work correctly.
 |----------------------|-----------|
 | Echo                 | On        |
 | Delimiters           | Off       |
-| Report mode changes  | Full v4   |
+| Report mode changes  | Full v5   |
 
 **MENU → Other → OnOff Setup:**
 
@@ -204,11 +204,10 @@ handled by `client.py`, a self-contained async TCP client (~400 lines).
 The coordinator sets `update_interval=None` — no polling. All state updates
 come from the TCP stream:
 
-- **Mode changes**: the Lumagen pushes `!I24,…` unsolicited
+- **Mode changes**: the Lumagen pushes `!I25,…` unsolicited (Full v5)
 - **Power changes**: `Power-up complete.` / `POWER OFF.` sentinels
-- **Input changes**: detected from ZQI00/ZQI24, triggers ZQI18 fetch for
-  per-input output config
-- **Keepalive**: `ZQI00` sent after 30 s of idle; any received data resets
+- **Input/memory changes**: included in ZQI25 response
+- **Keepalive**: `ZQI25` sent after 30 s of idle; any received data resets
   the timer
 
 Device state is split into three tiers — config (stored on disk), per-input
