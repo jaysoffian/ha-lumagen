@@ -117,8 +117,17 @@ def _source_summary(s: LumagenState) -> str:
 def _output_summary(s: LumagenState) -> str:
     if s.output_vertical_resolution is None:
         return "—"
+    mode = (s.output_mode or "Progressive")[0:1].lower() if s.output_mode else "p"
     rate = f" {s.output_vertical_rate}Hz" if s.output_vertical_rate else ""
-    return f"{s.output_vertical_resolution}p{rate}"
+    return f"{s.output_vertical_resolution}{mode}{rate}"
+
+
+def _outputs_on(s: LumagenState) -> str:
+    if s.outputs_on is None:
+        return "—"
+    return ", ".join(
+        f"{k}: {'On' if v else 'Off'}" for k, v in sorted(s.outputs_on.items())
+    )
 
 
 def _input_label(s: LumagenState) -> str:
@@ -165,6 +174,7 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     ("Input", "logical_input", _input_summary),
     ("Physical In", "physical_input", _physical_in),
     ("Input Label", "_input_label", _input_label),
+    ("Video Status", "input_video_status", lambda s: s.input_video_status or "—"),
     ("", "", None),
     ("Source", "_source_summary", _source_summary),
     ("Dynamic Range", "source_dynamic_range", lambda s: s.source_dynamic_range or "—"),
@@ -175,13 +185,18 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     ),
     ("Raster Aspect", "source_raster_aspect", lambda s: s.source_raster_aspect or "—"),
     ("NLS", "nls_active", lambda s: "Active" if s.nls_active else "Off"),
+    ("Source 3D", "source_3d_mode", lambda s: s.source_3d_mode or "—"),
     ("", "", None),
     ("Output", "_output_summary", _output_summary),
     ("Output Aspect", "output_aspect", lambda s: s.output_aspect or "—"),
     ("Colorspace", "output_colorspace", lambda s: s.output_colorspace or "—"),
+    ("Output 3D", "output_3d_mode", lambda s: s.output_3d_mode or "—"),
+    ("Outputs On", "_outputs_on", _outputs_on),
     ("CMS", "_cms", _cms),
     ("Style", "_style", _style),
+    ("", "", None),
     ("Game Mode", "game_mode", lambda s: "On" if s.game_mode else "Off"),
+    ("Auto Aspect", "auto_aspect", lambda s: "On" if s.auto_aspect else "Off"),
 ]
 
 
@@ -217,6 +232,7 @@ HELP_TEXT = """\
 [bold]Power & Input:[/]
   on / off               turn Lumagen on or off
   <1-19>                 select input
+  previous               switch to previous input
   a / b / c / d          select input memory
 
 [bold]Video Processing:[/]
@@ -226,12 +242,17 @@ HELP_TEXT = """\
   style <1-8>            output style
   game on / off          game mode
   autoaspect on / off    auto aspect detection
+  subtitle off / 3% / 6% subtitle shift
+
+[bold]Hardware:[/]
+  fan <1-10>             minimum fan speed
 
 [bold]Labels & OSD:[/]
   labels                 show all labels
   label <id> <text>      set label (e.g. label A1 Apple TV)
   osd \\[0-9] <text>       OSD message (0-8=seconds, 9=persistent; \\n for newline)
   osd                    clear OSD
+  osdaspect              pop up input/aspect info on OSD
 
 [bold]Navigation & System:[/]
   remote <cmd>           remote key (menu, up, down, ok, exit, …)
@@ -256,6 +277,7 @@ _COMMAND_SUGGESTIONS = sorted(
     {
         "on",
         "off",
+        "previous",
         *[f"aspect {a}" for a in ASPECT_COMMANDS],
         *[f"mode {i}" for i in range(1, 9)],
         *[f"cms {i}" for i in range(1, 9)],
@@ -264,9 +286,14 @@ _COMMAND_SUGGESTIONS = sorted(
         "game off",
         "autoaspect on",
         "autoaspect off",
+        "subtitle off",
+        "subtitle 3%",
+        "subtitle 6%",
+        *[f"fan {i}" for i in range(1, 11)],
         "labels",
         "label ",
         "osd ",
+        "osdaspect",
         *[f"remote {k}" for k in REMOTE_COMMANDS if not k.isdigit()],
         "save",
         "hotplug",
@@ -504,9 +531,9 @@ class LumagenTUI(App):
 
         if cmd == "autoaspect":
             if arg in ("on", "1"):
-                await self._client.set_aspect("Auto")
+                await self._client.set_auto_aspect(True)
             elif arg in ("off", "0"):
-                await self._client.send_command("V")
+                await self._client.set_auto_aspect(False)
             else:
                 log.write("[red]Usage: autoaspect on / autoaspect off[/]")
             return
@@ -548,6 +575,35 @@ class LumagenTUI(App):
             else:
                 await self._client.trigger_hotplug()
             log.write("[green]Hotplug triggered[/]")
+            return
+
+        if cmd == "previous":
+            await self._client.previous_input()
+            return
+
+        if cmd == "fan" and arg:
+            try:
+                val = int(arg)
+            except ValueError:
+                log.write(f"[red]Invalid fan speed: {arg} (use 1-10)[/]")
+                return
+            if not 1 <= val <= 10:
+                log.write(f"[red]Fan speed must be 1-10, got {val}[/]")
+                return
+            await self._client.set_fan_speed(val)
+            return
+
+        if cmd == "subtitle":
+            shift_map = {"off": 0, "0": 0, "3": 1, "3%": 1, "6": 2, "6%": 2}
+            level = shift_map.get(arg)
+            if level is None:
+                log.write("[red]Usage: subtitle off / 3% / 6%[/]")
+                return
+            await self._client.set_subtitle_shift(level)
+            return
+
+        if cmd == "osdaspect":
+            await self._client.display_input_aspect()
             return
 
         if cmd == "remote" and arg:
