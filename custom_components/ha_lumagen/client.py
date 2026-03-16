@@ -9,8 +9,20 @@ import time
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
+from typing import Literal
 
 _LOGGER = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Type aliases
+# ---------------------------------------------------------------------------
+
+PowerState = Literal["on", "off"]
+InputMemory = Literal["A", "B", "C", "D", "a", "b", "c", "d"]
+DynamicRange = Literal["SDR", "HDR"]
+SourceMode = Literal["Progressive", "Interlaced"]
+OutputColorspace = Literal["BT.601", "BT.709", "BT.2020", "BT.2100"]
+LabelCategory = Literal["A", "B", "C", "D", "0", "1", "2", "3"]
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -114,11 +126,11 @@ class LumagenState:
     serial_number: str | None = None
 
     # Power
-    power: str | None = None  # "on" / "off"
+    power: PowerState | None = None
 
     # Input (from I00 and I24)
     logical_input: int | None = None
-    input_memory: str | None = None  # A / B / C / D
+    input_memory: InputMemory | None = None
     physical_input: int | None = None
     input_config_number: int | None = None
 
@@ -127,8 +139,8 @@ class LumagenState:
     source_raster_aspect: str | None = None
     detected_content_aspect: str | None = None
     detected_raster_aspect: str | None = None
-    source_dynamic_range: str | None = None  # "SDR" / "HDR"
-    source_mode: str | None = None  # "Progressive" / "Interlaced"
+    source_dynamic_range: DynamicRange | None = None
+    source_mode: SourceMode | None = None
     source_vertical_rate: int | None = None
     source_vertical_resolution: int | None = None
     nls_active: bool = False
@@ -138,7 +150,7 @@ class LumagenState:
     output_vertical_resolution: int | None = None
     output_cms: int | None = None
     output_style: int | None = None
-    output_colorspace: str | None = None
+    output_colorspace: OutputColorspace | None = None
     output_aspect: str | None = None
 
     # Config (from I53)
@@ -722,10 +734,13 @@ class LumagenClient:
         if _setattr_changed(self.state, "logical_input", number):
             self._notify_state_changed()
 
-    async def select_memory(self, memory: str) -> None:
-        """Select input memory (A / B / C / D)."""
-        await self.send_command(memory.lower())
-        if _setattr_changed(self.state, "input_memory", memory.upper()):
+    async def select_memory(self, memory: InputMemory) -> None:
+        """Select input memory (A / B / C / D, case-insensitive)."""
+        upper = memory.upper()
+        if upper not in ("A", "B", "C", "D"):
+            raise ValueError(f"Invalid input memory: {memory!r}")
+        await self.send_command(upper.lower())
+        if _setattr_changed(self.state, "input_memory", upper):
             self._notify_state_changed()
 
     async def set_aspect(self, aspect: str) -> None:
@@ -780,6 +795,9 @@ class LumagenClient:
 
         Uses ZY530MCS where each position is 0-7 or K (keep).
         """
+        for name, val in (("mode", mode), ("cms", cms), ("style", style)):
+            if val is not None and not 0 <= val <= 7:
+                raise ValueError(f"{name} must be 0-7, got {val}")
         m = str(mode) if mode is not None else "K"
         c = str(cms) if cms is not None else "K"
         s = str(style) if style is not None else "K"
@@ -793,14 +811,26 @@ class LumagenClient:
 
     # -- Labels -------------------------------------------------------------
 
-    async def set_label(self, category: str, index: int, text: str) -> None:
+    async def set_label(self, category: LabelCategory, index: int, text: str) -> None:
         """Set a label on the device.
 
         *category*: 'A'-'D' (input per input memory), '0' (all input memories),
                     '1' (custom mode), '2' (CMS), '3' (style).
         *index*: label index (0-9 for inputs, 0-7 for modes/CMS/styles).
-        *text*: label text.
+        *text*: label text (max 30 characters).
         """
+        if category not in ("A", "B", "C", "D", "0", "1", "2", "3"):
+            raise ValueError(f"Invalid label category: {category!r}")
+        max_index = 9 if category in ("A", "B", "C", "D", "0") else 7
+        if not 0 <= index <= max_index:
+            raise ValueError(
+                f"Label index must be 0-{max_index}"
+                f" for category {category!r}, got {index}"
+            )
+        if not text.isascii():
+            raise ValueError("Label text must be ASCII only")
+        if len(text) > 30:
+            raise ValueError(f"Label text must be <=30 chars, got {len(text)}")
         await self.send_command(f"ZY524{category}{index}{text}\r")
         # Re-fetch to confirm
         await self._query_label(f"{category}{index}")
