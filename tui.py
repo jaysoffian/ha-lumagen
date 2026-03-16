@@ -9,7 +9,7 @@ import pathlib
 import sys
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from textual import work
 from textual.app import App, ComposeResult
@@ -25,6 +25,8 @@ sys.path.insert(
 from client import (
     ASPECT_COMMANDS,
     REMOTE_COMMANDS,
+    InputMemory,
+    LabelCategory,
     LumagenClient,
     LumagenState,
 )
@@ -434,7 +436,7 @@ class LumagenTUI(App):
 
         # Bare letter → input memory shortcut
         if cmd in "abcd" and not arg:
-            await self._client.select_memory(cmd)
+            await self._client.select_memory(cast("InputMemory", cmd))
             return
 
         # Bare number → input shortcut
@@ -526,7 +528,8 @@ class LumagenTUI(App):
             if proto_idx < 0:
                 log.write("[red]Label index must be >= 1[/]")
                 return
-            await self._client.set_label(category, proto_idx, label_parts[1])
+            cat = cast("LabelCategory", category)
+            await self._client.set_label(cat, proto_idx, label_parts[1])
             log.write(f"[green]Set label {label_id} = {label_parts[1]}[/]")
             return
 

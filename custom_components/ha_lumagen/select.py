@@ -5,14 +5,14 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .client import ASPECT_COMMANDS, LumagenState
+from .client import ASPECT_COMMANDS, InputMemory, LumagenState
 from .const import DOMAIN
 from .coordinator import LumagenCoordinator
 from .entity import LumagenEntity
@@ -71,7 +71,7 @@ def _current_memory(data: LumagenState, _coord: LumagenCoordinator) -> str | Non
 
 
 async def _select_memory(coord: LumagenCoordinator, option: str) -> None:
-    await coord.client.select_memory(option[-1])  # "MEMA" → "A"
+    await coord.client.select_memory(cast("InputMemory", option[-1]))  # "MEMA" → "A"
 
 
 # -- Entity descriptions ----------------------------------------------------
