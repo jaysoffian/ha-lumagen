@@ -140,6 +140,19 @@ STATUS_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (
         value_fn=lambda data: data.output_3d_mode,
     ),
     LumagenSensorEntityDescription(
+        key="outputs_on",
+        name="Active Outputs",
+        icon="mdi:video-output",
+        value_fn=lambda data: (
+            ", ".join(
+                str(i + 1)
+                for i in range(4)
+                if data.outputs_on is not None and data.outputs_on & (1 << i)
+            )
+            or None
+        ),
+    ),
+    LumagenSensorEntityDescription(
         key="output_mode",
         name="Output Mode",
         icon="mdi:scan-helper",
