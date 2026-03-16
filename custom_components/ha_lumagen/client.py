@@ -395,9 +395,15 @@ class LumagenClient:
     async def disconnect(self) -> None:
         """Shut down cleanly."""
         self._running = False
-        for task in (self._reconnect_task, self._keepalive_task, self._read_task):
-            if task and not task.done():
-                task.cancel()
+        tasks = [
+            t
+            for t in (self._reconnect_task, self._keepalive_task, self._read_task)
+            if t and not t.done()
+        ]
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
         if self._writer:
             with suppress(Exception):
                 self._writer.close()
