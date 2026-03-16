@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import pathlib
 import sys
@@ -339,6 +340,21 @@ class LumagenTUI(App):
         ("ctrl+r", "refresh", "Refresh"),
     ]
 
+    _STATE_FILE = pathlib.Path(__file__).resolve().parent / "tui.state"
+
+    _STORED_FIELDS = (
+        "model_name",
+        "software_revision",
+        "model_number",
+        "serial_number",
+        "game_mode",
+        "auto_aspect",
+        "input_labels",
+        "custom_mode_labels",
+        "cms_labels",
+        "style_labels",
+    )
+
     def __init__(self, host: str, port: int) -> None:
         super().__init__()
         self._host = host
@@ -378,6 +394,12 @@ class LumagenTUI(App):
     @work(exclusive=True)
     async def _connect_client(self) -> None:
         log = self.query_one("#log", RichLog)
+
+        has_stored = self._load_state()
+        if has_stored:
+            log.write("[dim]Loaded stored state.[/]")
+            self._refresh_state()
+
         log.write("[dim]Connecting…[/]")
 
         await self._client.connect(
@@ -391,9 +413,11 @@ class LumagenTUI(App):
             log.write("[green]Connected.[/]")
             await self._client.fetch_full_state()
             self._refresh_state()
-            log.write("[dim]Fetching labels…[/]")
-            await self._client.get_labels()
-            self._refresh_state()
+            if not has_stored:
+                log.write("[dim]Fetching labels…[/]")
+                await self._client.get_labels()
+                self._save_state()
+                self._refresh_state()
             log.write(HELP_TEXT)
         else:
             log.write("[red]Connection failed.[/]")
@@ -428,6 +452,26 @@ class LumagenTUI(App):
     def _refresh_state(self) -> None:
         panel = self.query_one("#state", StatePanel)
         panel.update_state(self._client.state)
+
+    def _save_state(self) -> None:
+        """Persist identity, config, and labels to tui.state."""
+        s = self._client.state
+        data = {k: getattr(s, k) for k in self._STORED_FIELDS}
+        self._STATE_FILE.write_text(json.dumps(data, indent=2) + "\n")
+
+    def _load_state(self) -> bool:
+        """Load stored state into client. Returns True if file existed."""
+        if not self._STATE_FILE.exists():
+            return False
+        try:
+            data = json.loads(self._STATE_FILE.read_text())
+        except (json.JSONDecodeError, OSError):
+            return False
+        s = self._client.state
+        for key in self._STORED_FIELDS:
+            if key in data:
+                setattr(s, key, data[key])
+        return True
 
     def _log_sent(self, cmd: str) -> None:
         ts = datetime.now().strftime("%H:%M:%S")
@@ -656,6 +700,7 @@ class LumagenTUI(App):
             if arg == "labels":
                 log.write("[dim]Fetching labels…[/]")
                 await self._client.get_labels()
+                self._save_state()
                 self._refresh_state()
                 self._show_labels(log)
             else:
