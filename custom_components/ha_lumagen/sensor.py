@@ -196,15 +196,12 @@ class LumagenSensorEntity(LumagenEntity, SensorEntity):
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{description.key}"
 
-    @property
-    def available(self) -> bool:
-        if not self.coordinator.last_update_success:
-            return False
-        data = self.coordinator.data
+    def _update_attrs(self) -> None:
+        super()._update_attrs()
         if self.entity_description.entity_category == EntityCategory.DIAGNOSTIC:
-            return data.connected
-        return data.connected and data.power == "on"
-
-    @property
-    def native_value(self) -> Any:
-        return self.entity_description.value_fn(self.coordinator.data)
+            self._attr_available = (
+                self.coordinator.last_update_success and self.coordinator.data.connected
+            )
+        self._attr_native_value = self.entity_description.value_fn(
+            self.coordinator.data
+        )

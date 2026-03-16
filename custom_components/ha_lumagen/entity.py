@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -18,10 +16,10 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)
 
-    @property
-    def device_info(self) -> dict[str, Any]:
+    def _update_attrs(self) -> None:
+        """Recompute _attr_ values from coordinator data. Override in subclasses."""
         data = self.coordinator.data
-        return {
+        self._attr_device_info = {
             "identifiers": {(DOMAIN, self.coordinator.entry.entry_id)},
             "name": f"Lumagen {data.model_name or 'RadiancePro'}",
             "manufacturer": "Lumagen",
@@ -29,10 +27,12 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
             "sw_version": data.software_revision,
             "serial_number": data.serial_number,
         }
+        self._attr_available = (
+            self.coordinator.last_update_success
+            and data.connected
+            and data.power == "on"
+        )
 
-    @property
-    def available(self) -> bool:
-        if not self.coordinator.last_update_success:
-            return False
-        data = self.coordinator.data
-        return data.connected and data.power == "on"
+    def _handle_coordinator_update(self) -> None:
+        self._update_attrs()
+        super()._handle_coordinator_update()

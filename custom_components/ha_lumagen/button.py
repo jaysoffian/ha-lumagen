@@ -37,10 +37,11 @@ class LumagenRefreshConfigButton(LumagenEntity, ButtonEntity):
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.entry.entry_id}_refresh_labels"
 
-    @property
-    def available(self) -> bool:
-        """Available whenever connected, regardless of power state."""
-        return self.coordinator.last_update_success and self.coordinator.data.connected
+    def _update_attrs(self) -> None:
+        super()._update_attrs()
+        self._attr_available = (
+            self.coordinator.last_update_success and self.coordinator.data.connected
+        )
 
     async def async_press(self) -> None:
         """Fetch identity and labels from the device."""
