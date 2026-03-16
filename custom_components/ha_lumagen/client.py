@@ -218,14 +218,15 @@ def _safe_int(s: str) -> int | None:
 
 
 def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
-    """I21/I22/I23/I24 — full device info.
+    """I21/I22/I23/I24/I25 — full device info.
 
     Field indices (0-based after splitting on commas):
       0=M  1=RRR  2=VVVV  3=D  4=X  5=AAA  6=SSS  7=Y  8=T  9=WWWW
       10=C 11=B   12=PPP  13=QQQQ 14=ZZZ
       15=E 16=F   17=G    18=H          (v2+)
       19=II 20=KK                       (v3+)
-      21=JJJ 22=LLL                     (v4)
+      21=JJJ 22=LLL                     (v4+)
+      23=MEM 24=PWR                       (v5)
 
     Fields are ordered by protocol version. We parse as many as are
     present; an IndexError means we've reached the end of what this
@@ -278,6 +279,15 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> bool:
         state, "detected_content_aspect", _aspect_name(fields[22])
     )
 
+    # v5 fields (23-24) — input memory, power status
+    if len(fields) < 25:
+        return changed
+    mem = fields[23]
+    if mem in ("A", "B", "C", "D"):
+        changed |= _setattr_changed(state, "input_memory", mem)
+    power = "on" if fields[24] == "1" else "off"
+    changed |= _setattr_changed(state, "power", power)
+
     return changed
 
 
@@ -318,6 +328,7 @@ RESPONSE_HANDLERS: dict[str, Callable[[LumagenState, list[str]], bool]] = {
     "I22": _handle_full_info,
     "I23": _handle_full_info,
     "I24": _handle_full_info,
+    "I25": _handle_full_info,
     "I53": _handle_game_mode,
 }
 
@@ -450,9 +461,6 @@ class LumagenClient:
             if self.state.connected:
                 _LOGGER.info("Reconnected to %s:%s", self._host, self._port)
                 await self.fetch_power()
-                await asyncio.sleep(0.05)
-                if self.state.power == "on":
-                    await self.send_command("ZQI00")
                 return
             delay = min(delay * 2, 30.0)
 
@@ -520,9 +528,9 @@ class LumagenClient:
         if handler:
             try:
                 changed = handler(self.state, fields)
-                # Always notify on I24 — even unchanged values are
+                # Always notify on I2x — even unchanged values are
                 # authoritative and must clear optimistic entity state.
-                if changed or name in ("I21", "I22", "I23", "I24"):
+                if changed or name in ("I21", "I22", "I23", "I24", "I25"):
                     self._notify_state_changed()
             except Exception:
                 _LOGGER.debug("Error in handler for %s", name, exc_info=True)
@@ -549,7 +557,7 @@ class LumagenClient:
     async def _keepalive_loop(self) -> None:
         """Probe connection after 30 s of idle.
 
-        When the device is on, poll with ZQI24 (full signal state).
+        When the device is on, poll with ZQI25 (full signal state).
         When off, poll with ZQS02 (power status).
         """
         interval = 30
@@ -569,8 +577,7 @@ class LumagenClient:
             before = self._last_recv
             try:
                 if self.state.power == "on":
-                    await self.send_command("ZQI24")
-                    await self.send_command("ZQI00")
+                    await self.send_command("ZQI25")
                 else:
                     await self.send_command("ZQS02")
                 await asyncio.sleep(probe_timeout)
@@ -612,10 +619,8 @@ class LumagenClient:
         await self.send_command("ZQS02")
 
     async def fetch_runtime_state(self) -> None:
-        """Query signal info and input memory. Called at startup and power-on."""
-        await self.send_command("ZQI24")
-        await asyncio.sleep(0.05)
-        await self.send_command("ZQI00")
+        """Query signal info (incl. input memory). Startup & power-on."""
+        await self.send_command("ZQI25")
 
     async def fetch_full_state(self) -> None:
         """Query identity, power, input, output config, and full info."""
@@ -779,7 +784,7 @@ class LumagenClient:
         c = str(cms) if cms is not None else "K"
         s = str(style) if style is not None else "K"
         await self.send_command(f"ZY530{m}{c}{s}\r")
-        await self.send_command("ZQI24")
+        await self.send_command("ZQI25")
 
     async def set_game_mode(self, enabled: bool) -> None:
         """Enable or disable game mode."""

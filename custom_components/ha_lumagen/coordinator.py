@@ -47,20 +47,11 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         new_data = copy.copy(self.client.state)
 
         old_power = self.data.power if self.data else None
-        old_input = self.data.logical_input if self.data else None
 
         # Detect standby → active transition (not initial state discovery)
         if new_data.power == "on" and old_power == "off":
-            _LOGGER.info("Device powered on — scheduling ZQI00")
+            _LOGGER.info("Device powered on — scheduling runtime state fetch")
             self.hass.async_create_task(self._handle_power_on())
-
-        # Input change (e.g. from unsolicited ZQI24) — fetch ZQI00 for memory
-        if (
-            new_data.logical_input is not None
-            and new_data.logical_input != old_input
-            and old_input is not None
-        ):
-            self.hass.async_create_task(self.client.send_command("ZQI00"))
 
         self.async_set_updated_data(new_data)
 
@@ -75,8 +66,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         """After power-on, wait for the device to settle then query state."""
         await asyncio.sleep(10)
         try:
-            await self.client.send_command("ZQI24")
-            await self.client.send_command("ZQI00")
+            await self.client.fetch_runtime_state()
         except Exception:
             _LOGGER.exception("Error querying state after power-on")
 
