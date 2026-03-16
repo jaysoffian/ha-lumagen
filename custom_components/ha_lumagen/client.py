@@ -200,7 +200,7 @@ class LumagenState:
 
 
 # ---------------------------------------------------------------------------
-# Response handlers — each returns True if state changed
+# Response handlers — mutate state directly; changes tracked by __setattr__
 # ---------------------------------------------------------------------------
 
 
