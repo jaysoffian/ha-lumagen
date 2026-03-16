@@ -35,16 +35,15 @@ class LumagenPowerSwitch(LumagenEntity, SwitchEntity):
         self._attr_unique_id = f"{coordinator.entry.entry_id}_power"
         self._optimistic_state: bool | None = None
 
-    @property
-    def available(self) -> bool:
-        """Power switch is available whenever connected (even in standby)."""
-        return self.coordinator.last_update_success and self.coordinator.data.connected
-
-    @property
-    def is_on(self) -> bool:
+    def _update_attrs(self) -> None:
+        super()._update_attrs()
+        self._attr_available = (
+            self.coordinator.last_update_success and self.coordinator.data.connected
+        )
         if self._optimistic_state is not None:
-            return self._optimistic_state
-        return self.coordinator.data.power == "on"
+            self._attr_is_on = self._optimistic_state
+        else:
+            self._attr_is_on = self.coordinator.data.power == "on"
 
     def _handle_coordinator_update(self) -> None:
         self._optimistic_state = None
@@ -53,9 +52,11 @@ class LumagenPowerSwitch(LumagenEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self.coordinator.client.power_on()
         self._optimistic_state = True
+        self._attr_is_on = True
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self.coordinator.client.power_off()
         self._optimistic_state = False
+        self._attr_is_on = False
         self.async_write_ha_state()
