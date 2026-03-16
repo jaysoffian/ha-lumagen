@@ -564,7 +564,7 @@ class LumagenClient:
 
         if label_id:
             self._last_label_value = label_text
-        if self._label_event:
+        if self._label_event and label_id == self._pending_label_id:
             self._label_event.set()
 
     # -- Keepalive ----------------------------------------------------------
