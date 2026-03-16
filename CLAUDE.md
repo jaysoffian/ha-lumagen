@@ -36,6 +36,10 @@ custom_components/ha_lumagen/
 tui.py             — standalone Textual TUI for interactive testing
 ```
 
+## tui.py
+- Runs via `#!/usr/bin/env -S uv run python` — uses the project venv, not `uv run --script`.
+- PEP 723 inline script metadata does NOT apply; new deps go in `pyproject.toml` `[dependency-groups] dev`.
+
 ## Reference docs
 - `docs/rs232_command_reference.md` — full Lumagen RS-232 command & query reference
 - `docs/state_management.md` — state tier design, startup sequence, connection lifecycle

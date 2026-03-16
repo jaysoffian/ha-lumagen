@@ -3,14 +3,14 @@
 
 from __future__ import annotations
 
-import argparse
 import logging
 import pathlib
 import sys
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any, ClassVar, cast
+from typing import Annotated, Any, ClassVar, cast
 
+import typer
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
@@ -639,23 +639,11 @@ class LumagenTUI(App):
 # ---------------------------------------------------------------------------
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Lumagen Radiance Pro TUI",
-    )
-    parser.add_argument(
-        "host",
-        help="Hostname or IP of the Lumagen device",
-    )
-    parser.add_argument(
-        "port",
-        nargs="?",
-        type=int,
-        default=4999,
-        help="TCP port (default: 4999)",
-    )
-    args = parser.parse_args()
-
+def main(
+    host: Annotated[str, typer.Argument(envvar="LUMAGEN_HOST", help="Hostname or IP")],
+    port: Annotated[int, typer.Argument(envvar="LUMAGEN_PORT", help="TCP port")] = 4999,
+) -> None:
+    """Lumagen Radiance Pro TUI."""
     # Log all client protocol traffic to tui.log
     client_logger = logging.getLogger("client")
     handler = logging.FileHandler("tui.log")
@@ -664,9 +652,9 @@ def main() -> None:
     client_logger.addHandler(handler)
     client_logger.setLevel(logging.DEBUG)
 
-    app = LumagenTUI(args.host, args.port)
+    app = LumagenTUI(host, port)
     app.run()
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)
