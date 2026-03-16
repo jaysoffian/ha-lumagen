@@ -37,13 +37,15 @@ class LumagenPowerSwitch(LumagenEntity, SwitchEntity):
 
     def _update_attrs(self) -> None:
         super()._update_attrs()
-        self._attr_available = (
-            self.coordinator.last_update_success and self.coordinator.data.connected
-        )
+        data = self.coordinator.data
+        if data is None:
+            return
+        # Available whenever connected (even in standby, so user can turn on)
+        self._attr_available = self.coordinator.last_update_success and data.connected
         if self._optimistic_state is not None:
             self._attr_is_on = self._optimistic_state
         else:
-            self._attr_is_on = self.coordinator.data.power == "on"
+            self._attr_is_on = data.power == "on"
 
     def _handle_coordinator_update(self) -> None:
         self._optimistic_state = None

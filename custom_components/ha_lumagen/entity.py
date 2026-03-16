@@ -17,7 +17,13 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
         super().__init__(coordinator)
 
     def _update_attrs(self) -> None:
-        """Recompute _attr_ values from coordinator data. Override in subclasses."""
+        """Recompute _attr_ values from coordinator data. Override in subclasses.
+
+        Availability tiers (subclasses override for their needs):
+        - Base (sensor, select): requires connected AND power == "on"
+        - Control (switch, button, remote): requires connected only
+        - Diagnostic sensors: requires connected only
+        """
         data = self.coordinator.data
         if data is None:
             self._attr_available = False
