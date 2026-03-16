@@ -44,6 +44,12 @@ ignore = [
 [tool.ty.environment]
 extra-paths = ["custom_components", "custom_components/ha_lumagen"]
 
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+extraPaths = ["custom_components", "custom_components/ha_lumagen"]
+reportIncompatibleVariableOverride = false
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 filterwarnings = [

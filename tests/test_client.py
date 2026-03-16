@@ -81,11 +81,13 @@ def _make_i24_fields(
         out_aspect,
     ]
     if out_colorspace is not None:
-        fields.extend([out_colorspace, dynamic_range, src_mode, out_mode])
+        fields.extend(
+            f for f in [out_colorspace, dynamic_range, src_mode, out_mode] if f
+        )
     if logical_input is not None:
-        fields.extend([logical_input, physical_input])
+        fields.extend(f for f in [logical_input, physical_input] if f)
     if detected_raster is not None:
-        fields.extend([detected_raster, detected_content])
+        fields.extend(f for f in [detected_raster, detected_content] if f)
     if input_memory is not None:
         fields.append(input_memory)
     if power_status is not None:
