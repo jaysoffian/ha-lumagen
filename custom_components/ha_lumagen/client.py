@@ -913,6 +913,26 @@ class LumagenClient:
         await self.send_command(f"ZY530{m}{c}{s}\r")
         await self.send_command("ZQI25")
 
+    async def previous_input(self) -> None:
+        """Switch to the previous input."""
+        await self.send_command("P")
+
+    async def display_input_aspect(self) -> None:
+        """Pop up input and aspect info on the OSD."""
+        await self.send_command("ZY811\r")
+
+    async def set_fan_speed(self, speed: int) -> None:
+        """Set minimum fan speed (1-10)."""
+        if not 1 <= speed <= 10:
+            raise ValueError(f"Fan speed must be 1-10, got {speed}")
+        await self.send_command(f"ZY552{speed - 1}\r")
+
+    async def set_subtitle_shift(self, level: int) -> None:
+        """Set subtitle shift (0=off, 1=3%, 2=6%)."""
+        if level not in (0, 1, 2):
+            raise ValueError(f"Subtitle shift must be 0-2, got {level}")
+        await self.send_command(f"ZY553{level}\r")
+
     async def set_auto_aspect(self, enabled: bool) -> None:
         """Enable or disable auto aspect detection."""
         await self.send_command("~" if enabled else "V")
