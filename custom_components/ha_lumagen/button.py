@@ -23,6 +23,7 @@ async def async_setup_entry(
         [
             LumagenRefreshConfigButton(coordinator),
             LumagenResetAutoAspectButton(coordinator),
+            LumagenDisplayInputAspectButton(coordinator),
         ]
     )
 
@@ -63,3 +64,18 @@ class LumagenResetAutoAspectButton(LumagenEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Reset auto aspect detection on the device."""
         await self.coordinator.client.send_command("ZY550\r")
+
+
+class LumagenDisplayInputAspectButton(LumagenEntity, ButtonEntity):
+    """Button to display input and aspect info on the OSD."""
+
+    _attr_name = "Display input aspect"
+    _attr_icon = "mdi:information-outline"
+
+    def __init__(self, coordinator: LumagenCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_display_input_aspect"
+
+    async def async_press(self) -> None:
+        """Show input and aspect on the device OSD."""
+        await self.coordinator.client.display_input_aspect()

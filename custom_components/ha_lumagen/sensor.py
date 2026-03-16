@@ -85,6 +85,18 @@ STATUS_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (
         value_fn=lambda data: data.source_mode,
     ),
     LumagenSensorEntityDescription(
+        key="input_video_status",
+        name="Input Video Status",
+        icon="mdi:video-check",
+        value_fn=lambda data: data.input_video_status,
+    ),
+    LumagenSensorEntityDescription(
+        key="source_3d_mode",
+        name="Source 3D Mode",
+        icon="mdi:video-3d",
+        value_fn=lambda data: data.source_3d_mode,
+    ),
+    LumagenSensorEntityDescription(
         key="nls_active",
         name="NLS Active",
         icon="mdi:arrow-expand-horizontal",
@@ -120,6 +132,18 @@ STATUS_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (
         name="Output Aspect Ratio",
         icon="mdi:aspect-ratio",
         value_fn=lambda data: data.output_aspect,
+    ),
+    LumagenSensorEntityDescription(
+        key="output_3d_mode",
+        name="Output 3D Mode",
+        icon="mdi:video-3d",
+        value_fn=lambda data: data.output_3d_mode,
+    ),
+    LumagenSensorEntityDescription(
+        key="output_mode",
+        name="Output Mode",
+        icon="mdi:scan-helper",
+        value_fn=lambda data: data.output_mode,
     ),
     LumagenSensorEntityDescription(
         key="output_colorspace",

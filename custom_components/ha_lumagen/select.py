@@ -74,6 +74,15 @@ async def _select_memory(coord: LumagenCoordinator, option: str) -> None:
     await coord.client.select_memory(cast("InputMemory", option[-1]))  # "MEMA" → "A"
 
 
+_SUBTITLE_SHIFT_OPTIONS = ["Off", "3%", "6%"]
+_SUBTITLE_SHIFT_TO_LEVEL = {"Off": 0, "3%": 1, "6%": 2}
+
+
+async def _select_subtitle_shift(coord: LumagenCoordinator, option: str) -> None:
+    level = _SUBTITLE_SHIFT_TO_LEVEL[option]
+    await coord.client.set_subtitle_shift(level)
+
+
 # -- Entity descriptions ----------------------------------------------------
 
 SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
@@ -100,6 +109,14 @@ SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
         current_option_fn=_current_memory,
         select_option_fn=_select_memory,
         static_options=["MEMA", "MEMB", "MEMC", "MEMD"],
+    ),
+    LumagenSelectEntityDescription(
+        key="subtitle_shift",
+        name="Subtitle Shift",
+        icon="mdi:subtitles",
+        current_option_fn=lambda _data, _coord: None,
+        select_option_fn=_select_subtitle_shift,
+        static_options=_SUBTITLE_SHIFT_OPTIONS,
     ),
 )
 
