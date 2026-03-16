@@ -19,6 +19,9 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
     def _update_attrs(self) -> None:
         """Recompute _attr_ values from coordinator data. Override in subclasses."""
         data = self.coordinator.data
+        if data is None:
+            self._attr_available = False
+            return
         self._attr_device_info = {
             "identifiers": {(DOMAIN, self.coordinator.entry.entry_id)},
             "name": f"Lumagen {data.model_name or 'RadiancePro'}",
