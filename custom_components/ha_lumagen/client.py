@@ -368,6 +368,9 @@ class LumagenClient:
         self._on_connection_changed: Callable[[bool], None] | None = None
         self._last_recv: float = 0.0
         self._write_lock = asyncio.Lock()
+        self._state_waiters: list[
+            tuple[asyncio.Event, Callable[[LumagenState], bool]]
+        ] = []
         # Label query correlation
         self._pending_label_id: str | None = None
         self._label_event: asyncio.Event | None = None
@@ -619,6 +622,29 @@ class LumagenClient:
     def _notify_state_changed(self) -> None:
         if self._on_state_changed:
             self._on_state_changed()
+        if self._state_waiters:
+            for event, predicate in self._state_waiters:
+                if predicate(self.state):
+                    event.set()
+
+    async def wait_for(
+        self,
+        predicate: Callable[[LumagenState], bool],
+        timeout: float = 5.0,
+    ) -> bool:
+        """Wait until predicate(state) is true, or timeout. Returns success."""
+        if predicate(self.state):
+            return True
+        event = asyncio.Event()
+        waiter = (event, predicate)
+        self._state_waiters.append(waiter)
+        try:
+            await asyncio.wait_for(event.wait(), timeout)
+            return True
+        except TimeoutError:
+            return False
+        finally:
+            self._state_waiters.remove(waiter)
 
     # -- State queries ------------------------------------------------------
 
