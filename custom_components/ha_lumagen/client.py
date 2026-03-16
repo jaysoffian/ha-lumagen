@@ -617,7 +617,7 @@ class LumagenClient:
                 await self._writer.drain()
             except (OSError, ConnectionError) as err:
                 _LOGGER.error("Send error: %s", err)
-                self._reconnect_task = asyncio.create_task(self._handle_disconnect())
+                await self._handle_disconnect()
 
     def _notify_state_changed(self) -> None:
         if self._on_state_changed:
