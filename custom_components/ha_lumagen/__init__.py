@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -40,10 +39,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             on_state_changed=coordinator.handle_state_changed,
             on_connection_changed=coordinator.handle_connection_changed,
         )
-        # Give initial queries time to complete
-        await asyncio.sleep(3)
 
-        if not client.state.connected:
+        if not await client.wait_for(lambda s: s.connected, timeout=5):
             raise ConfigEntryNotReady("Device not connected")
 
         # Load stored identity + labels, or fetch from device
@@ -52,16 +49,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not has_stored:
             # First-ever setup — fetch identity and save
             await client.fetch_identity()
-            await asyncio.sleep(1)
+            if not await client.wait_for(lambda s: s.model_name is not None, timeout=5):
+                _LOGGER.warning("Identity query timed out")
 
         # Always query power (runtime)
         await client.fetch_power()
-        await asyncio.sleep(1)
+        if not await client.wait_for(lambda s: s.power is not None, timeout=5):
+            _LOGGER.warning("Power query timed out")
 
         # If device is on, fetch runtime state
         if client.state.power == "on":
             await client.fetch_runtime_state()
-            await asyncio.sleep(1)
+            await client.wait_for(lambda s: s.logical_input is not None, timeout=5)
 
     except ConfigEntryNotReady:
         raise
@@ -78,11 +77,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Fetch identity + labels from device if none stored
+    # Fetch labels before setting up platforms so select entities have options
     if not has_stored:
-        hass.async_create_task(coordinator.refresh_config())
+        await coordinator.refresh_config()
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     _LOGGER.info("Lumagen integration ready (%s:%s)", host, port)
     return True
