@@ -27,9 +27,9 @@ custom_components/ha_lumagen/
   coordinator.py   — HA DataUpdateCoordinator (event-driven, no polling)
   entity.py        — shared base entity (device_info, availability)
   config_flow.py   — single-step IP/port config flow
-  sensor.py        — status + diagnostic sensors
+  sensor.py        — signal status sensors
   select.py        — input, aspect ratio, memory selects
-  switch.py        — power, auto aspect, game mode switches
+  switch.py        — power, auto aspect switches
   button.py        — reload config, reset auto aspect, show input aspect
   remote.py        — menu navigation commands
   const.py         — domain, defaults, errors

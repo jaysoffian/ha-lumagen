@@ -19,6 +19,14 @@ without querying the device.
 | Input labels     | ZQS1*   | 40 labels (A0-D9), set via Lumagen menus      |
 | Mode/CMS/Style labels | ZQS1* | 24 labels (custom mode, CMS, style)       |
 
+Model, serial, firmware, and labels are shown in the UI but not exposed
+as separate entities — identity fields live in HA's device info, and
+labels populate the Input select dropdown.
+
+Game mode is queried and stored but not exposed as an entity. It's a
+per-input setting saved on the Lumagen; switching inputs already applies
+the right value. The TUI `game on/off` command is available for testing.
+
 **When fetched:**
 - First-ever setup (no stored data) — automatic with backoff retry.
 - User presses the "Reload config" button entity.
@@ -46,7 +54,7 @@ when configured with "Report mode changes: Full v5" (unsolicited ZQI25).
 | Source dynamic range (SDR/HDR) | ZQI25 unsolicited |
 | Source mode (progressive/interlaced) | ZQI25 unsolicited |
 | Source 3D mode              | ZQI25 unsolicited (field 3) |
-| NLS status                  | ZQI25 unsolicited |
+| NLS status                  | ZQI25 unsolicited (field 7: `N` = active, `-` = off) |
 | Output resolution/rate/aspect | ZQI25 unsolicited |
 | Output mode (progressive/interlaced) | ZQI25 unsolicited (v2+ field 18) |
 | Output colorspace           | ZQI25 unsolicited |
@@ -63,6 +71,51 @@ received at all), a probe is sent. The probe depends on power state:
 Any received data — including unsolicited ZQI25 reports — resets the idle
 timer. This means during active use (source changes, input switches), no
 keepalive traffic is generated; the device's own reports prove liveness.
+
+## 3. Optimistic vs authoritative state
+
+Some controls set optimistic state for instant UI feedback, then let the
+next device response confirm or correct it.
+
+**Optimistic (single-command, reliable):**
+- Power on/off, input selection, input memory, auto aspect toggle
+- Aspect ratio selection (non-NLS): set immediately, confirmed by I54 + I25 queries
+
+**Authoritative only (multi-command or unreliable):**
+- NLS variants (4:3 NLS, 16:9 NLS, 1.85 NLS): send the base aspect
+  command followed by `N`, then query I54 + I25 for the final state. No
+  optimistic state is set because the device fires an intermediate I24
+  response after the base aspect command (before processing `N`) that
+  would overwrite it.
+- Reset auto aspect (ZY550): queries I54 + I25 afterward to get the
+  device's actual state.
+
+### NLS caveats
+
+NLS (Non-Linear Stretch) on the Lumagen remote is a two-button sequence:
+press an aspect ratio (4:3, 16:9, or 1.85) then press NLS. The
+integration replicates this by sending both commands.
+
+Known device-level issues:
+- **1.85 NLS is unreliable**: works roughly 50% of the time with a 16:9
+  source. The device sets the aspect to 1.85 but sometimes does not
+  engage NLS. This is a firmware limitation, not an integration bug.
+- **4:3 NLS and 16:9 NLS are reliable** in testing.
+- Selecting any aspect ratio (including NLS variants) disables auto
+  aspect. Selecting "Auto" re-enables it.
+- "Reset auto aspect" clears NLS and re-enables auto aspect detection.
+
+### Aspect / auto aspect interaction
+
+| Action              | Auto aspect | NLS    | Aspect              |
+|---------------------|-------------|--------|---------------------|
+| Select "Auto"       | On          | Off    | (device-detected)   |
+| Select a ratio      | Off         | Off    | Set to selection    |
+| Select NLS variant  | Off         | On*    | Set to base ratio   |
+| Reset auto aspect   | On          | Off    | (device-detected)   |
+| Toggle auto aspect  | Toggled     | —      | —                   |
+
+*NLS engagement depends on device firmware; 1.85 NLS is unreliable.
 
 ## Startup sequence
 
