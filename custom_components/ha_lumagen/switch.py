@@ -12,7 +12,6 @@ from homeassistant.components.switch import (
     SwitchEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -49,15 +48,6 @@ SWITCH_ENTITIES: tuple[LumagenSwitchEntityDescription, ...] = (
         is_on_fn=lambda s: s.auto_aspect,
         turn_on_fn=lambda c: c.client.set_auto_aspect(True),
         turn_off_fn=lambda c: c.client.set_auto_aspect(False),
-    ),
-    LumagenSwitchEntityDescription(
-        key="game_mode",
-        name="Game Mode",
-        icon="mdi:gamepad-variant",
-        is_on_fn=lambda s: s.game_mode,
-        turn_on_fn=lambda c: c.client.set_game_mode(True),
-        turn_off_fn=lambda c: c.client.set_game_mode(False),
-        entity_category=EntityCategory.CONFIG,
     ),
 )
 
