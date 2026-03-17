@@ -48,8 +48,9 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
 
         old_power = self.data.power if self.data else None
 
-        # Detect transition to active (from standby, or initial state discovery)
-        if new_data.power == "on" and old_power != "on":
+        # Detect transition to active — skip initial state discovery (old_power
+        # is None) since __init__.py already fetches runtime state at startup.
+        if new_data.power == "on" and old_power is not None and old_power != "on":
             _LOGGER.info("Device powered on — scheduling runtime state fetch")
             self.hass.async_create_task(self._handle_power_on())
 
