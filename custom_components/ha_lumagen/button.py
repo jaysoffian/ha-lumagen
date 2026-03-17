@@ -66,6 +66,8 @@ class LumagenResetAutoAspectButton(LumagenEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Reset auto aspect detection on the device."""
         await self.coordinator.client.send_command("ZY550\r")
+        # Reset re-enables auto aspect; confirm from device
+        await self.coordinator.client.send_command("ZQI54")
 
 
 class LumagenDisplayInputAspectButton(LumagenEntity, ButtonEntity):
