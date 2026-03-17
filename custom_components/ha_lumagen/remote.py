@@ -35,7 +35,6 @@ class LumagenRemoteEntity(LumagenEntity, RemoteEntity):
 
     _attr_name = "Remote"
     _attr_icon = "mdi:remote"
-    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)

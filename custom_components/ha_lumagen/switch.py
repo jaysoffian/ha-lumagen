@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -116,6 +117,7 @@ class LumagenGameModeSwitch(LumagenEntity, SwitchEntity):
     _attr_name = "Game Mode"
     _attr_icon = "mdi:gamepad-variant"
     _attr_device_class = SwitchDeviceClass.SWITCH
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)

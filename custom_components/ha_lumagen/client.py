@@ -924,7 +924,7 @@ class LumagenClient:
         """Pop up input and aspect info on the OSD."""
         await self.send_command("ZY811\r")
 
-    async def set_fan_speed(self, speed: int) -> None:
+    async def set_min_fan_speed(self, speed: int) -> None:
         """Set minimum fan speed (1-10)."""
         if not 1 <= speed <= 10:
             raise ValueError(f"Fan speed must be 1-10, got {speed}")

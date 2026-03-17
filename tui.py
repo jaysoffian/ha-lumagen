@@ -648,7 +648,7 @@ class LumagenTUI(App):
             if not 1 <= val <= 10:
                 log.write(f"[red]Fan speed must be 1-10, got {val}[/]")
                 return
-            await self._client.set_fan_speed(val)
+            await self._client.set_min_fan_speed(val)
             return
 
         if cmd == "subtitle":
