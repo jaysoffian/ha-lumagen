@@ -9,7 +9,6 @@ from typing import Any, cast
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -29,7 +28,6 @@ class LumagenSelectEntityDescription(SelectEntityDescription):
     select_option_fn: Callable[[LumagenCoordinator, str], Any]
     options_fn: Callable[[LumagenCoordinator], list[str]] | None = None
     static_options: list[str] | None = None
-    optimistic: bool = False  # True = no device query; keep last-set value
 
 
 # -- Option callbacks -------------------------------------------------------
@@ -76,15 +74,6 @@ async def _select_memory(coord: LumagenCoordinator, option: str) -> None:
     await coord.client.select_memory(cast("InputMemory", option[-1]))  # "MEMA" → "A"
 
 
-_SUBTITLE_SHIFT_OPTIONS = ["Off", "3%", "6%"]
-_SUBTITLE_SHIFT_TO_LEVEL = {"Off": 0, "3%": 1, "6%": 2}
-
-
-async def _select_subtitle_shift(coord: LumagenCoordinator, option: str) -> None:
-    level = _SUBTITLE_SHIFT_TO_LEVEL[option]
-    await coord.client.set_subtitle_shift(level)
-
-
 # -- Entity descriptions ----------------------------------------------------
 
 SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
@@ -111,16 +100,6 @@ SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
         current_option_fn=_current_memory,
         select_option_fn=_select_memory,
         static_options=["MEMA", "MEMB", "MEMC", "MEMD"],
-    ),
-    LumagenSelectEntityDescription(
-        key="subtitle_shift",
-        name="Subtitle Shift",
-        icon="mdi:subtitles",
-        entity_category=EntityCategory.CONFIG,
-        current_option_fn=lambda _data, _coord: None,
-        select_option_fn=_select_subtitle_shift,
-        static_options=_SUBTITLE_SHIFT_OPTIONS,
-        optimistic=True,
     ),
 )
 
@@ -151,9 +130,6 @@ class LumagenSelectEntity(LumagenEntity, SelectEntity):
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{description.key}"
         self._optimistic_option: str | None = None
-        # For purely optimistic entities (no device query), seed the default
-        if description.optimistic and description.static_options:
-            self._attr_current_option = description.static_options[0]
         # HA reads options during entity registration, before the first
         # coordinator update calls _update_attrs, so seed them here.
         if description.static_options:
@@ -175,18 +151,16 @@ class LumagenSelectEntity(LumagenEntity, SelectEntity):
             self._attr_options = []
         if self._optimistic_option is not None:
             self._attr_current_option = self._optimistic_option
-        elif not self.entity_description.optimistic:
+        else:
             self._attr_current_option = self.entity_description.current_option_fn(
                 self.coordinator.data, self.coordinator
             )
 
     def _handle_coordinator_update(self) -> None:
-        if not self.entity_description.optimistic:
-            self._optimistic_option = None
+        self._optimistic_option = None
         super()._handle_coordinator_update()
 
     async def async_select_option(self, option: str) -> None:
-        prev = self._attr_current_option
         self._optimistic_option = option
         self._attr_current_option = option
         self.async_write_ha_state()
@@ -194,9 +168,6 @@ class LumagenSelectEntity(LumagenEntity, SelectEntity):
             await self.entity_description.select_option_fn(self.coordinator, option)
         except Exception:
             self._optimistic_option = None
-            if self.entity_description.optimistic:
-                self._attr_current_option = prev
-            else:
-                self._update_attrs()
+            self._update_attrs()
             self.async_write_ha_state()
             raise
