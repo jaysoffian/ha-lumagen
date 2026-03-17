@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import logging
 
+import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 
 from .client import LumagenClient
 from .const import DEFAULT_PORT, DOMAIN
@@ -22,6 +24,67 @@ PLATFORMS: list[Platform] = [
     Platform.SWITCH,
     Platform.REMOTE,
 ]
+
+
+SERVICE_DISPLAY_MESSAGE = "display_message"
+SERVICE_DISPLAY_VOLUME = "display_volume"
+SERVICE_CLEAR_MESSAGE = "clear_message"
+
+DISPLAY_MESSAGE_SCHEMA = vol.Schema(
+    {
+        vol.Required("message"): cv.string,
+        vol.Optional("duration", default=3): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=9)
+        ),
+        vol.Optional("block_char", default=False): cv.boolean,
+    }
+)
+
+DISPLAY_VOLUME_SCHEMA = vol.Schema(
+    {
+        vol.Required("volume"): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
+    }
+)
+
+
+def _get_coordinator(hass: HomeAssistant) -> LumagenCoordinator:
+    """Return the first (and usually only) coordinator."""
+    coordinators: dict = hass.data.get(DOMAIN, {})
+    if not coordinators:
+        raise ValueError("No Lumagen devices configured")
+    return next(iter(coordinators.values()))
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up domain-level services."""
+
+    async def handle_display_message(call: ServiceCall) -> None:
+        coordinator = _get_coordinator(hass)
+        message = call.data["message"]
+        duration = call.data["duration"]
+        if call.data["block_char"]:
+            # Prepend ZBX so 'X' renders as █
+            await coordinator.client.send_command(f"ZBXZT{duration}{message:.60}\r")
+        else:
+            await coordinator.client.display_message(message, duration)
+
+    async def handle_display_volume(call: ServiceCall) -> None:
+        coordinator = _get_coordinator(hass)
+        await coordinator.client.display_volume(call.data["volume"])
+
+    async def handle_clear_message(call: ServiceCall) -> None:
+        coordinator = _get_coordinator(hass)
+        await coordinator.client.clear_message()
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_DISPLAY_MESSAGE, handle_display_message, DISPLAY_MESSAGE_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_DISPLAY_VOLUME, handle_display_volume, DISPLAY_VOLUME_SCHEMA
+    )
+    hass.services.async_register(DOMAIN, SERVICE_CLEAR_MESSAGE, handle_clear_message)
+
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

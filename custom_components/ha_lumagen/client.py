@@ -911,6 +911,19 @@ class LumagenClient:
         duration = max(0, min(9, duration))
         await self.send_command(f"ZT{duration}{text}\r")
 
+    async def display_volume(self, volume: float) -> None:
+        """Show a volume bar on the OSD.
+
+        Uses ZBX to set the block character (█), then ZT1 to display for 1s.
+        Format: ``vol  ████████████████         `` (4-char number + 25-char bar).
+        Bar is scaled for volume range 0-80.
+        """
+        bar_width = 25
+        vol_limit = 80
+        bar = "X" * int(min(volume, vol_limit) / vol_limit * bar_width)
+        vol = f"{volume:.1f}" if volume < 100 else "max"
+        await self.send_command(f"ZBXZT1{vol:>4} {bar:{bar_width}}\r")
+
     async def clear_message(self) -> None:
         """Clear any OSD message."""
         await self.send_command("ZC")
