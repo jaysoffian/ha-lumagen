@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -35,6 +35,7 @@ class LumagenPowerSwitch(LumagenEntity, SwitchEntity):
 
     _attr_name = "Power"
     _attr_icon = "mdi:power"
+    _attr_device_class = SwitchDeviceClass.SWITCH
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)
@@ -75,6 +76,7 @@ class LumagenAutoAspectSwitch(LumagenEntity, SwitchEntity):
 
     _attr_name = "Auto Aspect"
     _attr_icon = "mdi:aspect-ratio"
+    _attr_device_class = SwitchDeviceClass.SWITCH
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)
@@ -113,6 +115,7 @@ class LumagenGameModeSwitch(LumagenEntity, SwitchEntity):
 
     _attr_name = "Game Mode"
     _attr_icon = "mdi:gamepad-variant"
+    _attr_device_class = SwitchDeviceClass.SWITCH
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)
