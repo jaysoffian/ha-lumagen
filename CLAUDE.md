@@ -28,9 +28,9 @@ custom_components/ha_lumagen/
   entity.py        — shared base entity (device_info, availability)
   config_flow.py   — single-step IP/port config flow
   sensor.py        — status + diagnostic sensors
-  select.py        — input, aspect ratio, memory
-  switch.py        — power on/off
-  button.py        — refresh config, reset auto aspect buttons
+  select.py        — input, aspect ratio, memory selects
+  switch.py        — power, auto aspect, game mode switches
+  button.py        — reload config, reset auto aspect, show input aspect
   remote.py        — menu navigation commands
   const.py         — domain, defaults, errors
 tui.py             — standalone Textual TUI for interactive testing
