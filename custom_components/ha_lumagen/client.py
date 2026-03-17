@@ -862,32 +862,33 @@ class LumagenClient:
         """Set source aspect ratio by display name.
 
         Selecting "Auto" enables auto aspect detection; any other
-        manual aspect selection disables it.  NLS variants (e.g.
-        "4:3 NLS") send a two-command sequence and don't affect
-        auto aspect.
+        selection (including NLS variants) disables it.  NLS variants
+        send a two-command sequence with a brief delay so the device
+        processes the base aspect before the NLS modifier.
         """
         cmds = ASPECT_COMMANDS.get(aspect)
         if cmds is None:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
-        for cmd in cmds:
+        for i, cmd in enumerate(cmds):
+            if i > 0:
+                await asyncio.sleep(0.1)
             await self.send_command(cmd)
         self.state.clear_changed()
-        is_nls = aspect.endswith("NLS")
         if aspect == "Auto":
             self.state.nls_active = False
             self.state.auto_aspect = True
-        elif is_nls:
+        elif aspect.endswith("NLS"):
             self.state.nls_active = True
+            self.state.auto_aspect = False
         else:
             self.state.nls_active = False
             self.state.source_content_aspect = aspect
             self.state.auto_aspect = False
         if self.state._changed:
             self._notify_state_changed()
-        if not is_nls:
-            # Confirm auto aspect state from device
-            await self.send_command("ZQI54")
+        # Confirm auto aspect state from device
+        await self.send_command("ZQI54")
 
     async def send_remote_command(self, command: str) -> None:
         """Send a named remote-control command."""
