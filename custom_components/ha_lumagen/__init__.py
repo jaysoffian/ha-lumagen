@@ -58,6 +58,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not await client.wait_for(lambda s: s.power is not None, timeout=5):
             _LOGGER.warning("Power query timed out")
 
+        # Query config toggles (game mode, auto aspect) so switches
+        # have a known state from the start, not just when stored.
+        await client.send_command("ZQI53")
+        await client.send_command("ZQI54")
+
         # If device is on, fetch runtime state
         if client.state.power == "on":
             await client.fetch_runtime_state()
