@@ -11,7 +11,6 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -178,33 +177,6 @@ STATUS_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (
     ),
 )
 
-DIAGNOSTIC_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (
-    LumagenSensorEntityDescription(
-        key="model_name",
-        name="Model Name",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: data.model_name,
-    ),
-    LumagenSensorEntityDescription(
-        key="software_revision",
-        name="Software Revision",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: data.software_revision,
-    ),
-    LumagenSensorEntityDescription(
-        key="model_number",
-        name="Model Number",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: data.model_number,
-    ),
-    LumagenSensorEntityDescription(
-        key="serial_number",
-        name="Serial Number",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda data: data.serial_number,
-    ),
-)
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -214,8 +186,7 @@ async def async_setup_entry(
     """Set up Lumagen sensors."""
     coordinator: LumagenCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
-        LumagenSensorEntity(coordinator, desc)
-        for desc in (*STATUS_SENSORS, *DIAGNOSTIC_SENSORS)
+        LumagenSensorEntity(coordinator, desc) for desc in STATUS_SENSORS
     )
 
 
@@ -238,9 +209,4 @@ class LumagenSensorEntity(LumagenEntity, SensorEntity):
         data = self.coordinator.data
         if data is None:
             return
-        # Diagnostic sensors available whenever connected (even in standby)
-        if self.entity_description.entity_category == EntityCategory.DIAGNOSTIC:
-            self._attr_available = (
-                self.coordinator.last_update_success and data.connected
-            )
         self._attr_native_value = self.entity_description.value_fn(data)
