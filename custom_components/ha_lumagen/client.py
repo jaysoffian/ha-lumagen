@@ -48,22 +48,26 @@ ASPECT_RATIO_NAMES: dict[int, str] = {
     276: "2.76",
 }
 
-# Display name → RS232 command for setting aspect
-ASPECT_COMMANDS: dict[str, str] = {
-    "Auto": "~",
-    "4:3": "[",
-    "Letterbox": "]",
-    "16:9": "*",
-    "1.85": "/",
-    "1.90": "A",
-    "2.00": "C",
-    "2.10": "+j",
-    "2.20": "E",
-    "2.35": "K",
-    "2.40": "G",
-    "2.55": "+W",
-    "2.76": "+N",
-    "NLS": "N",
+# Display name → RS232 command(s) for setting aspect.
+# NLS requires a base aspect first (e.g. 4:3 then N), so the NLS
+# entries are two-command sequences.
+ASPECT_COMMANDS: dict[str, list[str]] = {
+    "Auto": ["~"],
+    "4:3": ["["],
+    "Letterbox": ["]"],
+    "16:9": ["*"],
+    "1.85": ["/"],
+    "1.90": ["A"],
+    "2.00": ["C"],
+    "2.10": ["+j"],
+    "2.20": ["E"],
+    "2.35": ["K"],
+    "2.40": ["G"],
+    "2.55": ["+W"],
+    "2.76": ["+N"],
+    "4:3 NLS": ["[", "N"],
+    "16:9 NLS": ["*", "N"],
+    "1.85 NLS": ["/", "N"],
 }
 
 # I20 aspect code → display name
@@ -858,28 +862,32 @@ class LumagenClient:
         """Set source aspect ratio by display name.
 
         Selecting "Auto" enables auto aspect detection; any other
-        manual aspect selection disables it.
+        manual aspect selection disables it.  NLS variants (e.g.
+        "4:3 NLS") send a two-command sequence and don't affect
+        auto aspect.
         """
-        cmd = ASPECT_COMMANDS.get(aspect)
-        if cmd is None:
+        cmds = ASPECT_COMMANDS.get(aspect)
+        if cmds is None:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
-        await self.send_command(cmd)
+        for cmd in cmds:
+            await self.send_command(cmd)
         self.state.clear_changed()
+        is_nls = aspect.endswith("NLS")
         if aspect == "Auto":
             self.state.nls_active = False
             self.state.auto_aspect = True
-        elif aspect == "NLS":
+        elif is_nls:
             self.state.nls_active = True
-            self.state.auto_aspect = False
         else:
             self.state.nls_active = False
             self.state.source_content_aspect = aspect
             self.state.auto_aspect = False
         if self.state._changed:
             self._notify_state_changed()
-        # Confirm auto aspect state from device
-        await self.send_command("ZQI54")
+        if not is_nls:
+            # Confirm auto aspect state from device
+            await self.send_command("ZQI54")
 
     async def send_remote_command(self, command: str) -> None:
         """Send a named remote-control command."""
