@@ -194,7 +194,32 @@ data:
     - enter
 ```
 
-### Automation Example
+### Services
+
+The integration registers domain-level services for OSD control:
+
+| Service                      | Description |
+|------------------------------|-------------|
+| `ha_lumagen.display_message` | Show an OSD message (up to 60 chars, two 30-char lines). Set `block_char: true` to render `X` as █. |
+| `ha_lumagen.display_volume`  | Show a volume bar (0-100) for 1 second, scaled for a 0-80 useful range. |
+| `ha_lumagen.clear_message`   | Clear any OSD message. |
+
+```yaml
+# Show a custom message for 5 seconds
+service: ha_lumagen.display_message
+data:
+  message: "Hello World"
+  duration: 5
+
+# Show a volume bar
+service: ha_lumagen.display_volume
+data:
+  volume: 63.5
+```
+
+### Automation Examples
+
+#### Switch input on playback
 
 ```yaml
 automation:
@@ -209,6 +234,27 @@ automation:
           entity_id: select.lumagen_radiancepro_input
         data:
           option: "HDMI 2"
+```
+
+#### Show Denon AVR volume on the Lumagen OSD
+
+If you use a Denon/Marantz AVR with the
+[built-in HA integration](https://www.home-assistant.io/integrations/denonavr/),
+you can mirror volume changes on the Lumagen display — no separate daemon
+needed:
+
+```yaml
+automation:
+  - alias: "Show Denon volume on Lumagen"
+    trigger:
+      - platform: state
+        entity_id: media_player.denon_avr  # adjust to your entity
+        attribute: volume_level
+    action:
+      - service: ha_lumagen.display_volume
+        data:
+          # HA volume_level is 0.0-1.0; scale to 0-100
+          volume: "{{ state_attr('media_player.denon_avr', 'volume_level') * 100 }}"
 ```
 
 ## Architecture
@@ -320,6 +366,7 @@ custom_components/ha_lumagen/
   button.py        — reload config, reset auto aspect, show input aspect
   remote.py        — menu navigation commands
   const.py         — domain, defaults, errors
+  services.yaml    — HA service descriptions for OSD services
 tui.py             — standalone Textual TUI for interactive testing
 docs/
   rs232_command_reference.md — full Lumagen RS-232 command + query reference
