@@ -66,9 +66,9 @@ Copy `custom_components/ha_lumagen` into your Home Assistant
 
 | Entity             | Category      | Description |
 |--------------------|---------------|-------------|
-| Reset Auto Aspect  | Main controls | Reset auto aspect detection and re-enable it (ZY550). Also clears NLS. |
-| Show Input Aspect  | Main controls | Pop up input and aspect info on the Lumagen OSD. |
-| Reload Config      | Configuration | Re-fetch identity and all labels from the device and save to disk. |
+| Reset auto aspect  | Main controls | Reset auto aspect detection and re-enable it (ZY550). Also clears NLS. |
+| Show input aspect  | Main controls | Pop up input and aspect info on the Lumagen OSD. |
+| Reload config      | Configuration | Re-fetch identity and all labels from the device and save to disk. |
 
 ### Selects
 
