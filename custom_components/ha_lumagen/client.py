@@ -1002,8 +1002,24 @@ class LumagenClient:
         if len(text) > 30:
             raise ValueError(f"Label text must be <=30 chars, got {len(text)}")
         await self.send_command(f"ZY524{category}{index}{text}\r")
-        # Re-fetch to confirm
-        await self._query_label(f"{category}{index}")
+        # Re-fetch to confirm; fall back to the text we sent
+        label_id = f"{category}{index}"
+        confirmed = await self._query_label(label_id)
+        label_text = confirmed if confirmed is not None else text
+        # Update the appropriate label dict
+        if category in ("A", "B", "C", "D"):
+            self.state.input_labels[label_id] = label_text
+        elif category == "0":
+            # Category 0 sets all input memories at once
+            for mem in "ABCD":
+                self.state.input_labels[f"{mem}{index}"] = label_text
+        elif category == "1":
+            self.state.custom_mode_labels[label_id] = label_text
+        elif category == "2":
+            self.state.cms_labels[label_id] = label_text
+        elif category == "3":
+            self.state.style_labels[label_id] = label_text
+        self._notify_state_changed()
 
     # -- Misc ---------------------------------------------------------------
 
