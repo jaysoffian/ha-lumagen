@@ -96,8 +96,8 @@ SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
         options_fn=lambda coord: coord.client.get_source_list(),
     ),
     LumagenSelectEntityDescription(
-        key="input_aspect_ratio",
-        name="Input Aspect Ratio",
+        key="aspect_ratio",
+        name="Aspect Ratio",
         icon="mdi:aspect-ratio",
         current_option_fn=_current_aspect,
         select_option_fn=_select_aspect,
