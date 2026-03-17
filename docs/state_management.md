@@ -23,9 +23,28 @@ Model, serial, firmware, and labels are shown in the UI but not exposed
 as separate entities — identity fields live in HA's device info, and
 labels populate the Input select dropdown.
 
-Game mode is queried and stored but not exposed as an entity. It's a
-per-input setting saved on the Lumagen; switching inputs already applies
-the right value. The TUI `game on/off` command is available for testing.
+### What we deliberately don't expose as HA entities
+
+The Lumagen has many settings that are configured once per input (or
+globally) via the Lumagen menu and then left alone. These are poor
+candidates for HA entities because:
+
+1. **No query command** — the device provides no way to read the current
+   value, so the entity can't show the real state after an HA restart or
+   a Lumagen reboot.
+2. **No automation value** — these are "set and forget" settings with no
+   realistic scenario where you'd want HA to change them dynamically.
+3. **Saved on the device** — switching inputs already applies the right
+   per-input configuration automatically.
+
+| Setting         | Command  | Why excluded                                        |
+|-----------------|----------|-----------------------------------------------------|
+| Game mode       | ZY551    | Per-input, saved on device, no automation use case. Queryable (I53) but not worth an entity. |
+| Min fan speed   | ZY552    | Global hardware setting. No query command — state lost on restart. |
+| Subtitle shift  | ZY553    | Per-input, no query command, no automation use case. |
+
+The client methods and TUI commands for these settings remain available
+for interactive testing and debugging.
 
 **When fetched:**
 - First-ever setup (no stored data) — automatic with backoff retry.
