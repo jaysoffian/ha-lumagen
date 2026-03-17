@@ -55,67 +55,101 @@ Copy `custom_components/ha_lumagen` into your Home Assistant
 
 ## Entities
 
-### Switch
+### Switches
 
-| Entity | Description |
-|--------|-------------|
-| Power  | Turn device on / standby. Optimistic state for instant UI feedback. |
+| Entity       | Description |
+|--------------|-------------|
+| Power        | Turn device on / standby. Available even in standby. |
+| Auto Aspect  | Enable / disable auto aspect detection. Syncs with aspect ratio selection (see below). |
 
-### Button
+### Buttons
 
-| Entity             | Description |
-|--------------------|-------------|
-| Refresh Config     | Re-fetch identity, game mode, and all labels from the device and save to disk. |
-| Reset Auto Aspect  | Reset auto aspect detection (ZY550). |
+| Entity             | Category      | Description |
+|--------------------|---------------|-------------|
+| Reset Auto Aspect  | Main controls | Reset auto aspect detection and re-enable it (ZY550). Also clears NLS. |
+| Show Input Aspect  | Main controls | Pop up input and aspect info on the Lumagen OSD. |
+| Reload Config      | Configuration | Re-fetch identity and all labels from the device and save to disk. |
 
-### Select
+### Selects
 
-| Entity             | Description |
-|--------------------|-------------|
-| Input              | Select from labeled inputs (cached on disk; press Refresh Config to update) |
-| Input Aspect Ratio | Auto, 4:3, Letterbox, 16:9, 1.85, 1.90, 2.00, 2.10, 2.20, 2.35, 2.40, 2.55, 2.76, NLS |
-| Memory             | Select input memory A / B / C / D |
+| Entity       | Description |
+|--------------|-------------|
+| Input        | Select from labeled inputs. Labels are cached on disk; press Reload Config to update. |
+| Aspect Ratio | Auto, 4:3, Letterbox, 16:9, 1.85–2.76, plus NLS variants (see below). |
+| Memory       | Select input memory A / B / C / D. |
 
 ### Sensors
 
-**Status** (available when device is active):
+All sensors require the device to be active (not in standby).
 
 | Sensor                       | Description |
 |------------------------------|-------------|
 | Logical Input                | Current logical input number |
 | Physical Input               | Current physical input |
 | Input Configuration          | Active input config number |
+| Input Video Status           | No Source / Active Video / Test Pattern |
 | Source Resolution             | Source vertical resolution |
 | Source Refresh Rate           | Source vertical refresh rate |
 | Source Content Aspect Ratio   | Detected source content aspect |
 | Source Raster Aspect Ratio    | Source raster aspect |
 | Source Dynamic Range          | SDR / HDR |
 | Source Mode                   | Progressive / Interlaced |
+| Source 3D Mode                | Off / Frame Sequential / Frame Packed / Top-Bottom / Side-by-Side |
 | NLS Active                   | Non-linear stretch active |
-| Detected Content Aspect Ratio | Auto-detected content aspect (v4 firmware) |
-| Detected Raster Aspect Ratio  | Auto-detected raster aspect (v4 firmware) |
+| Detected Content Aspect Ratio | Auto-detected content aspect (v4+ firmware) |
+| Detected Raster Aspect Ratio  | Auto-detected raster aspect (v4+ firmware) |
 | Output Resolution             | Output vertical resolution |
 | Output Refresh Rate           | Output vertical refresh rate |
 | Output Aspect Ratio           | Output aspect ratio |
+| Output Mode                   | Progressive / Interlaced |
 | Output Colorspace             | Output colorspace (e.g. BT.709, BT.2020) |
+| Output 3D Mode                | Off / Frame Sequential / Frame Packed / Top-Bottom / Side-by-Side |
+| Active Outputs                | Which outputs are active (1–4) |
 | Output CMS                    | Active color management system (0–7) |
 | Output Style                  | Active output style (0–7) |
 
-**Diagnostic** (available whenever connected, even in standby):
-
-| Sensor            | Description |
-|-------------------|-------------|
-| Model Name        | e.g. "RadiancePro" |
-| Software Revision | Firmware version |
-| Model Number      | Hardware model number |
-| Serial Number     | Device serial number |
+Device identity (model, serial, firmware) is shown in HA's device info
+rather than as separate entities.
 
 ### Remote
 
 Send navigation and control commands to the Lumagen menu system.
 
 Available commands: `up`, `down`, `left`, `right`, `menu`, `ok`, `enter`,
-`exit`, `back`, `home`, `info`, `alt`, `clear`, `0`–`9`.
+`exit`, `back`, `home`, `info`, `alt`, `clear`, `previous`, `pip_off`,
+`pip_select`, `pip_swap`, `pip_mode`, `save`, `hdr_setup`, `test_pattern`,
+`osd_on`, `osd_off`, `0`–`9`.
+
+## Aspect Ratio and Auto Aspect
+
+The Aspect Ratio select and Auto Aspect switch are kept in sync:
+
+| Action              | Auto Aspect | NLS    | Aspect              |
+|---------------------|-------------|--------|---------------------|
+| Select "Auto"       | On          | Off    | (device-detected)   |
+| Select a ratio      | Off         | Off    | Set to selection    |
+| Select NLS variant  | Off         | On*    | Set to base ratio   |
+| Reset Auto Aspect   | On          | Off    | (device-detected)   |
+
+### NLS (Non-Linear Stretch)
+
+NLS stretches a narrower aspect to fill a wider display non-linearly
+(more stretch at the edges, less in the center). The integration offers
+three NLS variants:
+
+- **4:3 NLS** — stretch 4:3 to 16:9
+- **16:9 NLS** — stretch 16:9 to 2.35/2.40
+- **1.85 NLS** — stretch 1.85 to 2.35/2.40
+
+On the Lumagen remote, NLS is a two-button sequence (e.g. press 16:9 then
+NLS). The integration sends both commands automatically.
+
+**Caveat:** NLS behavior can be unreliable at the firmware level. In
+testing, 4:3 NLS and 16:9 NLS work consistently, but **1.85 NLS works
+roughly 50% of the time** — the device sometimes sets the aspect to 1.85
+without engaging NLS. This is a firmware limitation. The integration
+queries the device for authoritative state after sending NLS commands, so
+the UI will always show what the device actually did.
 
 ## Usage Examples
 
@@ -132,7 +166,7 @@ target:
 ```yaml
 service: select.select_option
 target:
-  entity_id: select.lumagen_radiancepro_input_source
+  entity_id: select.lumagen_radiancepro_input
 data:
   option: "HDMI 1"
 ```
@@ -142,7 +176,7 @@ data:
 ```yaml
 service: select.select_option
 target:
-  entity_id: select.lumagen_radiancepro_source_aspect_ratio
+  entity_id: select.lumagen_radiancepro_aspect_ratio
 data:
   option: "2.35"
 ```
@@ -172,7 +206,7 @@ automation:
     action:
       - service: select.select_option
         target:
-          entity_id: select.lumagen_radiancepro_input_source
+          entity_id: select.lumagen_radiancepro_input
         data:
           option: "HDMI 2"
 ```
@@ -180,7 +214,7 @@ automation:
 ## Architecture
 
 The integration has no external dependencies. Communication with the Lumagen is
-handled by `client.py`, a self-contained async TCP client (~400 lines).
+handled by `client.py`, a self-contained async TCP client.
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -210,10 +244,10 @@ come from the TCP stream:
 - **Keepalive**: `ZQI25` sent after 30 s of idle; any received data resets
   the timer
 
-Device state is split into three tiers — config (stored on disk), per-input
-runtime, and signal (unsolicited). See
-[docs/state_management.md](docs/state_management.md) for details on what is
-fetched when and why.
+Device state is split into config (stored on disk) and signal (unsolicited).
+See [docs/state_management.md](docs/state_management.md) for the full design
+including startup sequence, optimistic vs authoritative state, NLS caveats,
+and connection lifecycle.
 
 For the full RS-232 command and query reference, see
 [docs/rs232_command_reference.md](docs/rs232_command_reference.md).
@@ -228,16 +262,22 @@ For the full RS-232 command and query reference, see
 
 ### Entities show unavailable
 
-- Status sensors require the device to be active (not in standby)
-- Diagnostic sensors only require a TCP connection
+- Sensors require the device to be active (not in standby)
+- Power switch and Reload Config are available whenever connected
 - Check Home Assistant logs for keepalive timeouts or reconnect messages
 
 ### Input source dropdown shows "Input 1", "Input 2", …
 
 Labels are cached on disk. If you see default names:
 1. Confirm you have custom labels configured on the Lumagen
-2. Press the **Refresh config** button entity to fetch labels from the device
+2. Press the **Reload config** button entity to fetch labels from the device
 3. Labels are per input memory — switching memories shows that memory's labels
+
+### NLS aspect shows unexpected result
+
+NLS can be unreliable at the firmware level (see [NLS caveats](#nls-non-linear-stretch)
+above). The integration always queries the device for authoritative state
+after NLS commands, so the UI reflects what the device actually did.
 
 ## Development
 
@@ -247,21 +287,8 @@ Requires [uv](https://docs.astral.sh/uv/).
 # Set up the dev environment
 uv sync
 
-# Run tests
-uv run pytest tests/ -v
-
-# Lint + format
-uv run ruff check custom_components/ tests/
-uv run ruff format custom_components/ tests/
-
-# Type check
-uv run ty check
-
-# Run all checks (ruff, ty, pytest, trailing whitespace, etc.)
-uv run pre-commit run --all-files
-
-# Install pre-commit as a git hook
-uv run pre-commit install
+# Run all checks (ruff, pyright, pytest, trailing whitespace, etc.)
+pre-commit run --all-files
 ```
 
 ### TUI
@@ -270,11 +297,14 @@ A standalone Textual TUI for exercising the client against a real Lumagen:
 
 ```bash
 ./tui.py <host> [port]
+# or via env vars:
+LUMAGEN_HOST=192.168.1.100 ./tui.py
 ```
 
 Split-pane interface with live device state on the left, protocol log on the
 right, and a command input at the bottom. Type `help` for available commands
-(raw RS-232, power, input, memory, aspect, remote, OSD, labels, etc.).
+(raw RS-232, power, input, memory, aspect, remote, OSD, labels, fan, subtitle
+shift, etc.).
 
 ### Repo layout
 
@@ -284,10 +314,10 @@ custom_components/ha_lumagen/
   coordinator.py   — HA DataUpdateCoordinator (event-driven, no polling)
   entity.py        — shared base entity (device_info, availability)
   config_flow.py   — single-step IP/port config flow
-  sensor.py        — status + diagnostic sensors
-  select.py        — input, aspect ratio, memory
-  switch.py        — power on/off
-  button.py        — refresh config, reset auto aspect buttons
+  sensor.py        — signal status sensors
+  select.py        — input, aspect ratio, memory selects
+  switch.py        — power, auto aspect switches
+  button.py        — reload config, reset auto aspect, show input aspect
   remote.py        — menu navigation commands
   const.py         — domain, defaults, errors
 tui.py             — standalone Textual TUI for interactive testing
