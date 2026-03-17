@@ -31,7 +31,7 @@ async def async_setup_entry(
 class LumagenRefreshConfigButton(LumagenEntity, ButtonEntity):
     """Button to refresh identity and labels from the device."""
 
-    _attr_name = "Refresh config"
+    _attr_name = "Reload config"
     _attr_icon = "mdi:refresh"
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
