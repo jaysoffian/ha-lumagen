@@ -855,22 +855,31 @@ class LumagenClient:
             self._notify_state_changed()
 
     async def set_aspect(self, aspect: str) -> None:
-        """Set source aspect ratio by display name."""
+        """Set source aspect ratio by display name.
+
+        Selecting "Auto" enables auto aspect detection; any other
+        manual aspect selection disables it.
+        """
         cmd = ASPECT_COMMANDS.get(aspect)
         if cmd is None:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
         await self.send_command(cmd)
         self.state.clear_changed()
-        if aspect == "NLS":
-            self.state.nls_active = True
-        elif aspect != "Auto":
+        if aspect == "Auto":
             self.state.nls_active = False
-            self.state.source_content_aspect = aspect
+            self.state.auto_aspect = True
+        elif aspect == "NLS":
+            self.state.nls_active = True
+            self.state.auto_aspect = False
         else:
             self.state.nls_active = False
+            self.state.source_content_aspect = aspect
+            self.state.auto_aspect = False
         if self.state._changed:
             self._notify_state_changed()
+        # Confirm auto aspect state from device
+        await self.send_command("ZQI54")
 
     async def send_remote_command(self, command: str) -> None:
         """Send a named remote-control command."""
