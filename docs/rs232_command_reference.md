@@ -233,6 +233,7 @@ Example responses:
 | `ZQI00` | Basic input info | `!I00,<logical 1-18>,<mem A-D>,<physical 1-18>` |
 | `ZQI01` | Input video | `!I01,<status>,<vrate*100>,<hres>,<vres>,<interlaced>,<3d>,<input_3d>` |
 | `ZQI02` | Test pattern info | `!I02,<on>,<group>,<sub>,<IRE>,<A or R>` |
+| `ZQI03` | Replaced by `ZQI18` ||
 | `ZQI04` | Audio select | 0–5=HDMI, 6–11=coax, 12–13=optical, 14–17=stereo |
 | `ZQI05`\* | Black level | -64 to 64 |
 | `ZQI06`\* | Contrast | -127 to 127 |
@@ -248,8 +249,12 @@ Example responses:
 | `ZQI16` | Vertical shift | `<index>,<value>` (0=off, 1–15; -511 to 511) |
 | `ZQI17` | Reinterlacing | `<enable>,<allow_keys>,<active>` (each 1/0) |
 | `ZQI18` | Output config for current input | `!I18,<out1>,<out2>,<mode>,<3d>,<cms>,<style>` |
+| `ZQI19` | Replaced by `ZQI20` ||
 | `ZQI20` | Input aspect | `!I20,<code><nls>` — code=0–9, nls='N' or '-' |
+| `ZQI21` - `ZQI25` | See "Query Commands — Information" below |
+| `ZQI26` - `ZQI29` | Reserved |
 | `ZQI30` | Sharpness | Values per ZY521ELS format |
+| `ZQI31` - `ZQI49` | Reserved |
 | `ZQI50` | Rec 2020 support (Pro) | `!I50,Y` or `!I50,N` |
 | `ZQI52` | HDR status (Pro) | `!I52,<V>,<Min>,<Max>,<Cll>` (V: 0=SDR, 1=HDR) |
 | `ZQI53` | Game mode | 0=off, 1=on |
@@ -331,8 +336,8 @@ Example responses:
 | `ZQO01` | Output mode | `!O01,<vrate*100>,<hres>,<vres>,<interlaced>,<3d>` |
 | `ZQO02` | Output aspect | Current + 5 per-input aspects (110–250 = 1.10–2.50) |
 | `ZQO03` | Output shrink | `<top>,<left>,<bottom>,<right>` (0–255 pixels) |
-| `ZQO04` | Gamma | 80–140 (= 0.80–1.40) |
-| `ZQO05` | Color gamut enabled | 0 or 1 |
+| `ZQO04` | Gamma | 80–140 (= 0.80–1.40). *Also see `ZY40`* |
+| `ZQO05` | Color gamut enabled | 0 or 1. *Also see `ZY412`* |
 | `ZQO13` | Color settings | `<color>,<color_red>,<color_grn>` (-127 to 127) |
 | `ZQO14` | Hue settings | `<hue>,<hue_red>,<hue_grn>` (-127 to 127) |
 | `ZQO15` | Black/contrast | `<black>,<contrast>` |
@@ -342,6 +347,8 @@ Example responses:
 | `ZQO20` | 3D LUT capability | `!O20,<dim>,<bits>` |
 | `ZQO21` | Current 3D LUT size | 01, 05, 09, or 17 |
 | `ZQO30XXYYZZ` | Read 3D LUT value | `!O30,<rrrr>,<gggg>,<bbbb>` (hex, 0x0000–0x0400) |
+
+Note: some `ZQO` commands have been omitted from above. See [Tech Tip 11 - Radiance RS-232 control (11/20/2023)](https://www.lumagen.com/s/Tip0011_RS232CommandInterface_111023.pdf) for complete list of `ZQO` commands.
 
 ---
 
