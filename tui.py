@@ -498,9 +498,8 @@ class LumagenTUI(App):
 
     async def _dispatch_command(self, raw: str) -> None:
         log = self.query_one("#log", RichLog)
-        lower = raw.lower()
-        parts = lower.split(maxsplit=1)
-        cmd = parts[0]
+        parts = raw.split(maxsplit=1)
+        cmd = parts[0].lower()
         arg = parts[1] if len(parts) > 1 else ""
 
         if cmd in ("quit", "exit", "q"):
@@ -579,18 +578,18 @@ class LumagenTUI(App):
             return
 
         if cmd == "game":
-            if arg in ("on", "1"):
+            if arg.lower() in ("on", "1"):
                 await self._client.set_game_mode(True)
-            elif arg in ("off", "0"):
+            elif arg.lower() in ("off", "0"):
                 await self._client.set_game_mode(False)
             else:
                 log.write("[red]Usage: game on / game off[/]")
             return
 
         if cmd == "autoaspect":
-            if arg in ("on", "1"):
+            if arg.lower() in ("on", "1"):
                 await self._client.set_auto_aspect(True)
-            elif arg in ("off", "0"):
+            elif arg.lower() in ("off", "0"):
                 await self._client.set_auto_aspect(False)
             else:
                 log.write("[red]Usage: autoaspect on / autoaspect off[/]")
@@ -615,6 +614,8 @@ class LumagenTUI(App):
                 return
             cat = cast("LabelCategory", category)
             await self._client.set_label(cat, proto_idx, label_parts[1])
+            self._save_state()
+            self._refresh_state()
             log.write(f"[green]Set label {label_id} = {label_parts[1]}[/]")
             return
 
@@ -653,7 +654,7 @@ class LumagenTUI(App):
 
         if cmd == "subtitle":
             shift_map = {"off": 0, "0": 0, "3": 1, "3%": 1, "6": 2, "6%": 2}
-            level = shift_map.get(arg)
+            level = shift_map.get(arg.lower())
             if level is None:
                 log.write("[red]Usage: subtitle off / 3% / 6%[/]")
                 return
@@ -665,7 +666,7 @@ class LumagenTUI(App):
             return
 
         if cmd == "remote" and arg:
-            if arg in REMOTE_COMMANDS:
+            if arg.lower() in REMOTE_COMMANDS:
                 await self._client.send_remote_command(arg)
             else:
                 names = ", ".join(
@@ -697,7 +698,7 @@ class LumagenTUI(App):
             return
 
         if cmd == "refresh":
-            if arg == "labels":
+            if arg.lower() == "labels":
                 log.write("[dim]Fetching labels…[/]")
                 await self._client.get_labels()
                 self._save_state()
