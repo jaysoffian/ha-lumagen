@@ -156,7 +156,7 @@ the UI will always show what the device actually did.
 ### Power
 
 ```yaml
-service: switch.turn_on
+action: switch.turn_on
 target:
   entity_id: switch.lumagen_radiancepro_power
 ```
@@ -164,7 +164,7 @@ target:
 ### Input Selection
 
 ```yaml
-service: select.select_option
+action: select.select_option
 target:
   entity_id: select.lumagen_radiancepro_input
 data:
@@ -174,7 +174,7 @@ data:
 ### Aspect Ratio
 
 ```yaml
-service: select.select_option
+action: select.select_option
 target:
   entity_id: select.lumagen_radiancepro_aspect_ratio
 data:
@@ -184,7 +184,7 @@ data:
 ### Remote Commands
 
 ```yaml
-service: remote.send_command
+action: remote.send_command
 target:
   entity_id: remote.lumagen_radiancepro_remote
 data:
@@ -206,13 +206,13 @@ The integration registers domain-level services for OSD control:
 
 ```yaml
 # Show a custom message for 5 seconds
-service: ha_lumagen.display_message
+action: ha_lumagen.display_message
 data:
   message: "Hello World"
   duration: 5
 
 # Show a volume bar
-service: ha_lumagen.display_volume
+action: ha_lumagen.display_volume
 data:
   volume: 63.5
 ```
@@ -229,7 +229,7 @@ automation:
         entity_id: media_player.apple_tv
         to: "playing"
     action:
-      - service: select.select_option
+      - action: select.select_option
         target:
           entity_id: select.lumagen_radiancepro_input
         data:
@@ -244,17 +244,20 @@ you can mirror volume changes on the Lumagen display — no separate daemon
 needed:
 
 ```yaml
-automation:
-  - alias: "Show Denon volume on Lumagen"
-    trigger:
-      - platform: state
-        entity_id: media_player.denon_avr  # adjust to your entity
-        attribute: volume_level
-    action:
-      - service: ha_lumagen.display_volume
-        data:
-          # HA volume_level is 0.0-1.0; scale to 0-100
-          volume: "{{ state_attr('media_player.denon_avr', 'volume_level') * 100 }}"
+- alias: "Show Denon volume on Lumagen"
+  triggers:
+    - trigger: state
+      entity_id: media_player.denon_avr_x3800h  # adjust to your entity
+      attribute: volume_level
+  conditions:
+    # Skip when volume_level is None (e.g. AVR powering on/off)
+    - condition: template
+      value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
+  actions:
+    - action: ha_lumagen.display_volume
+      data:
+        volume: "{{ trigger.to_state.attributes.volume_level * 100 }}"
+  mode: single
 ```
 
 ## Architecture
