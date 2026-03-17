@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -25,8 +26,9 @@ async def async_setup_entry(
 class LumagenFanSpeedNumber(LumagenEntity, NumberEntity):
     """Lumagen minimum fan speed (1-10)."""
 
-    _attr_name = "Fan Speed"
+    _attr_name = "Minimum Fan Speed"
     _attr_icon = "mdi:fan"
+    _attr_entity_category = EntityCategory.CONFIG
     _attr_native_min_value = 1
     _attr_native_max_value = 10
     _attr_native_step = 1
@@ -38,4 +40,4 @@ class LumagenFanSpeedNumber(LumagenEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the fan speed."""
-        await self.coordinator.client.set_fan_speed(int(value))
+        await self.coordinator.client.set_min_fan_speed(int(value))

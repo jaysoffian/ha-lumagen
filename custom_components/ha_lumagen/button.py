@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -33,6 +34,7 @@ class LumagenRefreshConfigButton(LumagenEntity, ButtonEntity):
 
     _attr_name = "Reload config"
     _attr_icon = "mdi:refresh"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)
@@ -56,6 +58,7 @@ class LumagenResetAutoAspectButton(LumagenEntity, ButtonEntity):
 
     _attr_name = "Reset auto aspect"
     _attr_icon = "mdi:aspect-ratio"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)
@@ -69,8 +72,9 @@ class LumagenResetAutoAspectButton(LumagenEntity, ButtonEntity):
 class LumagenDisplayInputAspectButton(LumagenEntity, ButtonEntity):
     """Button to display input and aspect info on the OSD."""
 
-    _attr_name = "Display input aspect"
+    _attr_name = "Show input aspect"
     _attr_icon = "mdi:information-outline"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)

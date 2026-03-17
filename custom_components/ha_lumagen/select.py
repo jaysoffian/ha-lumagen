@@ -9,6 +9,7 @@ from typing import Any, cast
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -114,7 +115,8 @@ SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
         key="subtitle_shift",
         name="Subtitle Shift",
         icon="mdi:subtitles",
-        current_option_fn=lambda _data, _coord: None,
+        entity_category=EntityCategory.CONFIG,
+        current_option_fn=lambda _data, _coord: "Off",
         select_option_fn=_select_subtitle_shift,
         static_options=_SUBTITLE_SHIFT_OPTIONS,
     ),
