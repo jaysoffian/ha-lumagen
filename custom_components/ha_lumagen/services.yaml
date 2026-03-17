@@ -1,0 +1,46 @@
+display_message:
+  name: Display message
+  description: Show an OSD message on the Lumagen.
+  fields:
+    message:
+      name: Message
+      description: Text to display (up to 60 chars, two 30-char lines).
+      required: true
+      example: "Hello World"
+      selector:
+        text:
+    duration:
+      name: Duration
+      description: Display duration in seconds (0-8) or 9 for persistent.
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 9
+          mode: slider
+    block_char:
+      name: Block character
+      description: Replace X with block character (█) for bar displays.
+      default: false
+      selector:
+        boolean:
+
+display_volume:
+  name: Display volume
+  description: Show a volume bar on the Lumagen OSD (scaled 0-80).
+  fields:
+    volume:
+      name: Volume
+      description: Volume level (0-100).
+      required: true
+      example: 63.5
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 0.5
+          mode: slider
+
+clear_message:
+  name: Clear message
+  description: Clear any OSD message from the Lumagen.
