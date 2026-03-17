@@ -24,6 +24,7 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
                 "name": f"Lumagen {data.model_name or 'RadiancePro'}",
                 "manufacturer": "Lumagen",
                 "model": data.model_name or "RadiancePro",
+                "model_id": data.model_number,
                 "sw_version": data.software_revision,
                 "serial_number": data.serial_number,
             }
