@@ -229,49 +229,49 @@ class StatePanel(Static):
 # TUI app
 # ---------------------------------------------------------------------------
 
-HELP_TEXT = """\
-[bold]Power & Input:[/]
-  on / off               turn Lumagen on or off
-  <1-19>                 select input
-  previous               switch to previous input
-  a / b / c / d          select input memory
-
-[bold]Video Processing:[/]
-  aspect <name>          source aspect (4:3, 16:9, 2.40, NLS, …)
-  mode <1-8>             output custom mode
-  cms <1-8>              output CMS
-  style <1-8>            output style
-  game on / off          game mode
-  autoaspect on / off    auto aspect detection
-  subtitle off / 3% / 6% subtitle shift
-
-[bold]Hardware:[/]
-  fan <1-10>             minimum fan speed
-
-[bold]Labels & OSD:[/]
-  labels                 show all labels
-  label <id> <text>      set label (e.g. label A1 Apple TV)
-  osd \\[0-9] <text>       OSD message (0-8=seconds, 9=persistent; \\n for newline)
-  osd                    clear OSD
-  osdaspect              pop up input/aspect info on OSD
-
-[bold]Navigation & System:[/]
-  remote <cmd>           remote key (menu, up, down, ok, exit, …)
-  save                   save config to flash
-  hotplug \\[input]        toggle HDMI hotplug (all inputs if omitted)
-  refresh                re-query full state
-  refresh labels         re-fetch labels from device
-  help                   show this message
-  quit / q               exit
-
-[bold]Raw RS232:[/]
-  Z...                   e.g. ZQS01, ZQI24, ZY530MCS
-
-[bold]Keyboard shortcuts:[/]
-  Ctrl+Q                 quit
-  Ctrl+L                 clear protocol log
-  Ctrl+R                 refresh state
-"""
+HELP_TEXT = (
+    "[bold]Power & Input:[/]",
+    "  on / off — turn Lumagen on or off",
+    "  <1-19> — select input",
+    "  previous — switch to previous input",
+    "  a / b / c / d — select input memory",
+    "",
+    "[bold]Video Processing:[/]",
+    "  aspect <name> — source aspect (4:3, 16:9, 2.40, NLS, …)",
+    "  mode <1-8> — output custom mode",
+    "  cms <1-8> — output CMS",
+    "  style <1-8> — output style",
+    "  game on / off — game mode",
+    "  autoaspect on / off — auto aspect detection",
+    "  subtitle off / 3% / 6% — subtitle shift",
+    "",
+    "[bold]Hardware:[/]",
+    "  fan <1-10> — minimum fan speed",
+    "",
+    "[bold]Labels & OSD:[/]",
+    "  labels — show all labels",
+    "  label <id> <text> — set label (e.g. label A1 Apple TV)",
+    "  osd \\[0-9] <text> — OSD message (0-8=seconds, 9=persistent; \\n for newline)",
+    "  osd — clear OSD",
+    "  osdaspect — pop up input/aspect info on OSD",
+    "",
+    "[bold]Navigation & System:[/]",
+    "  remote <cmd> — remote key (menu, up, down, ok, exit, …)",
+    "  save — save config to flash",
+    "  hotplug \\[input] — toggle HDMI hotplug (all inputs if omitted)",
+    "  refresh — re-query full state",
+    "  refresh labels — re-fetch labels from device",
+    "  help — show this message",
+    "  quit / q — exit",
+    "",
+    "[bold]Raw RS232:[/]",
+    "  Z... — e.g. ZQS01, ZQI24, ZY530MCS",
+    "",
+    "[bold]Keyboard shortcuts:[/]",
+    "  Ctrl+Q — quit",
+    "  Ctrl+L — clear protocol log",
+    "  Ctrl+R — refresh state",
+)
 
 # All completable command prefixes for the suggester
 _COMMAND_SUGGESTIONS = sorted(
@@ -418,7 +418,8 @@ class LumagenTUI(App):
                 await self._client.get_labels()
                 self._save_state()
                 self._refresh_state()
-            log.write(HELP_TEXT)
+            for line in HELP_TEXT:
+                log.write(line)
         else:
             log.write("[red]Connection failed.[/]")
 
@@ -508,7 +509,8 @@ class LumagenTUI(App):
             return
 
         if cmd in ("help", "?"):
-            log.write(HELP_TEXT)
+            for line in HELP_TEXT:
+                log.write(line)
             return
 
         if cmd == "on":
