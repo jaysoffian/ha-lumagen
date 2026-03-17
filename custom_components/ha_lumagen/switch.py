@@ -6,7 +6,11 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
+from homeassistant.components.switch import (
+    SwitchDeviceClass,
+    SwitchEntity,
+    SwitchEntityDescription,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
@@ -19,16 +23,12 @@ from .entity import LumagenEntity
 
 
 @dataclass(frozen=True, kw_only=True)
-class LumagenSwitchEntityDescription:
+class LumagenSwitchEntityDescription(SwitchEntityDescription):
     """Describes a Lumagen switch entity."""
 
-    key: str
-    name: str
-    icon: str
     is_on_fn: Callable[[LumagenState], bool | None]
     turn_on_fn: Callable[[LumagenCoordinator], Awaitable[None]]
     turn_off_fn: Callable[[LumagenCoordinator], Awaitable[None]]
-    entity_category: EntityCategory | None = None
     available_in_standby: bool = False
 
 
@@ -88,10 +88,6 @@ class LumagenSwitchEntity(LumagenEntity, SwitchEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{description.key}"
-        self._attr_name = description.name
-        self._attr_icon = description.icon
-        if description.entity_category:
-            self._attr_entity_category = description.entity_category
         self._optimistic_state: bool | None = None
 
     def _update_attrs(self) -> None:
