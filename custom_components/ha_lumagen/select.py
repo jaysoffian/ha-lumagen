@@ -54,9 +54,12 @@ async def _select_input_source(coord: LumagenCoordinator, option: str) -> None:
     await coord.client.select_input(input_number)
 
 
+_NLS_VARIANTS = {"4:3", "16:9", "1.85"}
+
+
 def _current_aspect(data: LumagenState, _coord: LumagenCoordinator) -> str | None:
-    if data.nls_active:
-        return "NLS"
+    if data.nls_active and data.source_content_aspect in _NLS_VARIANTS:
+        return f"{data.source_content_aspect} NLS"
     return data.source_content_aspect
 
 
