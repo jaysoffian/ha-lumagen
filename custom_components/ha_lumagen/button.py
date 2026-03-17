@@ -58,7 +58,6 @@ class LumagenResetAutoAspectButton(LumagenEntity, ButtonEntity):
 
     _attr_name = "Reset auto aspect"
     _attr_icon = "mdi:aspect-ratio"
-    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)
@@ -74,7 +73,6 @@ class LumagenDisplayInputAspectButton(LumagenEntity, ButtonEntity):
 
     _attr_name = "Show input aspect"
     _attr_icon = "mdi:information-outline"
-    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)
