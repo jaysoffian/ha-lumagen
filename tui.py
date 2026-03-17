@@ -13,10 +13,12 @@ from datetime import datetime
 from typing import Annotated, Any, ClassVar, cast
 
 import typer
+from rich.markup import escape
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.events import Resize
 from textual.widgets import Header, Input, RichLog, Static
 
 sys.path.insert(
@@ -82,6 +84,45 @@ class CommandInput(Input):
                 # Show options in the log
                 log = self.app.query_one("#log", RichLog)
                 log.write("[dim]  " + "  ".join(sorted(matches)) + "[/]")
+
+
+class WrappingRichLog(RichLog):
+    """RichLog that re-wraps content when the widget is resized."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._writes: list[str] = []
+        self._rewrapping = False
+
+    def write(  # type: ignore[override]
+        self,
+        content: object,
+        *args: Any,
+        **kwargs: Any,
+    ) -> WrappingRichLog:
+        if not self._rewrapping and isinstance(content, str):
+            self._writes.append(content)
+        super().write(content, *args, **kwargs)
+        return self
+
+    def clear(self) -> WrappingRichLog:
+        self._writes.clear()
+        super().clear()
+        return self
+
+    def on_resize(self, event: Resize) -> None:
+        super().on_resize(event)
+        self.set_timer(0.05, self._rewrap)
+
+    def _rewrap(self) -> None:
+        at_end = self.scroll_offset.y >= self.virtual_size.height - self.size.height
+        self._rewrapping = True
+        super().clear()
+        for content in self._writes:
+            super().write(content)
+        self._rewrapping = False
+        if at_end:
+            self.scroll_end(animate=False)
 
 
 class InstrumentedClient(LumagenClient):
@@ -229,49 +270,47 @@ class StatePanel(Static):
 # TUI app
 # ---------------------------------------------------------------------------
 
-HELP_TEXT = (
-    "[bold]Power & Input:[/]",
-    "  on / off — turn Lumagen on or off",
-    "  <1-19> — select input",
-    "  previous — switch to previous input",
-    "  a / b / c / d — select input memory",
-    "",
-    "[bold]Video Processing:[/]",
-    "  aspect <name> — source aspect (4:3, 16:9, 2.40, NLS, …)",
-    "  mode <1-8> — output custom mode",
-    "  cms <1-8> — output CMS",
-    "  style <1-8> — output style",
-    "  game on / off — game mode",
-    "  autoaspect on / off — auto aspect detection",
-    "  subtitle off / 3% / 6% — subtitle shift",
-    "",
-    "[bold]Hardware:[/]",
-    "  fan <1-10> — minimum fan speed",
-    "",
-    "[bold]Labels & OSD:[/]",
-    "  labels — show all labels",
-    "  label <id> <text> — set label (e.g. label A1 Apple TV)",
-    "  osd \\[0-9] <text> — OSD message (0-8=seconds, 9=persistent; \\n for newline)",
-    "  osd — clear OSD",
-    "  osdaspect — pop up input/aspect info on OSD",
-    "",
-    "[bold]Navigation & System:[/]",
-    "  remote <cmd> — remote key (menu, up, down, ok, exit, …)",
-    "  save — save config to flash",
-    "  hotplug \\[input] — toggle HDMI hotplug (all inputs if omitted)",
-    "  refresh — re-query full state",
-    "  refresh labels — re-fetch labels from device",
-    "  help — show this message",
-    "  quit / q — exit",
-    "",
-    "[bold]Raw RS232:[/]",
-    "  Z... — e.g. ZQS01, ZQI24, ZY530MCS",
-    "",
-    "[bold]Keyboard shortcuts:[/]",
-    "  Ctrl+Q — quit",
-    "  Ctrl+L — clear protocol log",
-    "  Ctrl+R — refresh state",
-)
+HELP_TEXT = """\
+[bold]Power & Input[/]
+  on / off — power on or off
+  <1-19> — select input
+  previous — previous input
+  a / b / c / d — input memory
+
+[bold]Video Processing[/]
+  aspect <name> — 4:3, 16:9, 2.40, NLS, …
+  mode <1-8> — output custom mode
+  cms <1-8> — output CMS
+  style <1-8> — output style
+  game on / off — game mode
+  autoaspect on / off — auto aspect
+  subtitle off / 3% / 6%
+
+[bold]Hardware[/]
+  fan <1-10> — minimum fan speed
+
+[bold]Labels & OSD[/]
+  labels — show all labels
+  label <id> <text> — e.g. label A1 Apple TV
+  osd \\[0-9] <text> — OSD message
+  osd — clear OSD
+  osdaspect — input/aspect info
+
+[bold]Navigation & System[/]
+  remote <cmd> — menu, up, ok, exit, …
+  save — save config to flash
+  hotplug \\[input] — toggle HDMI hotplug
+  refresh — re-query full state
+  refresh labels — re-fetch labels
+  help / ? / Ctrl+H — toggle this panel
+  quit / q — exit
+
+[bold]Raw RS232[/]
+  Z... — e.g. ZQS01, ZQI24
+
+[bold]Keys[/]
+  Ctrl+H help   Ctrl+Q quit
+  Ctrl+L clear  Ctrl+R refresh"""
 
 # All completable command prefixes for the suggester
 _COMMAND_SUGGESTIONS = sorted(
@@ -327,6 +366,20 @@ class LumagenTUI(App):
     #log {
         scrollbar-size: 1 1;
     }
+    #help-panel {
+        width: 49;
+        max-width: 100%;
+        border: solid $success;
+        border-title-color: $text;
+        scrollbar-size: 1 1;
+        display: none;
+    }
+    #help-panel.visible {
+        display: block;
+    }
+    #help-content {
+        padding: 0 1;
+    }
     #input-bar {
         dock: bottom;
         height: 3;
@@ -338,6 +391,7 @@ class LumagenTUI(App):
         ("ctrl+q", "quit", "Quit"),
         ("ctrl+l", "clear_log", "Clear log"),
         ("ctrl+r", "refresh", "Refresh"),
+        ("ctrl+h", "toggle_help", "Help"),
     ]
 
     _STATE_FILE = pathlib.Path(__file__).resolve().parent / "tui.state"
@@ -368,12 +422,15 @@ class LumagenTUI(App):
             with Vertical(id="state-panel"):
                 yield StatePanel(id="state")
             with Vertical(id="log-panel"):
-                yield RichLog(
+                yield WrappingRichLog(
                     id="log",
                     highlight=True,
                     markup=True,
                     wrap=True,
+                    min_width=0,
                 )
+            with VerticalScroll(id="help-panel"):
+                yield Static(HELP_TEXT, id="help-content", markup=True)
         yield CommandInput(
             _COMMAND_SUGGESTIONS,
             placeholder="Enter command (type 'help' for list)",
@@ -384,6 +441,7 @@ class LumagenTUI(App):
         self.title = f"Lumagen — {self._host}:{self._port}"
         self.query_one("#state-panel").border_title = "State"
         self.query_one("#log-panel").border_title = "Protocol Log"
+        self.query_one("#help-panel").border_title = "Help (Ctrl+H)"
 
         self._client._on_line_sent.append(self._log_sent)
         self._client._on_line_received.append(self._log_received)
@@ -418,8 +476,6 @@ class LumagenTUI(App):
                 await self._client.get_labels()
                 self._save_state()
                 self._refresh_state()
-            for line in HELP_TEXT:
-                log.write(line)
         else:
             log.write("[red]Connection failed.[/]")
 
@@ -478,14 +534,14 @@ class LumagenTUI(App):
         ts = datetime.now().strftime("%H:%M:%S")
         self.call_later(
             self.query_one("#log", RichLog).write,
-            f"[dim]{ts}[/] [bold cyan]→[/] {cmd}",
+            f"[dim]{ts}[/] [bold cyan]→[/] {escape(cmd)}",
         )
 
     def _log_received(self, line: str) -> None:
         ts = datetime.now().strftime("%H:%M:%S")
         self.call_later(
             self.query_one("#log", RichLog).write,
-            f"[dim]{ts}[/] [bold green]←[/] {line}",
+            f"[dim]{ts}[/] [bold green]←[/] {escape(line)}",
         )
 
     # -- Input handling ----------------------------------------------------
@@ -509,8 +565,7 @@ class LumagenTUI(App):
             return
 
         if cmd in ("help", "?"):
-            for line in HELP_TEXT:
-                log.write(line)
+            self.action_toggle_help()
             return
 
         if cmd == "on":
@@ -740,6 +795,9 @@ class LumagenTUI(App):
                     log.write(f"  {display_id}: {text}")
 
     # -- Actions -----------------------------------------------------------
+
+    def action_toggle_help(self) -> None:
+        self.query_one("#help-panel").toggle_class("visible")
 
     def action_clear_log(self) -> None:
         self.query_one("#log", RichLog).clear()
