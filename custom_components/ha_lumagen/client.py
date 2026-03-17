@@ -862,33 +862,35 @@ class LumagenClient:
         """Set source aspect ratio by display name.
 
         Selecting "Auto" enables auto aspect detection; any other
-        selection (including NLS variants) disables it.  NLS variants
-        send a two-command sequence with a brief delay so the device
-        processes the base aspect before the NLS modifier.
+        selection (including NLS variants) disables it.
+
+        For single-command aspects, we set optimistic state immediately.
+        For NLS (two-command sequence), we skip optimistic state because
+        the device fires an intermediate I24 after the base aspect
+        command that would overwrite it.  Instead we let the final I24
+        (after the NLS command) provide the authoritative state.
         """
         cmds = ASPECT_COMMANDS.get(aspect)
         if cmds is None:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
-        for i, cmd in enumerate(cmds):
-            if i > 0:
-                await asyncio.sleep(0.1)
+        for cmd in cmds:
             await self.send_command(cmd)
-        self.state.clear_changed()
-        if aspect == "Auto":
-            self.state.nls_active = False
-            self.state.auto_aspect = True
-        elif aspect.endswith("NLS"):
-            self.state.nls_active = True
-            self.state.auto_aspect = False
-        else:
-            self.state.nls_active = False
-            self.state.source_content_aspect = aspect
-            self.state.auto_aspect = False
-        if self.state._changed:
-            self._notify_state_changed()
-        # Confirm auto aspect state from device
+        is_nls = aspect.endswith("NLS")
+        if not is_nls:
+            self.state.clear_changed()
+            if aspect == "Auto":
+                self.state.nls_active = False
+                self.state.auto_aspect = True
+            else:
+                self.state.nls_active = False
+                self.state.source_content_aspect = aspect
+                self.state.auto_aspect = False
+            if self.state._changed:
+                self._notify_state_changed()
+        # Query authoritative state from device
         await self.send_command("ZQI54")
+        await self.send_command("ZQI25")
 
     async def send_remote_command(self, command: str) -> None:
         """Send a named remote-control command."""
