@@ -52,14 +52,6 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
         if data is None:
             self._attr_available = False
             return
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, self.coordinator.entry.entry_id)},
-            "name": f"Lumagen {data.model_name or 'RadiancePro'}",
-            "manufacturer": "Lumagen",
-            "model": data.model_name or "RadiancePro",
-            "sw_version": data.software_revision,
-            "serial_number": data.serial_number,
-        }
         self._attr_available = (
             self.coordinator.last_update_success
             and data.connected
