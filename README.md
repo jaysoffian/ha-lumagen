@@ -1,6 +1,6 @@
 # Lumagen Radiance Pro Integration for Home Assistant
 
-This integration connects your Lumagen Radiance Pro video processor to your Home Assistant installation.
+This [integration](https://www.home-assistant.io/getting-started/concepts-terminology/#integrations) connects your Lumagen Radiance Pro video processor to your Home Assistant installation.
 
 ## TCP/IP to Serial Adapter Setup
 
@@ -38,9 +38,10 @@ The Lumagen should be configured as follows for the integration to work correctl
 
 1. Install [HACS](https://hacs.xyz)
 2. Open HACS → Integrations
-3. Three-dot menu → Custom repositories
-4. Add this repository's URL, category "Integration"
+3. Three-dot menu ( ⠇) → Custom repositories
+4. Add this repository's URL (`https://github.com/jaysoffian/ha_lumagen`), category "Integration"
 5. Install this integration and restart Home Assistant
+
 
 ### Manual
 
@@ -51,65 +52,56 @@ Copy `custom_components/ha_lumagen` into your Home Assistant `custom_components`
 1. Settings → Devices & Services → Add Integration → Lumagen
 2. Enter the hostname (or IP address) and port (default: 4999) of your TCP/IP to Serial Adapter.
 
-*Note: The integration tests the connection before completing setup.*
+The integration tests the connection before completing setup. Configuration information that rarely changes (identity, firmware revision, game mode, and labels) are loaded from your Lumagen at this time and then cached across HA restarts. Use the **Reload config** button to refresh this information in the future.
 
 ## Entities
 
 ### Switches
 
-| Entity       | Description |
-|--------------|-------------|
-| Power        | Turn device on / standby. Available even in standby. |
-| Auto Aspect  | Enable / disable auto aspect detection. Syncs with aspect ratio selection (see below). |
+- **Power** — Turn device on / standby.
+- **Auto Aspect** — Enable / disable auto aspect detection.
 
 ### Buttons
 
-| Entity             | Category      | Description |
-|--------------------|---------------|-------------|
-| Reset auto aspect  | Main controls | Reset auto aspect detection and re-enable it (ZY550). Also clears NLS. |
-| Show input aspect  | Main controls | Pop up input and aspect info on the Lumagen OSD. |
-| Reload config      | Configuration | Re-fetch identity and all labels from the device and save to disk. |
+- **Reset auto aspect** — Send reset auto aspect detection command (`ZY550`).
+- **Show input aspect** — Show input and aspect info on the Lumagen OSD.
+- **Reload config** — Reload rarely changing configuration information (identity, firmware revision, game mode, and labels) from your Lumagen.
 
 ### Selects
 
-| Entity       | Description |
-|--------------|-------------|
-| Input        | Select from labeled inputs. Labels are cached on disk; press Reload Config to update. |
-| Aspect Ratio | Auto, 1.33, Letterbox, 1.78, 1.85–2.76, plus NLS variants (see below). |
-| Memory       | Select input memory A / B / C / D. |
+- **Input** — Select input.
+- **Aspect Ratio** — Auto, 1.33, Letterbox, 1.78, 1.85–2.76, plus NLS variants (see below).
+- **Memory** — Select input memory A / B / C / D.
 
 ### Sensors
 
 All sensors require the device to be active (not in standby).
 
-| Sensor                       | Description |
-|------------------------------|-------------|
-| Logical Input                | Current logical input number |
-| Physical Input               | Current physical input |
-| Input Configuration          | Active input config number |
-| Input Video Status           | No Source / Active Video / Test Pattern |
-| Source Resolution             | Source vertical resolution |
-| Source Refresh Rate           | Source vertical refresh rate |
-| Source Content Aspect Ratio   | Detected source content aspect |
-| Source Raster Aspect Ratio    | Source raster aspect |
-| Source Dynamic Range          | SDR / HDR |
-| Source Mode                   | Progressive / Interlaced |
-| Source 3D Mode                | Off / Frame Sequential / Frame Packed / Top-Bottom / Side-by-Side |
-| NLS Active                   | Non-linear stretch active |
-| Detected Content Aspect Ratio | Auto-detected content aspect (v4+ firmware) |
-| Detected Raster Aspect Ratio  | Auto-detected raster aspect (v4+ firmware) |
-| Output Resolution             | Output vertical resolution |
-| Output Refresh Rate           | Output vertical refresh rate |
-| Output Aspect Ratio           | Output aspect ratio |
-| Output Mode                   | Progressive / Interlaced |
-| Output Colorspace             | Output colorspace (e.g. BT.709, BT.2020) |
-| Output 3D Mode                | Off / Frame Sequential / Frame Packed / Top-Bottom / Side-by-Side |
-| Active Outputs                | Which outputs are active (1–4) |
-| Output CMS                    | Active color management system (0–7) |
-| Output Style                  | Active output style (0–7) |
+- **Logical Input** — Current logical input number
+- **Physical Input** — Current physical input
+- **Input Configuration** — Active input config number
+- **Input Video Status** — No Source / Active Video / Test Pattern
+- **Source Resolution** — Source vertical resolution
+- **Source Refresh Rate** — Source vertical refresh rate
+- **Source Content Aspect Ratio** — Detected source content aspect
+- **Source Raster Aspect Ratio** — Source raster aspect
+- **Source Dynamic Range** — SDR / HDR
+- **Source Mode** — Progressive / Interlaced
+- **Source 3D Mode** — Off / Frame Sequential / Frame Packed / Top-Bottom / Side-by-Side
+- **NLS Active** — Non-linear stretch active
+- **Detected Content Aspect Ratio** — Auto-detected content aspect
+- **Detected Raster Aspect Ratio** — Auto-detected raster aspect
+- **Output Resolution** — Output vertical resolution
+- **Output Refresh Rate** — Output vertical refresh rate
+- **Output Aspect Ratio** — Output aspect ratio
+- **Output Mode** — Progressive / Interlaced
+- **Output Colorspace** — Output colorspace (e.g. BT.709, BT.2020)
+- **Output 3D Mode** — Off / Frame Sequential / Frame Packed / Top-Bottom / Side-by-Side
+- **Active Outputs** — Which outputs are active (1–4)
+- **Output CMS** — Active color management system (0–7)
+- **Output Style** — Active output style (0–7)
 
-Device identity (model, serial, firmware) is shown in HA's device info
-rather than as separate entities.
+Device identity (model, serial, firmware) is shown in HA's device info rather than as separate entities.
 
 ### Remote
 
@@ -128,7 +120,7 @@ The Aspect Ratio select and Auto Aspect switch are kept in sync:
 |---------------------|-------------|--------|---------------------|
 | Select "Auto"       | On          | Off    | (device-detected)   |
 | Select a ratio      | Off         | Off    | Set to selection    |
-| Select NLS variant  | Off         | On*    | Set to base ratio   |
+| Select NLS variant  | Off         | On     | Set to base ratio   |
 | Reset Auto Aspect   | On          | Off    | (device-detected)   |
 
 ### NLS (Non-Linear Stretch)
@@ -141,7 +133,7 @@ NLS stretches a narrower aspect to fill a wider display non-linearly (more stret
 
 On the Lumagen remote, NLS is a two-button sequence (e.g. press 1.78 then NLS). The integration sends both commands automatically.
 
-\* **Caveat:** NLS behavior can be unreliable at the firmware level. In testing, 1.33 NLS and 1.78 NLS work consistently, but **1.85 NLS works roughly 50% of the time** — the device sometimes sets the aspect to 1.85 without engaging NLS. This is a firmware limitation. The integration queries the device for authoritative state after sending NLS commands, so the UI will always show what the device actually did.
+Note: During testing, the **1.85 NLS** variant was found to be flaky. The Lumagen sometimes sets the aspect to 1.85 without engaging NLS. The integration queries the Lumagen for authoritative state after sending NLS commands, so the integration should always show what the Lumagen actually did.
 
 ## Usage Examples
 
@@ -190,11 +182,9 @@ data:
 
 The integration registers domain-level services for OSD control:
 
-| Service                      | Description |
-|------------------------------|-------------|
-| `ha_lumagen.display_message` | Show an OSD message (up to 60 chars, two 30-char lines). Set `block_char: true` to render `X` as █. |
-| `ha_lumagen.display_volume`  | Show a volume bar (0-100) for 1 second, scaled for a 0-80 useful range. |
-| `ha_lumagen.clear_message`   | Clear any OSD message. |
+- `ha_lumagen.display_message`: Show an OSD message (up to 60 chars, two 30-char lines). Set `block_char: true` to render `X` as █.
+- `ha_lumagen.display_volume`: Show a volume bar (0-100) for 1 second, scaled for a 0-80 useful range.
+- `ha_lumagen.clear_message`: Clear any OSD message.
 
 ```yaml
 # Show a custom message for 5 seconds
@@ -266,9 +256,8 @@ If you use a Denon/Marantz AVR with the [built-in HA integration](https://www.ho
 
 ### Input source dropdown shows "Input 1", "Input 2", …
 
-Labels are cached on disk. If you see default names:
-1. Confirm you have custom labels configured on the Lumagen
-2. Press the **Reload config** button entity to fetch labels from the device
+1. Confirm you have custom labels configured on your Lumagen
+2. Press the **Reload config** button entity to fetch labels from your Lumagen
 3. Labels are per input memory — switching memories shows that memory's labels
 
 ### NLS aspect shows unexpected result
