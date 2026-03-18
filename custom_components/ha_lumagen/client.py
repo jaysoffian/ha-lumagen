@@ -914,16 +914,55 @@ class LumagenClient:
 
     # -- OSD ----------------------------------------------------------------
 
-    async def display_message(self, text: str, duration: int = 3) -> None:
+    @staticmethod
+    def _sanitize_osd_text(text: str) -> str:
+        """Strip characters outside the legal OSD range (0x20-0x7A)."""
+        return "".join(c for c in text if 0x20 <= ord(c) <= 0x7A)
+
+    async def show_osd_message(
+        self,
+        line_one: str,
+        line_two: str = "",
+        duration: int = 3,
+        block_char: str = "",
+    ) -> None:
         """Show an OSD message.
 
-        *duration*: 0-8 for timed (seconds), 9 for persistent.
-        *text*: up to 60 chars (two 30-char lines separated by ``\\n``).
+        *line_one*/*line_two*: up to 30 chars each (truncated with warning).
+          Legal characters are ' ' through 'z' (0x20-0x7A); others are
+          stripped.  ``{`` and ``\\r`` both terminate the message, so ``{``
+          is implicitly excluded by the legal range.
+        *duration*: 1-8 for that many seconds, 0 for persistent (until cleared).
+        *block_char*: single character (0x20-0x7A) remapped to █ via ``ZB``.
+          The Lumagen renders any extended-ASCII character as a solid block;
+          ``ZB`` temporarily promotes the given character into that range.
         """
-        duration = max(0, min(9, duration))
-        await self.send_command(f"ZT{duration}{text}\r")
+        if block_char and (
+            len(block_char) != 1 or not (0x20 <= ord(block_char) <= 0x7A)
+        ):
+            raise ValueError(
+                f"block_char must be a single character in 0x20-0x7A, "
+                f"got {block_char!r}"
+            )
 
-    async def display_volume(self, volume: float) -> None:
+        line_one = self._sanitize_osd_text(line_one)
+        line_two = self._sanitize_osd_text(line_two)
+
+        max_line = 30
+        if len(line_one) > max_line:
+            _LOGGER.warning("line_one truncated to %d chars", max_line)
+            line_one = line_one[:max_line]
+        if len(line_two) > max_line:
+            _LOGGER.warning("line_two truncated to %d chars", max_line)
+            line_two = line_two[:max_line]
+
+        # 0 = persistent (protocol digit 9), 1-8 = seconds
+        digit = 9 if duration == 0 else max(1, min(8, duration))
+        payload = f"{line_one}\n{line_two}" if line_two else line_one
+        prefix = f"ZB{block_char}" if block_char else ""
+        await self.send_command(f"{prefix}ZT{digit}{payload}\r")
+
+    async def show_osd_volume_bar(self, volume: float) -> None:
         """Show a volume bar on the OSD.
 
         Uses ZBX to set the block character (█), then ZT1 to display for 1s.
@@ -936,7 +975,7 @@ class LumagenClient:
         vol = f"{volume:.1f}" if volume < 100 else "max"
         await self.send_command(f"ZBXZT1{vol:>4} {bar:{bar_width}}\r")
 
-    async def clear_message(self) -> None:
+    async def clear_osd_message(self) -> None:
         """Clear any OSD message."""
         await self.send_command("ZC")
 

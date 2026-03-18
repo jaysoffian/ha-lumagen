@@ -26,21 +26,22 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-SERVICE_DISPLAY_MESSAGE = "display_message"
-SERVICE_DISPLAY_VOLUME = "display_volume"
-SERVICE_CLEAR_MESSAGE = "clear_message"
+SERVICE_SHOW_OSD_MESSAGE = "show_osd_message"
+SERVICE_SHOW_OSD_VOLUME_BAR = "show_osd_volume_bar"
+SERVICE_CLEAR_OSD_MESSAGE = "clear_osd_message"
 
-DISPLAY_MESSAGE_SCHEMA = vol.Schema(
+SHOW_OSD_MESSAGE_SCHEMA = vol.Schema(
     {
-        vol.Required("message"): cv.string,
+        vol.Required("line_one"): cv.string,
+        vol.Optional("line_two", default=""): cv.string,
         vol.Optional("duration", default=3): vol.All(
-            vol.Coerce(int), vol.Range(min=0, max=9)
+            vol.Coerce(int), vol.Range(min=0, max=8)
         ),
-        vol.Optional("block_char", default=False): cv.boolean,
+        vol.Optional("block_char", default=""): cv.string,
     }
 )
 
-DISPLAY_VOLUME_SCHEMA = vol.Schema(
+SHOW_OSD_VOLUME_BAR_SCHEMA = vol.Schema(
     {
         vol.Required("volume"): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
     }
@@ -58,31 +59,38 @@ def _get_coordinator(hass: HomeAssistant) -> LumagenCoordinator:
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up domain-level services."""
 
-    async def handle_display_message(call: ServiceCall) -> None:
+    async def handle_show_osd_message(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass)
-        message = call.data["message"]
-        duration = call.data["duration"]
-        if call.data["block_char"]:
-            # Prepend ZBX so 'X' renders as █
-            await coordinator.client.send_command(f"ZBXZT{duration}{message:.60}\r")
-        else:
-            await coordinator.client.display_message(message, duration)
+        await coordinator.client.show_osd_message(
+            line_one=call.data["line_one"],
+            line_two=call.data["line_two"],
+            duration=call.data["duration"],
+            block_char=call.data["block_char"],
+        )
 
-    async def handle_display_volume(call: ServiceCall) -> None:
+    async def handle_show_osd_volume_bar(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass)
-        await coordinator.client.display_volume(call.data["volume"])
+        await coordinator.client.show_osd_volume_bar(call.data["volume"])
 
-    async def handle_clear_message(call: ServiceCall) -> None:
+    async def handle_clear_osd_message(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass)
-        await coordinator.client.clear_message()
+        await coordinator.client.clear_osd_message()
 
     hass.services.async_register(
-        DOMAIN, SERVICE_DISPLAY_MESSAGE, handle_display_message, DISPLAY_MESSAGE_SCHEMA
+        DOMAIN,
+        SERVICE_SHOW_OSD_MESSAGE,
+        handle_show_osd_message,
+        SHOW_OSD_MESSAGE_SCHEMA,
     )
     hass.services.async_register(
-        DOMAIN, SERVICE_DISPLAY_VOLUME, handle_display_volume, DISPLAY_VOLUME_SCHEMA
+        DOMAIN,
+        SERVICE_SHOW_OSD_VOLUME_BAR,
+        handle_show_osd_volume_bar,
+        SHOW_OSD_VOLUME_BAR_SCHEMA,
     )
-    hass.services.async_register(DOMAIN, SERVICE_CLEAR_MESSAGE, handle_clear_message)
+    hass.services.async_register(
+        DOMAIN, SERVICE_CLEAR_OSD_MESSAGE, handle_clear_osd_message
+    )
 
     return True
 
