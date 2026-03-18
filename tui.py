@@ -671,11 +671,8 @@ class LumagenTUI(App):
             label_text = label_parts[1]
             max_len = 10 if category in "ABCD0" else 7 if category == "1" else 8
             if len(label_text) > max_len:
-                log.write(
-                    f"[red]Label text must be <={max_len} chars,"
-                    f" got {len(label_text)}[/]"
-                )
-                return
+                label_text = label_text[:max_len]
+                log.write(f"[yellow]Truncated to {max_len} chars: {label_text}[/]")
             cat = cast("LabelCategory", category)
             await self._client.set_label(cat, proto_idx, label_text)
             self._save_state()
