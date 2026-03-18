@@ -147,7 +147,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Fetch labels before setting up platforms so select entities have options
     if not has_stored:
-        await coordinator.refresh_config()
+        await coordinator.reload_config()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

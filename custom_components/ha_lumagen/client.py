@@ -755,6 +755,16 @@ class LumagenClient:
         await self.send_command("ZQI53")
         await self.send_command("ZQI54")
 
+    async def reload_config(self) -> int:
+        """Re-fetch identity, config state, and all labels.
+
+        Returns the number of labels that failed to resolve (0 = success).
+        """
+        await self.fetch_identity()
+        await self.send_command("ZQI53")
+        await self.send_command("ZQI54")
+        return await self.get_labels()
+
     async def get_labels(self) -> int:
         """Query all labels (inputs A0-D7, custom modes, CMS, styles).
 

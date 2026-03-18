@@ -43,7 +43,7 @@
       "serial_number": { "name": "Serial Number" }
     },
     "button": {
-      "refresh_config": { "name": "Refresh Config" },
+      "reload_config": { "name": "Reload Config" },
       "reset_auto_aspect": { "name": "Reset Auto Aspect" }
     },
     "select": {

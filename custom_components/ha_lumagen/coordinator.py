@@ -114,16 +114,10 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
             }
         )
 
-    async def refresh_config(self, max_attempts: int = 5) -> None:
-        """Fetch identity, game mode, and labels from device."""
-        await self.client.fetch_identity()
-        await asyncio.sleep(0.05)
-        await self.client.send_command("ZQI53")
-        await asyncio.sleep(0.05)
-        await self.client.send_command("ZQI54")
-        await asyncio.sleep(1)
+    async def reload_config(self, max_attempts: int = 5) -> None:
+        """Re-fetch identity, config state, and labels from device."""
         for attempt in range(max_attempts):
-            failed = await self.client.get_labels()
+            failed = await self.client.reload_config()
             if failed == 0:
                 await self.async_save_stored_state()
                 return
