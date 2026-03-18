@@ -252,7 +252,7 @@ class StatePanel(Static):
     DEFAULT_CSS = """
     StatePanel {
         width: 1fr;
-        padding: 0 0;
+        padding: 0 0 0 1;
     }
     """
 
