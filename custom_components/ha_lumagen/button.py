@@ -50,7 +50,7 @@ class LumagenRefreshConfigButton(LumagenEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Fetch identity and labels from the device."""
-        await self.coordinator.refresh_config()
+        await self.coordinator.reload_config()
 
 
 class LumagenResetAutoAspectButton(LumagenEntity, ButtonEntity):
