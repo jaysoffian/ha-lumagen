@@ -360,11 +360,6 @@ A standalone Textual TUI for exercising the client against a real Lumagen:
 LUMAGEN_HOST=192.168.1.100 ./tui.py
 ```
 
-Split-pane interface with live device state on the left, protocol log on the
-right, and a command input at the bottom. Type `help` for available commands
-(raw RS-232, power, input, memory, aspect, remote, OSD, labels, fan, subtitle
-shift, etc.).
-
 ### Repo layout
 
 ```
