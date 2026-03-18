@@ -207,16 +207,14 @@ def _outputs_on(s: LumagenState) -> str:
     return ", ".join(active) if active else "None"
 
 
-def _input_label(s: LumagenState) -> str:
-    mem = s.input_memory or "A"
-    idx = (s.logical_input or 1) - 1
-    return s.input_labels.get(f"{mem}{idx}", "—")
-
-
 def _input_summary(s: LumagenState) -> str:
     if s.logical_input is None:
         return "—"
-    return f"{s.logical_input} (Memory {s.input_memory})"
+    mem = s.input_memory or "A"
+    idx = (s.logical_input or 1) - 1
+    label = s.input_labels.get(f"{mem}{idx}")
+    suffix = f" ({label})" if label else ""
+    return f"{s.logical_input}{mem}{suffix}"
 
 
 def _physical_in(s: LumagenState) -> str:
@@ -226,15 +224,17 @@ def _physical_in(s: LumagenState) -> str:
 def _cms(s: LumagenState) -> str:
     if s.output_cms is None:
         return "—"
-    cms = s.cms_labels.get(f"2{s.output_cms}", f"CMS{s.output_cms + 1}")
-    return f"{s.output_cms + 1}: {cms}"
+    label = s.cms_labels.get(f"2{s.output_cms}")
+    suffix = f" ({label})" if label else ""
+    return f"{s.output_cms + 1}{suffix}"
 
 
 def _style(s: LumagenState) -> str:
     if s.output_style is None:
         return "—"
-    style = s.style_labels.get(f"3{s.output_style}", f"Style{s.output_style + 1}")
-    return f"{s.output_style + 1}: {style}"
+    label = s.style_labels.get(f"3{s.output_style}")
+    suffix = f" ({label})" if label else ""
+    return f"{s.output_style + 1}{suffix}"
 
 
 _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]] = [
@@ -250,7 +250,6 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     ("", "", None),  # spacer
     ("Input", "logical_input", _input_summary),
     ("Physical In", "physical_input", _physical_in),
-    ("Input Label", "_input_label", _input_label),
     ("Video Status", "input_video_status", lambda s: s.input_video_status or "—"),
     ("", "", None),
     ("Source", "_source_summary", _source_summary),
@@ -383,7 +382,7 @@ class LumagenTUI(App):
         height: 1fr;
     }
     #state-panel {
-        width: 32;
+        width: 34;
         border: solid $accent;
         border-title-color: $text;
     }
@@ -826,7 +825,7 @@ class LumagenTUI(App):
         # State panel (fixed 40) + help panel (49) + log + borders/gaps
         # Estimate remaining space for the log pane
         main = self.query_one("#main")
-        available = main.size.width - 32 - 49  # state + help widths
+        available = main.size.width - 34 - 49  # state + help widths
         log_panel.display = available >= self._LOG_MIN_WIDTH
 
     def on_resize(self, event: Resize) -> None:
