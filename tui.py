@@ -93,6 +93,7 @@ class WrappingRichLog(RichLog):
         super().__init__(**kwargs)
         self._writes: list[str] = []
         self._rewrapping = False
+        self._last_width: int | None = None
 
     def write(  # type: ignore[override]
         self,
@@ -112,7 +113,10 @@ class WrappingRichLog(RichLog):
 
     def on_resize(self, event: Resize) -> None:
         super().on_resize(event)
-        self.set_timer(0.05, self._rewrap)
+        prev = self._last_width
+        self._last_width = event.size.width
+        if prev is not None and event.size.width != prev:
+            self.set_timer(0.05, self._rewrap)
 
     def _rewrap(self) -> None:
         at_end = self.scroll_offset.y >= self.virtual_size.height - self.size.height
@@ -468,7 +472,6 @@ class LumagenTUI(App):
         )
 
         if self._client.state.connected:
-            log.write("[green]Connected.[/]")
             await self._client.fetch_full_state()
             self._refresh_state()
             if not has_stored:
@@ -796,8 +799,27 @@ class LumagenTUI(App):
 
     # -- Actions -----------------------------------------------------------
 
+    _LOG_MIN_WIDTH = 25
+
     def action_toggle_help(self) -> None:
         self.query_one("#help-panel").toggle_class("visible")
+        self._update_log_visibility()
+
+    def _update_log_visibility(self) -> None:
+        """Hide the log pane when it would be too narrow to be useful."""
+        help_panel = self.query_one("#help-panel")
+        log_panel = self.query_one("#log-panel")
+        if not help_panel.has_class("visible"):
+            log_panel.display = True
+            return
+        # State panel (fixed 40) + help panel (49) + log + borders/gaps
+        # Estimate remaining space for the log pane
+        main = self.query_one("#main")
+        available = main.size.width - 40 - 49  # state + help widths
+        log_panel.display = available >= self._LOG_MIN_WIDTH
+
+    def on_resize(self, event: Resize) -> None:
+        self._update_log_visibility()
 
     def action_clear_log(self) -> None:
         self.query_one("#log", RichLog).clear()
