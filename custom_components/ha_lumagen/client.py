@@ -590,11 +590,6 @@ class LumagenClient:
                 self._notify_state_changed()
             return
 
-        # Ignore echoed commands and display noise
-        # (lines that have no '!' at all are pure echo / ZT / ZY noise)
-        if "!" not in line:
-            return
-
         # Label response: !S1<cat>,<label text>
         # Check before the general regex because the code is only 2 chars (S1).
         if label_match := _LABEL_RE.search(line):
