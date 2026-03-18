@@ -357,8 +357,10 @@ A standalone Textual TUI for exercising the client against a real Lumagen:
 ```bash
 ./tui.py <host> [port]
 # or via env vars:
-LUMAGEN_HOST=192.168.1.100 ./tui.py
+LUMAGEN_HOST=lrp LUMAGEN_PORT=5555 ./tui.py
 ```
+
+<img src="tui.svg" alt="TUI screenshot" width="600">
 
 ### Repo layout
 
