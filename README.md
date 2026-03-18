@@ -1,23 +1,21 @@
 # Lumagen Radiance Pro Integration for Home Assistant
 
-Home Assistant custom integration for Lumagen Radiance Pro video processor.
-
-This integration requires a TCP/IP to Serial adapter such as the [Global Cache iTach IP2SL](https://www.amazon.com/Global-Cache-iTach-Serial-IP2SL/dp/B0051BU1X4) or [USR-TCP232-302](https://www.amazon.com/USR-TCP232-302-Serial-Ethernet-Converter-Support/dp/B01GPGPEBM) connected to the Lumagen's RS-232 port.
-
-The adapter must provide bidirectional transparent bridging between its network and serial connections as is the case for the IP2SL and USR-TCP232-302 adapters.
-
-*Note: This integration is developed and tested against the USR-TCP232-302.*
+This integration connects your Lumagen Radiance Pro video processor to your Home Assistant installation.
 
 ## TCP/IP to Serial Adapter Setup
+
+Required: A TCP/IP to Serial adapter such as the [Global Cache iTach IP2SL](https://www.amazon.com/Global-Cache-iTach-Serial-IP2SL/dp/B0051BU1X4) or [USR-TCP232-302](https://www.amazon.com/USR-TCP232-302-Serial-Ethernet-Converter-Support/dp/B01GPGPEBM)\* connected to the Lumagen's RS-232 port.
 
 Connect the adapter to the Lumagen's RS-232 DB-9 male DTE port using the appropriate cable:
 
 - The IP2SL has a DB-9 male DTE port. Connect it using a [DB-9 female-to-female null-modem cable](https://www.startech.com/en-us/cables/scnm9ff1mbk).
 - The USR-TCP232-302 has a DB-9 female DCE port. Connect it using a [DB-9 male-to-female straight-through cable](https://www.startech.com/en-us/cables/mxt1001mbk).
 
-Connect the adapter to your local network. You'll need the adapter's IP address and port (default 4999) when configuring the HA component.
+The adapter's serial port settings must match the Lumagen's RS-232 port settings (default: 9600 bps, 8N1, no flow control).
 
-The adapter serial port settings must match the Lumagen's RS-232 port settings (default: 9600 bps, 8N1, no flow control).
+Connect the adapter to your local network. You'll need the adapter's IP address and port (default 4999) when configuring the integration later.
+
+\* *This integration is developed and tested against the USR-TCP232-302.*
 
 ## Lumagen Setup
 
@@ -38,15 +36,15 @@ The Lumagen should be configured as follows for the integration to work correctl
 
 ### HACS
 
-1. Open HACS → Integrations
-2. Three-dot menu → Custom repositories
-3. Add this repository URL, category "Integration"
-4. Install and restart Home Assistant
+1. Install [HACS](https://hacs.xyz)
+2. Open HACS → Integrations
+3. Three-dot menu → Custom repositories
+4. Add this repository's URL, category "Integration"
+5. Install this integration and restart Home Assistant
 
 ### Manual
 
-Copy `custom_components/ha_lumagen` into your Home Assistant
-`custom_components` directory and restart.
+Copy `custom_components/ha_lumagen` into your Home Assistant `custom_components` directory and restart.
 
 ## Configuration
 
