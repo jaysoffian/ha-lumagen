@@ -8,6 +8,7 @@ import json
 import logging
 import pathlib
 import sys
+import textwrap
 from collections.abc import Callable
 from datetime import datetime
 from typing import Annotated, Any, ClassVar, cast
@@ -95,7 +96,7 @@ class WrappingRichLog(RichLog):
         self._rewrapping = False
         self._last_width: int | None = None
 
-    def write(  # type: ignore[override]
+    def write(
         self,
         content: object,
         *args: Any,
@@ -259,13 +260,22 @@ class StatePanel(Static):
     _LABEL_WIDTH = max(len(label) + 1 for label, _, fmt in _STATE_FIELDS if fmt)
 
     def render_state(self, state: LumagenState) -> str:
+        width = self.size.width or 30
+        val_width = width - self._LABEL_WIDTH - 1  # 1 for space
         lines: list[str] = []
         for label, _key, fmt in _STATE_FIELDS:
             if fmt is None:
                 lines.append("")
                 continue
-            val = fmt(state)
-            lines.append(f"{label + ':':<{self._LABEL_WIDTH}s} {val}")
+            val = fmt(state) or "—"
+            if val_width > 0 and len(val) > val_width:
+                wrapped = textwrap.wrap(val, val_width)
+                indent = " " * (self._LABEL_WIDTH + 1)
+                first = f"{label + ':':<{self._LABEL_WIDTH}s} {wrapped[0]}"
+                lines.append(first)
+                lines.extend(f"{indent}{w}" for w in wrapped[1:])
+            else:
+                lines.append(f"{label + ':':<{self._LABEL_WIDTH}s} {val}")
         return "\n".join(lines)
 
     def update_state(self, state: LumagenState) -> None:
@@ -306,17 +316,14 @@ HELP_TEXT = """\
   remote <cmd> — menu, up, ok, exit, …
   save — save config to flash
   hotplug \\[input] — toggle HDMI hotplug
-  refresh — re-query full state
-  refresh labels — re-fetch labels
-  help / ? / Ctrl+H — toggle this panel
-  quit / q — exit
 
 [bold]Raw RS232[/]
   Z... — e.g. ZQS01, ZQI24
 
 [bold]Keys[/]
-  Ctrl+H help   Ctrl+Q quit
-  Ctrl+L clear  Ctrl+R refresh"""
+  Ctrl+H help     Ctrl+Q quit
+  Ctrl+I info     Ctrl+R reload
+  Ctrl+L clear log"""
 
 # All completable command prefixes for the suggester
 _COMMAND_SUGGESTIONS = sorted(
@@ -343,11 +350,6 @@ _COMMAND_SUGGESTIONS = sorted(
         *[f"remote {k}" for k in REMOTE_COMMANDS if not k.isdigit()],
         "save",
         "hotplug",
-        "refresh",
-        "refresh labels",
-        "help",
-        "quit",
-        "exit",
     }
 )
 
@@ -396,7 +398,8 @@ class LumagenTUI(App):
     BINDINGS: ClassVar[list[BindingType]] = [
         ("ctrl+q", "quit", "Quit"),
         ("ctrl+l", "clear_log", "Clear log"),
-        ("ctrl+r", "refresh", "Refresh"),
+        ("ctrl+i", "refresh_info", "Refresh info"),
+        ("ctrl+r", "reload_config", "Reload config"),
         ("ctrl+h", "toggle_help", "Help"),
     ]
 
@@ -439,7 +442,7 @@ class LumagenTUI(App):
                 yield Static(HELP_TEXT, id="help-content", markup=True)
         yield CommandInput(
             _COMMAND_SUGGESTIONS,
-            placeholder="Enter command (type 'help' for list)",
+            placeholder="Enter command (Ctrl+H for help)",
             id="input-bar",
         )
 
@@ -564,15 +567,6 @@ class LumagenTUI(App):
         cmd = parts[0].lower()
         arg = parts[1] if len(parts) > 1 else ""
 
-        if cmd in ("quit", "exit", "q"):
-            await self._client.disconnect()
-            self.exit()
-            return
-
-        if cmd in ("help", "?"):
-            self.action_toggle_help()
-            return
-
         if cmd == "on":
             await self._client.power_on()
             return
@@ -674,8 +668,14 @@ class LumagenTUI(App):
             if proto_idx < 0:
                 log.write("[red]Label index must be >= 1[/]")
                 return
+            label_text = label_parts[1]
+            if len(label_text) > 30:
+                log.write(
+                    f"[red]Label text must be <=30 chars, got {len(label_text)}[/]"
+                )
+                return
             cat = cast("LabelCategory", category)
-            await self._client.set_label(cat, proto_idx, label_parts[1])
+            await self._client.set_label(cat, proto_idx, label_text)
             self._save_state()
             self._refresh_state()
             log.write(f"[green]Set label {label_id} = {label_parts[1]}[/]")
@@ -759,25 +759,13 @@ class LumagenTUI(App):
             self._show_labels(log)
             return
 
-        if cmd == "refresh":
-            if arg.lower() == "labels":
-                log.write("[dim]Fetching labels…[/]")
-                await self._client.get_labels()
-                self._save_state()
-                self._refresh_state()
-                self._show_labels(log)
-            else:
-                await self._client.fetch_full_state()
-                self._refresh_state()
-            return
-
         # Raw RS232 commands start with Z
         if raw.startswith("Z"):
             await self._client.send_command(raw)
             return
 
         log.write(f"[red]Unknown command: {raw}[/]")
-        log.write("[dim]Type 'help' for available commands.[/]")
+        log.write("[dim]Press Ctrl+H for help.[/]")
 
     def _show_labels(self, log: RichLog) -> None:
         """Display cached labels in the log panel."""
@@ -826,9 +814,25 @@ class LumagenTUI(App):
     def action_clear_log(self) -> None:
         self.query_one("#log", RichLog).clear()
 
-    async def action_refresh(self) -> None:
-        await self._client.fetch_full_state()
+    async def action_refresh_info(self) -> None:
+        log = self.query_one("#log", RichLog)
+        log.write("[dim]Refreshing signal info…[/]")
+        await self._client.fetch_runtime_state()
         self._refresh_state()
+
+    async def action_reload_config(self) -> None:
+        log = self.query_one("#log", RichLog)
+        log.write("[dim]Reloading config & labels…[/]")
+        await self._client.fetch_identity()
+        await asyncio.sleep(0.05)
+        await self._client.send_command("ZQI53")
+        await asyncio.sleep(0.05)
+        await self._client.send_command("ZQI54")
+        await asyncio.sleep(1)
+        await self._client.get_labels()
+        self._save_state()
+        self._refresh_state()
+        log.write("[green]Config reloaded.[/]")
 
     async def on_unmount(self) -> None:
         await self._client.disconnect()
