@@ -99,13 +99,13 @@ class LumagenSwitchEntity(LumagenEntity, SwitchEntity):
         super()._handle_coordinator_update()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self.entity_description.turn_on_fn(self.coordinator)
         self._optimistic_state = True
         self._attr_is_on = True
         self.async_write_ha_state()
+        await self.entity_description.turn_on_fn(self.coordinator)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self.entity_description.turn_off_fn(self.coordinator)
         self._optimistic_state = False
         self._attr_is_on = False
         self.async_write_ha_state()
+        await self.entity_description.turn_off_fn(self.coordinator)
