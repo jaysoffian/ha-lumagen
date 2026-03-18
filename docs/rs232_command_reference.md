@@ -41,24 +41,6 @@ Extended aspect ratios (MENU → Input → Options → Aspect Setup → Aspect O
 
 ---
 
-## Commands — Power & Navigation
-
-| RS232 | Description |
-|-------|-------------|
-| `%` | Power on |
-| `$` | Power to standby |
-| `M` | Activate menu |
-| `X` | Exit / cancel |
-| `!` | Force menu off |
-| `k` | OK / accept |
-| `<CR>` | OK / accept (only when command specifies it) |
-| `<` | Left arrow |
-| `>` | Right arrow |
-| `v` | Down arrow |
-| `^` | Up arrow |
-| `0`–`9` | Digit entry |
-| `U` | On-screen help |
-
 ## How Lumagen Inputs Work
 
 The Radiance Pro has three layers of input abstraction:
@@ -87,9 +69,9 @@ The remote selects logical inputs: buttons 1–9 select inputs 1–9, and the `+
 
 ### Input (Configuration) Memories
 
-The Radiance Pro has four input memories (MEMA, MEMB, MEMC and MEMD). Each input memory has sub-memories for each supported input resolution and rate which are automatically selected based on the input resolution and vertical-rate. The “Other” entry is selected for input resolutions and vertical rates not specified explicitly. Each input resolution and vertical rate has 8 sub-memories which are programmable on a per-input and per-input-memory basis. Different inputs and input memories can each be independently programed to one of the 8 sub-memories for each listed resolution and vertical rate.
+The Radiance Pro has four input memories (MEMA, MEMB, MEMC and MEMD). Each input memory has sub-memories for each supported input resolution and rate which are automatically selected based on the input resolution and vertical-rate. The "Other" entry is selected for input resolutions and vertical rates not specified explicitly. Each input resolution and vertical rate has 8 sub-memories which are programmable on a per-input and per-input-memory basis. Different inputs and input memories can each be independently programed to one of the 8 sub-memories for each listed resolution and vertical rate.
 
-Each input memory, and sub-memory, is independent of the other memories. To allow the memories to be used for mode selection (i.e. day/night), by default, the memory type remains unchanged when a new input is selected. (i.e. If input 2 memory B is active, pressing “INPUT, 3” selects input 3 memory B).
+Each input memory, and sub-memory, is independent of the other memories. To allow the memories to be used for mode selection (i.e. day/night), by default, the memory type remains unchanged when a new input is selected. (i.e. If input 2 memory B is active, pressing "INPUT, 3" selects input 3 memory B).
 
 ### Input Labels
 
@@ -105,7 +87,27 @@ Logical Input → Input Memory (A-D) → Resolution Sub-memory → Mode + CMS + 
 
 By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and Style 0.
 
-## Commands — Input Selection
+---
+
+## ASCII Commands — Power & Navigation
+
+| RS232 | Description |
+|-------|-------------|
+| `%` | Power on |
+| `$` | Power to standby |
+| `M` | Activate menu |
+| `X` | Exit / cancel |
+| `!` | Force menu off |
+| `k` | OK / accept |
+| `<CR>` | OK / accept (only when command specifies it) |
+| `<` | Left arrow |
+| `>` | Right arrow |
+| `v` | Down arrow |
+| `^` | Up arrow |
+| `0`–`9` | Digit entry |
+| `U` | On-screen help |
+
+## ASCII Commands — Input Selection
 
 | RS232 | Description |
 |-------|-------------|
@@ -113,9 +115,9 @@ By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and 
 | `+` | Add 10 to next digit for input selection |
 | `P` | Previous input |
 | `L` | Output zone select |
-| `#` | ALT key |
+| `#` | ALT key (use `:` if delimiter mode is enabled) |
 
-## Commands — Source Aspect
+## ASCII Commands — Source Aspect
 
 | RS232 | Aspect | Notes |
 |-------|--------|-------|
@@ -131,18 +133,18 @@ By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and 
 | `j` | 1.85 | Previous zoom |
 | `/` | 1.85 | No zoom |
 | `/N` | 1.85 NLS | No zoom |
-| `A` | 1.90 | Pro only |
-| `AN` | 1.90 NLS | Pro only |
-| `C` | 2.00 | Pro only |
-| `CN` | 2.00 NLS | Pro only |
-| `E` | 2.20 | Pro only |
-| `EN` | 2.20 NLS | Pro only |
+| `A` | 1.90 | |
+| `AN` | 1.90 NLS | |
+| `C` | 2.00 | |
+| `CN` | 2.00 NLS | |
+| `E` | 2.20 | |
+| `EN` | 2.20 NLS | |
 | `W` | 2.35 | Previous zoom |
 | `K` | 2.35 | No zoom |
-| `G` | 2.40 | Pro only |
+| `G` | 2.40 | |
 | `N` | NLS toggle | Send source aspect first |
-| `V` | Auto Aspect Disable | Pro only |
-| `~` | Auto Aspect Enable | Pro only |
+| `V` | Auto Aspect Disable | |
+| `~` | Auto Aspect Enable | Use `?` if delimiter mode is enabled |
 
 ### Extended Aspects
 
@@ -157,7 +159,7 @@ By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and 
 
 **Note**: These aspects require extended aspect ratios to be enabled (MENU → Input → Options → Aspect Setup → Aspect Opts → Extended).
 
-## Commands — Memory & Display
+## ASCII Commands — Memory & Display
 
 | RS232 | Description |
 |-------|-------------|
@@ -168,10 +170,10 @@ By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and 
 | `g` | Onscreen messages on |
 | `s` | Onscreen messages off |
 | `S` | Save shortcut (then send `k` to confirm) |
-| `Y` | HDR Setup menu  |
-| `H` | Show test pattern  |
+| `Y` | HDR Setup menu |
+| `H` | Show test pattern |
 
-## Commands — PIP
+## ASCII Commands — PIP
 
 | RS232 | Description |
 |-------|-------------|
@@ -179,6 +181,14 @@ By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and 
 | `p` | PIP select |
 | `r` | PIP swap |
 | `m` | PIP mode |
+
+## ASCII Commands — Legacy Test Patterns
+
+| RS232 | Description |
+|-------|-------------|
+| `tXMM` | Use `ZY7T` instead |
+| `tA` | Set adjustable test pattern mode (affected by output CMS settings). Also see `ZY7T` |
+| `tR` | Set reference test pattern mode (affected only by PC/Video output setting). Also see `ZY7T` |
 
 ---
 
@@ -196,11 +206,11 @@ By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and 
 | `ZQS01` | Device ID | `!S01,RadianceXD,102308,1009,745` (model, sw rev, model#, serial#) |
 | `ZQS02` | Power state | `!S02,0` (off) / `!S02,1` (on) |
 | `ZQS03` | Zoom step % | 5 or 15 |
-| `ZQS04` | Trigger status | `!S04,<trig1>,<trig2>` (0=low, 1=high) |
+| `ZQS04` | Trigger status (units with output triggers only) | `!S04,<trig1>,<trig2>` (0=low, 1=high) |
 
-### Query Command - Labels (ZQS1XY)
+### Query Command — Labels (ZQS1XY)
 
-Given command `ZQS1XY`, X and Y determine which label you're querying.
+Given command `ZQS1XY`, X and Y determine which label you're querying. The maximum label length varies per label type.
 
 | X | Y | Label | Max Length |
 |---|---|------------------|
@@ -233,7 +243,7 @@ Example responses:
 | `ZQI00` | Basic input info | `!I00,<logical 1-18>,<mem A-D>,<physical 1-18>` |
 | `ZQI01` | Input video | `!I01,<status>,<vrate*100>,<hres>,<vres>,<interlaced>,<3d>,<input_3d>` |
 | `ZQI02` | Test pattern info | `!I02,<on>,<group>,<sub>,<IRE>,<A or R>` |
-| `ZQI03` | Replaced by `ZQI18` ||
+| `ZQI03` | Use `ZQI18` instead | |
 | `ZQI04` | Audio select | 0–5=HDMI, 6–11=coax, 12–13=optical, 14–17=stereo |
 | `ZQI05`\* | Black level | -64 to 64 |
 | `ZQI06`\* | Contrast | -127 to 127 |
@@ -249,25 +259,91 @@ Example responses:
 | `ZQI16` | Vertical shift | `<index>,<value>` (0=off, 1–15; -511 to 511) |
 | `ZQI17` | Reinterlacing | `<enable>,<allow_keys>,<active>` (each 1/0) |
 | `ZQI18` | Output config for current input | `!I18,<out1>,<out2>,<mode>,<3d>,<cms>,<style>` |
-| `ZQI19` | Replaced by `ZQI20` ||
+| `ZQI19` | Use `ZQI20` instead | |
 | `ZQI20` | Input aspect | `!I20,<code><nls>` — code=0–9, nls='N' or '-' |
-| `ZQI21` - `ZQI25` | See "Query Commands — Information" below |
-| `ZQI26` - `ZQI29` | Reserved |
-| `ZQI30` | Sharpness | Values per ZY521ELS format |
-| `ZQI31` - `ZQI49` | Reserved |
-| `ZQI50` | Rec 2020 support (Pro) | `!I50,Y` or `!I50,N` |
-| `ZQI52` | HDR status (Pro) | `!I52,<V>,<Min>,<Max>,<Cll>` (V: 0=SDR, 1=HDR) |
+| `ZQI21`–`ZQI25` | See [Information Queries](#query-commands--information-zqi21zqi25) below |
+| `ZQI26`–`ZQI29` | Reserved |
+| `ZQI30` | Sharpness | Values per `ZY521ELS` format |
+| `ZQI31`–`ZQI49` | Reserved |
+| `ZQI50` | Rec 2020 support | `!I50,Y` or `!I50,N` |
+| `ZQI51` | HDR test pattern Info Frame data | `!I51,P0X,P0Y,P1X,P1Y,P2X,P2Y,WPX,WPY,MAX,MIN,CLL,FALL` |
+| `ZQI52` | HDR status | `!I52,<V>,<Min>,<Max>,<Cll>` (V: 0=SDR, 1=HDR) |
 | `ZQI53` | Game mode | 0=off, 1=on |
-| `ZQI54` | Auto aspect status (fw ≥041824) | `!I54,0` (disabled) / `!I54,1` (enabled) |
+| `ZQI54` | Auto aspect status | 0=off, 1=on |
 
 \* Input setting is combined with output setting; final value clamped to register max.
+
+### ZQI02 Test Pattern Groups
+
+| Group | Sub | Pattern |
+|-------|-----|---------|
+| `a` | 0 | Crosshatch |
+| `a` | 1 | Overscan |
+| `a` | 2 | AspectSquares |
+| `b` | 0 | Contrast1 |
+| `b` | 2 | Contrast2 |
+| `b` | 3 | BlkRamp |
+| `b` | 4 | LowClip |
+| `b` | 5 | WhtRamp |
+| `b` | 6 | HiClip |
+| `b` | 7 | Targets |
+| `b` | 8 | Check |
+| `b` | 9 | Icheck |
+| `b` | 10 | VidBlack |
+| `b` | 11 | VidWhite |
+| `c` | 0 | HLines |
+| `c` | 1 | VLines |
+| `d` | 0 | Ramp |
+| `e` | 0 | GrayWindowMed |
+| `e` | 1 | GrayWindowSm |
+| `e` | 2 | GraySolid |
+| `f` | 0 | 100% ColorBars |
+| `f` | 1 | 75% ColorBars |
+| `g` | 0 | RedWindowMed |
+| `g` | 1 | RedWindowSm |
+| `g` | 2 | RedSolid |
+| `h` | 0 | GrnWindowMed |
+| `h` | 1 | GrnWindowSm |
+| `h` | 2 | GrnSolid |
+| `i` | 0 | BluWindowMed |
+| `i` | 1 | BluWindowSm |
+| `i` | 2 | BluSolid |
+| `j` | 0 | YelWindowMed |
+| `j` | 1 | YelWindowSm |
+| `j` | 2 | YelSolid |
+| `k` | 0 | CynWindowMed |
+| `k` | 1 | CynWindowSm |
+| `k` | 2 | CynSolid |
+| `l` | 0 | MagWindowMed |
+| `l` | 1 | MagWindowSm |
+| `l` | 2 | MagSolid |
+| `m` | 0 | DesaturatedRedWinMed |
+| `m` | 1 | DesaturatedRedWinSm |
+| `m` | 2 | DesaturatedRedWinSolid |
+| `n` | 0 | DesaturatedGrnWinMed |
+| `n` | 1 | DesaturatedGrnWinSm |
+| `n` | 2 | DesaturatedGrnWinSolid |
+| `o` | 0 | DesaturatedBluWinMed |
+| `o` | 1 | DesaturatedBluWinSm |
+| `o` | 2 | DesaturatedBluWinSolid |
+| `p` | 0 | DesaturatedYelWinMed |
+| `p` | 1 | DesaturatedYelWinSm |
+| `p` | 2 | DesaturatedYelWinSolid |
+| `q` | 0 | DesaturatedCynWinMed |
+| `q` | 1 | DesaturatedCynWinSm |
+| `q` | 2 | DesaturatedCynWinSolid |
+| `r` | 0 | DesaturatedMagWinMed |
+| `r` | 1 | DesaturatedMagWinSm |
+| `r` | 2 | DesaturatedMagWinSolid |
+
+Groups `m`–`r` (desaturated windows) are not in the menu; RS-232 control only.
 
 ### ZQI18 Fields
 
 | Field | Values |
 |-------|--------|
 | out1/out2 | 1=on, 0=off |
-| mode | C0–C7 (config) or D\<name\> (direct mode) |
+| mode | C0–C7 (config) or D*name* (direct mode) |
 | 3d | 0=off, f=auto, 1=frame seq, 2=frame packed, 4=top-btm, 8=SbS |
 | cms | 0–7 |
 | style | 0–7 |
@@ -281,10 +357,27 @@ Example responses:
 | 2 | 16:9 |
 | 3 | 1.85 |
 | 4 | 2.35 |
+| 5–7 | Reserved |
 | 8 | ALT-1.85 (1.85 in 1.78 letterbox) |
 | 9 | ALT-2.35 (= 2.40) |
 
-## Query Commands — Information (ZQI21, ZQI22, ZQI23, ZQI24, ZQI25)
+### ZQI51 Fields
+
+Returns HDR test pattern Info Frame data (values set by `ZY540`–`ZY546`, returned even if not activated by `ZY547`):
+
+| Field | Description |
+|-------|-------------|
+| P0X, P0Y | Display primary point 0 |
+| P1X, P1Y | Display primary point 1 |
+| P2X, P2Y | Display primary point 2 |
+| WPX, WPY | White point |
+| MAX, MIN | Mastering luminance max/min |
+| CLL | Max content light level |
+| FALL | Max frame average light level |
+
+See CEA 861.3 for value definitions.
+
+## Query Commands — Information (ZQI21–ZQI25)
 
 | Command | Description | Response |
 |-------|-------------|-------------|
@@ -313,20 +406,20 @@ Example responses:
 | PPP | Output vertical rate | All |
 | QQQQ | Output vertical resolution | All |
 | ZZZ | Output aspect | All |
-| E | Output colorspace (0=601, 1=709, 2=2020, 3=2100) | v2, v3, v4 |
-| F | Source dynamic range (0=SDR, 1=HDR) | v2, v3, v4 |
-| G | Source mode (i=interlaced, p=progressive, -=no input) | v2, v3, v4 |
-| H | Output mode (I=interlaced, P=progressive) | v2, v3, v4 |
-| II  | Virtual input (1–19) | v3, v4 |
-| KK | Physical input (1–19) | v3, v4 |
-| JJJ | Detected raster aspect (e.g. 178 for HD or UHD) | v4 |
-| LLL | Detected content aspect (e.g. 240=2.40) | v4 |
+| E | Output colorspace (0=601, 1=709, 2=2020, 3=2100) | v2+ |
+| F | Source dynamic range (0=SDR, 1=HDR) | v2+ |
+| G | Source mode (i=interlaced, p=progressive, -=no input) | v2+ |
+| H | Output mode (I=interlaced, P=progressive) | v2+ |
+| II  | Virtual input (1–19) | v3+ |
+| KK | Physical input (1–19) | v3+ |
+| JJJ | Detected raster aspect (e.g. 178 for HD or UHD) | v4+ |
+| LLL | Detected content aspect (e.g. 240=2.40) | v4+ |
 | MEM | Input memory (A, B, C, or D) | v5 |
 | PWR | Power status (0=off, 1=on) | v5 |
 
 **Notes**:
 - Parsers should tolerate additional comma-delimited fields appended to the latest full info response that may be present in future firmware.
-- The `ZQI21`, `ZQI22`, `ZQI23`, `ZQI24`, or `ZQI25` response is also sent by the Lumagen unsolicited whenever it detects mode changes depending upon the "report mode changes" setting.
+- The `ZQI21`–`ZQI25` response is also sent by the Lumagen unsolicited whenever it detects mode changes, depending upon the "report mode changes" setting.
 
 ## Query Commands — Output (ZQO)
 
@@ -338,17 +431,29 @@ Example responses:
 | `ZQO03` | Output shrink | `<top>,<left>,<bottom>,<right>` (0–255 pixels) |
 | `ZQO04` | Gamma | 80–140 (= 0.80–1.40). *Also see `ZY40`* |
 | `ZQO05` | Color gamut enabled | 0 or 1. *Also see `ZY412`* |
+| `ZQO06` | Use `ZQO30` instead | |
+| `ZQO07` | Use `ZQO30` instead | |
+| `ZQO08` | Use `ZQO30` instead | |
+| `ZQO09` | Color temp IRE pts 0–10 | 11 values, 0–1000 (= 0.0–100.0). *See also `ZQO89`* |
+| `ZQO10` | Color temp R pts 0–10 | 11 values, 0–1000 (= 0.0–100.0). *See also `ZQO90`* |
+| `ZQO11` | Color temp G pts 0–10 | 11 values, 0–1000 (= 0.0–100.0). *See also `ZQO91`* |
+| `ZQO12` | Color temp B pts 0–10 | 11 values, 0–1000 (= 0.0–100.0). *See also `ZQO92`* |
 | `ZQO13` | Color settings | `<color>,<color_red>,<color_grn>` (-127 to 127) |
 | `ZQO14` | Hue settings | `<hue>,<hue_red>,<hue_grn>` (-127 to 127) |
-| `ZQO15` | Black/contrast | `<black>,<contrast>` |
+| `ZQO15` | Black/contrast | `<black>,<contrast>` (-64–64, -127–127) |
 | `ZQO16` | Output mode name | Text string |
 | `ZQO17` | CTemp points count | 2, 5, 11, 12, or 21 |
-| `ZQO18` | Color format (Pro) | 0=yc422, 1=yc444, 2=rgbvid, 3=rgbpc, 4=yc420 |
+| `ZQO18` | Color format | 0=yc422, 1=yc444, 2=rgbvid, 3=rgbpc, 4=yc420 |
+| `ZQO19` | Reserved | |
 | `ZQO20` | 3D LUT capability | `!O20,<dim>,<bits>` |
 | `ZQO21` | Current 3D LUT size | 01, 05, 09, or 17 |
+| `ZQO22`–`ZQO29` | Reserved | |
 | `ZQO30XXYYZZ` | Read 3D LUT value | `!O30,<rrrr>,<gggg>,<bbbb>` (hex, 0x0000–0x0400) |
-
-Note: some `ZQO` commands have been omitted from above. See [Tech Tip 11 - Radiance RS-232 control (11/20/2023)](https://www.lumagen.com/s/Tip0011_RS232CommandInterface_111023.pdf) for complete list of `ZQO` commands.
+| `ZQO31`–`ZQO88` | Reserved | |
+| `ZQO89` | Color temp IRE pts 11–20 | 12pt: point 12; 21pt: points 11–20. *See also `ZQO09`* |
+| `ZQO90` | Color temp R pts 11–20 | 12pt: point 12; 21pt: points 11–20. *See also `ZQO10`* |
+| `ZQO91` | Color temp G pts 11–20 | 12pt: point 12; 21pt: points 11–20. *See also `ZQO11`* |
+| `ZQO92` | Color temp B pts 11–20 | 12pt: point 12; 21pt: points 11–20. *See also `ZQO12`* |
 
 ---
 
@@ -383,8 +488,8 @@ Note: some `ZQO` commands have been omitted from above. See [Tech Tip 11 - Radia
 
 | Command | Description |
 |---------|-------------|
-| `ZY530MCS<CR>` | Set mode(M), CMS(C), style(S) — each 0–7 or K=keep |
-| `ZY530MCDS<CR>` | Pro: mode(M), CMS-SDR(C), CMS-HDR(D), style(S) |
+| `ZY530MCS<CR>` | Set mode(M), CMS\(C\), style(S) — each 0–7 or K=keep |
+| `ZY530MCDS<CR>` | Mode(M), CMS-SDR\(C\), CMS-HDR(D), style(S) |
 
 ### Output Color / Hue / Black / Contrast
 
@@ -403,12 +508,13 @@ Note: some `ZQO` commands have been omitted from above. See [Tech Tip 11 - Radia
 
 | Command | Description |
 |---------|-------------|
+| `ZY410CRXXXX<CR>` | Use `ZY415` instead |
 | `ZY411<CR>` | Reset color gamut to defaults + 8pt mode |
 | `ZY412<0,1><CR>` | 3D gamut enable/disable |
 | `ZY413XX<CR>` | Set 1D LUT points (11, 12, or 21) — resets all points |
 | `ZY415XXYYZZCVVVV<CR>` | Write 3D LUT — XX,YY,ZZ=address, C=0/1/2 (R/G/B), VVVV=hex 0000–0400 |
 | `ZY416XX<CR>` | Gamut size (05, 09, 17) |
-| `ZY416XXM<CR>` | Gamut size + gamma mode (Pro; M='S' source, 'L' linear) |
+| `ZY416XXM<CR>` | Gamut size + gamma mode (M='S' source, 'L' linear) |
 | `ZY417XXXXXG<CR>` | HDR intensity mapping (00000=off, 00050–10000=max nits; G='A'/'H'/'S') |
 | `ZYGXYZRRRGGGBBB<CR>` | Short 3D LUT write — single-char addresses (10–16 = `:;<=>?@`) |
 
@@ -416,7 +522,7 @@ Note: some `ZQO` commands have been omitted from above. See [Tech Tip 11 - Radia
 
 | Command | Description |
 |---------|-------------|
-| `ZY42APPRRRRGGGGBBBB<CR>` | Set R,G,B for point PP (0000–1000 = 0.0–100.0; optional 5-digit on Pro) |
+| `ZY42APPRRRRGGGGBBBB<CR>` | Set R,G,B for point PP (0000–1000 = 0.0–100.0; optional 5-digit) |
 | `ZY42RPPXXXX<CR>` | Set red for point PP |
 | `ZY42GPPXXXX<CR>` | Set green for point PP |
 | `ZY42BPPXXXX<CR>` | Set blue for point PP |
@@ -427,6 +533,7 @@ Note: some `ZQO` commands have been omitted from above. See [Tech Tip 11 - Radia
 
 | Command | Description |
 |---------|-------------|
+| `ZY503XYZ<CR>` | Use `ZY530` instead |
 | `ZY506SVVV<CR>`\* | Input contrast (S=+/-, VVV=000–127) |
 | `ZY507X<CR>`\* | Input color format (0=auto, 1=Bt.601, 2=Bt.709) |
 | `ZY508SVVV<CR>`\* | Input color offset |
@@ -444,10 +551,11 @@ Note: some `ZQO` commands have been omitted from above. See [Tech Tip 11 - Radia
 | `ZY520X<CR>` | Toggle HDMI hotplug (X=0–7 input, 'A'=all) |
 | `ZY521ELS<CR>` | Sharpness (E=Y/N enable, L=0–7 level, S=H/N sensitivity) |
 | `ZY522EnHnVS<CR>` | H/V sharpness (n=+/-, H,V=0–7, S=H/N) |
+| `ZY523X<CR>` | Reinterlace arrow key control (0=disallow, 1=allow, 2=allow with OSD) |
 
 ### Setting Labels
 
-Given command `ZY524{X}{Y}{label}`, X and Y determine which label you’re setting to "label". The maximum label length varies per label type. The Lumagen truncates overlong labels.
+Given command `ZY524{X}{Y}{label}`, X and Y determine which label you're setting to "label". The maximum label length varies per label type. The Lumagen truncates overlong labels.
 
 | Command | Description | Max Length |
 |---------|-------------|------------|
@@ -462,8 +570,8 @@ Given command `ZY524{X}{Y}{label}`, X and Y determine which label you’re setti
 |---------|-------------|
 | `ZY550<CR>` | Reset auto aspect detection |
 | `ZY551X<CR>` | Game mode (0=off, 1=on) |
-| `ZY552X<CR>` | Set minimum fan speed (X=0–9 for speeds 1–10; fw ≥041824) |
-| `ZY553X<CR>` | Subtitle shift (0=disable, 1=shift 3%, 2=shift 6%; fw ≥092025) |
+| `ZY552X<CR>` | Set minimum fan speed (X=0–9 for speeds 1–10) |
+| `ZY553X<CR>` | Subtitle shift (0=disable, 1=shift 3%, 2=shift 6%) |
 
 ### Display / OSD
 
@@ -472,8 +580,8 @@ Given command `ZY524{X}{Y}{label}`, X and Y determine which label you’re setti
 | `ZB<X>` | Define block char (rendered as `█`) — **no `<CR>`** |
 | `ZC` | Clear OSD message — **no `<CR>`** |
 | `ZTMxxxx<CR>` | Display message (M='0'–'8' timed, '9'=persistent; 2 lines, 30 chars/line) |
-| `ZY811<CR>` | Pop up input and aspect on OSD (fw ≥030424) |
-| `ZY418CRRGGBB<CR>` | Message colors (C: 0=bg, 1=fg, 2=blend; RRGGBB hex; when setting blend value, only last B digit is used so range is 000001-00000f where ‘f’ is opaque messages and ‘1’ is near transparent. |
+| `ZY418CRRGGBB<CR>` | Message colors (C: 0=bg, 1=fg, 2=blend; RRGGBB hex; blend uses only last digit 1–f) |
+| `ZY811<CR>` | Pop up input and aspect on OSD |
 
 ### Test Patterns
 
@@ -483,7 +591,7 @@ Given command `ZY524{X}{Y}{label}`, X and Y determine which label you’re setti
 | `ZY7TsSRRRGGGBBB<CR>` | User pattern (S=0/1/2 med/sm/full, RGB 0–255) |
 | `ZY7TsSSSAAARRRGGGBBB<CR>` | User pattern + size/APL (SSS=area 0–999, AAA=APL 0–100) |
 | `ZY532CSDM<CR>` | Test pattern output mode (C=CMS, S=style, D=3D, M=mode name/C0–C7/K) |
-| `ZY533ICSDM<CR>` | Pro: + input colorspace (I=1 Rec709, 2 Rec2020) |
+| `ZY533ICSDM<CR>` | Test pattern output mode + input colorspace (I=1 Rec709, 2 Rec2020) |
 
 ### HDR Info Frame
 
