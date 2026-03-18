@@ -2,19 +2,22 @@
 
 Home Assistant custom integration for Lumagen Radiance Pro video processor.
 
-Communication is via a TCP/IP to Serial adapter such as the [Global Cache IP2SL](https://www.amazon.com/Global-Cache-iTach-Serial-IP2SL/dp/B0051BU1X4) or [USR-TCP232-302](https://www.amazon.com/USR-TCP232-302-Serial-Ethernet-Converter-Support/dp/B01GPGPEBM) connected to the Lumagen's RS-232 port.
+This integration requires a TCP/IP to Serial adapter such as the [Global Cache iTach IP2SL](https://www.amazon.com/Global-Cache-iTach-Serial-IP2SL/dp/B0051BU1X4) or [USR-TCP232-302](https://www.amazon.com/USR-TCP232-302-Serial-Ethernet-Converter-Support/dp/B01GPGPEBM) connected to the Lumagen's RS-232 port. 
+
+The adapter must provide bidirectional transparent bridging between its network and serial connections as is the case for the IP2SL and USR-TCP232-302 adapters.
+
+*Note: This integration is developed and tested against the USR-TCP232-302.*
 
 ## TCP/IP to Serial Adapter Setup
 
-Connect the adapter to your local network and to the Lumagen's RS-232 port via a straight-through serial cable. (Do NOT use a null-model/crossover cable and note that the Lumagen has a male DB-9 port.)
+Connect the adapter to the Lumagen's RS-232 DB-9 male DTE port using the appropriate cable:
 
-You'll need the adapter's IP address and port (default 4999) when configuring the HA component.
+- The IP2SL has a DB-9 male DTE port. Connect it using a [DB-9 female-to-female null-modem cable](https://www.startech.com/en-us/cables/scnm9ff1mbk).
+- The USR-TCP232-302 has a DB-9 female DCE port. Connect it using a [DB-9 male-to-female straight-through cable](https://www.startech.com/en-us/cables/mxt1001mbk).
+
+Connect the adapter to your local network. You'll need the adapter's IP address and port (default 4999) when configuring the HA component.
 
 The adapter serial port settings must match the Lumagen's RS-232 port settings (default: 9600 bps, 8N1, no flow control).
-
-The adapter must provide bidirectional transparent bridging between network and serial. Data transfer must not be interpreted or altered in any way by the adapter. This is the case for the Global Cache IP2SL and USR-TCP232-302 adapters.
-
-*Note: This integration has been developed and tested against the USR-TCP232-302.*
 
 ## Lumagen Setup
 
@@ -24,10 +27,10 @@ The Lumagen should be configured as follows for the integration to work correctl
 
 | Setting              | Value     | Note |
 |----------------------|-----------|------|
-| Echo-RS232           | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. This integration should work either way, but is tested with it On. |
-| Echo-USB             | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. Mentioned only for completeness as the adapter connects to the RS-232 port. |
-| **Delimiters**           | **Off**       | Lumagen recommends "Delimiter Mode = Off". This works reliably and is easier to implement. This integration WILL NOT work otherwise. |
-| Report mode changes  | Full v5   | Optional but recommended. Enables the integration to receive real-time updates from the Lumagen. |
+| Echo-RS232           | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. *This integration should work either way, but is tested with it On.* |
+| Echo-USB             | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. *Mentioned only for completeness as the adapter connects to the RS-232 port.* |
+| **Delimiters**           | **Off**       | Lumagen recommends "Delimiter Mode = Off". This works reliably and is easier to implement. **This integration WILL NOT work otherwise.** |
+| Report mode changes  | Full v5   | Optional but recommended. *Enables the integration to receive real-time updates from the Lumagen.* |
 
 **MENU → Other → OnOff Setup:**
 
@@ -36,7 +39,7 @@ The Lumagen should be configured as follows for the integration to work correctl
 | On Message   | N       | Message may interfere with integration. |
 | Off Message  | N       | Message may interfere with integration. |
 
-**MENU → Input → Options → Aspect Setup → Aspect Opts:**
+**MENU → Input → Options → Aspect Setup:**
 
 | Setting    | Value    | Note |
 |------------|----------|------|
@@ -58,8 +61,8 @@ Copy `custom_components/ha_lumagen` into your Home Assistant
 
 ## Configuration
 
-1. **Settings → Devices & Services → Add Integration → Lumagen**
-2. Enter the hostname or IP address and port of your TCP/IP to Serial Adapter (default port: 4999)
+1. Settings → Devices & Services → Add Integration → Lumagen
+2. Enter the hostname (or IP address) and port (default: 4999) of your TCP/IP to Serial Adapter.
 
 *Note: The integration tests the connection before completing setup.*
 
