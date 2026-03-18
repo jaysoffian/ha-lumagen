@@ -1,37 +1,40 @@
 # Lumagen Radiance Pro Integration for Home Assistant
 
-Home Assistant custom integration for Lumagen Radiance Pro video processors.
-Communicates directly over TCP via a serial-to-TCP adapter (e.g. Global Cache
-IP2SL, USR-TCP232-302) connected to the Lumagen's RS-232 port.
-
-No external libraries — the integration contains its own async TCP client that
-speaks the Lumagen RS-232 protocol natively.
+Home Assistant custom integration for Lumagen Radiance Pro video processors. Communicates with over TCP via a serial-to-TCP adapter (e.g. [Global Cache IP2SL](https://www.amazon.com/Global-Cache-iTach-Serial-IP2SL/dp/B0051BU1X4) or [USR-TCP232-302](https://www.amazon.com/USR-TCP232-302-Serial-Ethernet-Converter-Support/dp/B01GPGPEBM)) connected to the Lumagen's RS-232 port.
 
 ## Lumagen Setup
 
-The Lumagen must be configured for the integration to work correctly.
+The Lumagen should be configured as follows for the integration to work correctly.
 
 **MENU → Other → I/O Setup → RS-232 Setup:**
 
-| Setting              | Value     |
-|----------------------|-----------|
-| Echo                 | On        |
-| Delimiters           | Off       |
-| Report mode changes  | Full v5   |
+| Setting              | Value     | Note |
+|----------------------|-----------|------|
+| Echo-RS232           | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. This integration should work either way, but is tested with it On. |
+| Echo-USB             | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. Mentioned only for completeness as the serial-to-TCP adapter uses the RS-232 port. |
+| **Delimiters**           | **Off**       | Lumagen recommends "Delimiter Mode = Off". This works reliably and is easier to implement. This integration WILL NOT work otherwise. |
+| Report mode changes  | Full v5   | Optional but recommended. Enables the integration to receive real-time updates from the Lumagen. |
 
 **MENU → Other → OnOff Setup:**
 
-| Setting     | Value    |
-|-------------|----------|
-| OnMessage   | Off      |
-| OffMessage  | Off      |
+| Setting      | Enabled | Note |
+|--------------|---------|------|
+| On Message   | N       | Message may interfere with integration. |
+| Off Message  | N       | Message may interfere with integration. |
 
-Optional: enable extended aspect ratios (MENU → Input → Options → Aspect Setup
-→ Aspect Opts → Extended) to detect/select 4:3 Pillarbox, 1.375 Pillarbox,
-1.66 Pillarbox, 2.10, 2.55, and 2.76.
+**MENU → Input → Options → Aspect Setup → Aspect Opts:**
 
-The serial-to-TCP adapter must match the Lumagen's RS-232 settings (default:
-9600 bps, 8N1, no flow control).
+| Setting    | Value    | Note |
+|------------|----------|------|
+| Aspect Opts| Extended | Optional but recommended. Enables detection/selection of 4:3 Pillarbox, 1.375 Pillarbox, 1.66 Pillarbox, 2.10, 2.55, and 2.76 aspect ratios. |
+
+## Serial-to-TCP adapter Setup
+
+The serial-to-TCP adapter must match the Lumagen's RS-232 port settings (default: 9600 bps, 8N1, no flow control).
+
+The serial-to-TCP adapter must provide bidirectional transparent bridging between network and serial. Data transfer must not be interpreted or altered in any way by the adapter. This is the case for the Global Cache IP2SL and USR-TCP232-302 adapters.
+
+*Note: This integration has been developed and tested against the USR-TCP232-302.*
 
 ## Installation
 
@@ -50,8 +53,9 @@ Copy `custom_components/ha_lumagen` into your Home Assistant
 ## Configuration
 
 1. **Settings → Devices & Services → Add Integration → Lumagen**
-2. Enter the IP address and port of your serial-to-TCP adapter (default port: 4999)
-3. The integration tests the connection with an alive query before completing setup
+2. Enter the hostname or IP address and port of your serial-to-TCP adapter (default port: 4999)
+
+*Note: The integration tests the connection with an alive query before completing setup.*
 
 ## Entities
 
