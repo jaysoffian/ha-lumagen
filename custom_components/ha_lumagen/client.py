@@ -775,7 +775,7 @@ class LumagenClient:
 
         # Input labels: A0-D7 (reverse iteration works around firmware bug)
         for mem in "ABCD":
-            for i in reversed(range(8)):
+            for i in reversed(range(10)):
                 expected += 1
                 label_id = f"{mem}{i}"
                 val = await self._query_label(label_id)
@@ -1003,9 +1003,11 @@ class LumagenClient:
         """
         if category not in ("A", "B", "C", "D", "0", "1", "2", "3"):
             raise ValueError(f"Invalid label category: {category!r}")
-        if not 0 <= index <= 7:
+        max_index = 9 if category in ("A", "B", "C", "D", "0") else 7
+        if not 0 <= index <= max_index:
             raise ValueError(
-                f"Label index must be 0-7 for category {category!r}, got {index}"
+                f"Label index must be 0-{max_index} for category"
+                f" {category!r}, got {index}"
             )
         max_len = (
             10 if category in ("A", "B", "C", "D", "0") else 7 if category == "1" else 8
