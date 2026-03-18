@@ -40,6 +40,14 @@ class LumagenRemoteEntity(LumagenEntity, RemoteEntity):
         super().__init__(coordinator)
         self._attr_unique_id = f"{coordinator.entry.entry_id}_remote"
 
+    def _update_attrs(self) -> None:
+        super()._update_attrs()
+        data = self.coordinator.data
+        if data is None:
+            return
+        # Available in standby so power-on works via the remote entity
+        self._attr_available = self.coordinator.last_update_success and data.connected
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self.coordinator.client.power_on()
 
