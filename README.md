@@ -1,6 +1,20 @@
 # Lumagen Radiance Pro Integration for Home Assistant
 
-Home Assistant custom integration for Lumagen Radiance Pro video processors. Communicates with over TCP via a serial-to-TCP adapter (e.g. [Global Cache IP2SL](https://www.amazon.com/Global-Cache-iTach-Serial-IP2SL/dp/B0051BU1X4) or [USR-TCP232-302](https://www.amazon.com/USR-TCP232-302-Serial-Ethernet-Converter-Support/dp/B01GPGPEBM)) connected to the Lumagen's RS-232 port.
+Home Assistant custom integration for Lumagen Radiance Pro video processor.
+
+Communication is via a TCP/IP to Serial adapter such as the [Global Cache IP2SL](https://www.amazon.com/Global-Cache-iTach-Serial-IP2SL/dp/B0051BU1X4) or [USR-TCP232-302](https://www.amazon.com/USR-TCP232-302-Serial-Ethernet-Converter-Support/dp/B01GPGPEBM) connected to the Lumagen's RS-232 port.
+
+## TCP/IP to Serial Adapter Setup
+
+Connect the adapter to your local network and to the Lumagen's RS-232 port via a straight-through serial cable. (Do NOT use a null-model/crossover cable and note that the Lumagen has a male DB-9 port.)
+
+You'll need the adapter's IP address and port (default 4999) when configuring the HA component.
+
+The adapter serial port settings must match the Lumagen's RS-232 port settings (default: 9600 bps, 8N1, no flow control).
+
+The adapter must provide bidirectional transparent bridging between network and serial. Data transfer must not be interpreted or altered in any way by the adapter. This is the case for the Global Cache IP2SL and USR-TCP232-302 adapters.
+
+*Note: This integration has been developed and tested against the USR-TCP232-302.*
 
 ## Lumagen Setup
 
@@ -11,7 +25,7 @@ The Lumagen should be configured as follows for the integration to work correctl
 | Setting              | Value     | Note |
 |----------------------|-----------|------|
 | Echo-RS232           | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. This integration should work either way, but is tested with it On. |
-| Echo-USB             | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. Mentioned only for completeness as the serial-to-TCP adapter uses the RS-232 port. |
+| Echo-USB             | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. Mentioned only for completeness as the adapter connects to the RS-232 port. |
 | **Delimiters**           | **Off**       | Lumagen recommends "Delimiter Mode = Off". This works reliably and is easier to implement. This integration WILL NOT work otherwise. |
 | Report mode changes  | Full v5   | Optional but recommended. Enables the integration to receive real-time updates from the Lumagen. |
 
@@ -27,14 +41,6 @@ The Lumagen should be configured as follows for the integration to work correctl
 | Setting    | Value    | Note |
 |------------|----------|------|
 | Aspect Opts| Extended | Optional but recommended. Enables detection/selection of 4:3 Pillarbox, 1.375 Pillarbox, 1.66 Pillarbox, 2.10, 2.55, and 2.76 aspect ratios. |
-
-## Serial-to-TCP adapter Setup
-
-The serial-to-TCP adapter must match the Lumagen's RS-232 port settings (default: 9600 bps, 8N1, no flow control).
-
-The serial-to-TCP adapter must provide bidirectional transparent bridging between network and serial. Data transfer must not be interpreted or altered in any way by the adapter. This is the case for the Global Cache IP2SL and USR-TCP232-302 adapters.
-
-*Note: This integration has been developed and tested against the USR-TCP232-302.*
 
 ## Installation
 
@@ -53,9 +59,9 @@ Copy `custom_components/ha_lumagen` into your Home Assistant
 ## Configuration
 
 1. **Settings → Devices & Services → Add Integration → Lumagen**
-2. Enter the hostname or IP address and port of your serial-to-TCP adapter (default port: 4999)
+2. Enter the hostname or IP address and port of your TCP/IP to Serial Adapter (default port: 4999)
 
-*Note: The integration tests the connection with an alive query before completing setup.*
+*Note: The integration tests the connection before completing setup.*
 
 ## Entities
 
@@ -309,7 +315,7 @@ For the full RS-232 command and query reference, see
 
 ### Connection fails during setup
 
-- Verify the serial-to-TCP adapter is reachable at the configured IP/port
+- Verify the TCP-to-serial adapter is reachable at the configured IP/port
 - Confirm the adapter's serial settings match the Lumagen (9600 8N1)
 - Check that the Lumagen is powered on (the alive query needs a response)
 
