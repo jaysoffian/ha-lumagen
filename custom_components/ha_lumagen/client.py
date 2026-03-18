@@ -633,7 +633,18 @@ class LumagenClient:
 
     def _handle_label_response(self, line: str, match: re.Match[str]) -> None:
         """Extract label text and correlate with the pending query."""
-        label_text = line[match.end() :]  # everything after "!S1<cat>,"
+        rest = line[match.end() :]  # everything after "!S1<cat>,"
+
+        # A subsequent response may be concatenated after the label text.
+        # Split on '!' which marks the start of the next response.
+        next_bang = rest.find("!")
+        if next_bang >= 0:
+            label_text = rest[:next_bang]
+            self._process_line(rest[next_bang:])
+        else:
+            # Labels are max 10 chars; truncate to avoid swallowing
+            # concatenated response data that lacks a '!' delimiter.
+            label_text = rest[:10]
 
         # Determine which label ID this is for
         label_id = self._pending_label_id
@@ -754,7 +765,7 @@ class LumagenClient:
         await self.send_command("ZQI54")
 
     async def get_labels(self) -> int:
-        """Query all labels (inputs A0-D9, custom modes, CMS, styles).
+        """Query all labels (inputs A0-D7, custom modes, CMS, styles).
 
         Populates the per-category state fields and returns the number of
         labels that failed to resolve (0 = complete success).
@@ -762,9 +773,9 @@ class LumagenClient:
         all_labels: dict[str, str] = {}
         expected = 0
 
-        # Input labels: A0-D9 (reverse iteration works around firmware bug)
+        # Input labels: A0-D7 (reverse iteration works around firmware bug)
         for mem in "ABCD":
-            for i in reversed(range(10)):
+            for i in reversed(range(8)):
                 expected += 1
                 label_id = f"{mem}{i}"
                 val = await self._query_label(label_id)
@@ -986,26 +997,30 @@ class LumagenClient:
 
         *category*: 'A'-'D' (input per input memory), '0' (all input memories),
                     '1' (custom mode), '2' (CMS), '3' (style).
-        *index*: label index (0-9 for inputs, 0-7 for modes/CMS/styles).
-        *text*: label text (max 30 characters).
+        *index*: label index (0-7 for all categories).
+        *text*: label text (max 10 for inputs, 7 for custom modes,
+                8 for CMS/styles).
         """
         if category not in ("A", "B", "C", "D", "0", "1", "2", "3"):
             raise ValueError(f"Invalid label category: {category!r}")
-        max_index = 9 if category in ("A", "B", "C", "D", "0") else 7
-        if not 0 <= index <= max_index:
+        if not 0 <= index <= 7:
             raise ValueError(
-                f"Label index must be 0-{max_index}"
-                f" for category {category!r}, got {index}"
+                f"Label index must be 0-7 for category {category!r}, got {index}"
             )
+        max_len = (
+            10 if category in ("A", "B", "C", "D", "0") else 7 if category == "1" else 8
+        )
         if not text.isascii():
             raise ValueError("Label text must be ASCII only")
-        if len(text) > 30:
-            raise ValueError(f"Label text must be <=30 chars, got {len(text)}")
+        if len(text) > max_len:
+            raise ValueError(f"Label text must be <={max_len} chars, got {len(text)}")
         await self.send_command(f"ZY524{category}{index}{text}\r")
-        # Re-fetch to confirm; fall back to the text we sent
+        # Re-fetch to confirm; use the sent text as the authoritative
+        # value since the device may truncate and the response can have
+        # concatenated protocol data that corrupts the label text.
         label_id = f"{category}{index}"
-        confirmed = await self._query_label(label_id)
-        label_text = confirmed if confirmed is not None else text
+        await self._query_label(label_id)
+        label_text = text
         # Update the appropriate label dict
         if category in ("A", "B", "C", "D"):
             self.state.input_labels[label_id] = label_text
