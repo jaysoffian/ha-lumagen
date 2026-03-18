@@ -451,7 +451,7 @@ Given command `ZY524{X}{Y}{label}`, X and Y determine which label you’re setti
 
 | Command | Description | Max Length |
 |---------|-------------|------------|
-| `ZY524XYlabel<CR>` | Set input label X (memory 'A'-'D' or '0' for all) on input Y ('0'-'7') to "label" | 10 characters |
+| `ZY524XYlabel<CR>` | Set input label X (memory 'A'-'D' or '0' for all) on input Y ('0'-'9') to "label" | 10 characters |
 | `ZY5241Ylabel<CR>` | Set custom mode label Y ('0'-'7') to "label" | 7 characters |
 | `ZY5242Ylabel<CR>` | Set CMS label Y ('0'-'7') to "label" | 8 characters |
 | `ZY5243Ylabel<CR>` | Set style label Y ('0'-'7') to "label" | 8 characters |

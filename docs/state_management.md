@@ -101,7 +101,7 @@ next device response confirm or correct it.
 - Aspect ratio selection (non-NLS): set immediately, confirmed by I54 + I25 queries
 
 **Authoritative only (multi-command or unreliable):**
-- NLS variants (4:3 NLS, 16:9 NLS, 1.85 NLS): send the base aspect
+- NLS variants (1.33 NLS, 1.78 NLS, 1.85 NLS): send the base aspect
   command followed by `N`, then query I54 + I25 for the final state. No
   optimistic state is set because the device fires an intermediate I24
   response after the base aspect command (before processing `N`) that
@@ -112,14 +112,14 @@ next device response confirm or correct it.
 ### NLS caveats
 
 NLS (Non-Linear Stretch) on the Lumagen remote is a two-button sequence:
-press an aspect ratio (4:3, 16:9, or 1.85) then press NLS. The
+press an aspect ratio (1.33, 1.78, or 1.85) then press NLS. The
 integration replicates this by sending both commands.
 
 Known device-level issues:
-- **1.85 NLS is unreliable**: works roughly 50% of the time with a 16:9
+- **1.85 NLS is unreliable**: works roughly 50% of the time with a 1.78
   source. The device sets the aspect to 1.85 but sometimes does not
   engage NLS. This is a firmware limitation, not an integration bug.
-- **4:3 NLS and 16:9 NLS are reliable** in testing.
+- **1.33 NLS and 1.78 NLS are reliable** in testing.
 - Selecting any aspect ratio (including NLS variants) disables auto
   aspect. Selecting "Auto" re-enables it.
 - "Reset auto aspect" clears NLS and re-enables auto aspect detection.

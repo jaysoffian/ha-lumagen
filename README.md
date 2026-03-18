@@ -79,7 +79,7 @@ Copy `custom_components/ha_lumagen` into your Home Assistant
 | Entity       | Description |
 |--------------|-------------|
 | Input        | Select from labeled inputs. Labels are cached on disk; press Reload Config to update. |
-| Aspect Ratio | Auto, 4:3, Letterbox, 16:9, 1.85–2.76, plus NLS variants (see below). |
+| Aspect Ratio | Auto, 1.33, Letterbox, 1.78, 1.85–2.76, plus NLS variants (see below). |
 | Memory       | Select input memory A / B / C / D. |
 
 ### Sensors
@@ -141,15 +141,15 @@ NLS stretches a narrower aspect to fill a wider display non-linearly
 (more stretch at the edges, less in the center). The integration offers
 three NLS variants:
 
-- **4:3 NLS** — stretch 4:3 to 16:9
-- **16:9 NLS** — stretch 16:9 to 2.35/2.40
+- **1.33 NLS** — stretch 1.33 (4:3) to 1.78 (16:9)
+- **1.78 NLS** — stretch 1.78 (16:9) to 2.35/2.40
 - **1.85 NLS** — stretch 1.85 to 2.35/2.40
 
-On the Lumagen remote, NLS is a two-button sequence (e.g. press 16:9 then
+On the Lumagen remote, NLS is a two-button sequence (e.g. press 1.78 then
 NLS). The integration sends both commands automatically.
 
 **Caveat:** NLS behavior can be unreliable at the firmware level. In
-testing, 4:3 NLS and 16:9 NLS work consistently, but **1.85 NLS works
+testing, 1.33 NLS and 1.78 NLS work consistently, but **1.85 NLS works
 roughly 50% of the time** — the device sometimes sets the aspect to 1.85
 without engaging NLS. This is a firmware limitation. The integration
 queries the device for authoritative state after sending NLS commands, so
