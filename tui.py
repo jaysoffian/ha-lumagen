@@ -328,7 +328,7 @@ HELP_TEXT = """\
 [bold]Labels & OSD[/]
   labels — show all labels
   label <id> <text> — e.g. label A1 Apple TV
-  osd \\[0-9] <text> — OSD message
+  osd \\[0-9] <text> — OSD message (| for line break)
   osd — clear OSD
   osdaspect — input/aspect info
 
@@ -761,18 +761,20 @@ class LumagenTUI(App):
         if cmd == "osd":
             rest = raw.split(maxsplit=1)
             if len(rest) < 2:
-                await self._client.clear_message()
+                await self._client.clear_osd_message()
                 return
             body = rest[1]
-            # Optional leading digit sets duration (0-8=seconds, 9=persistent)
+            # Optional leading digit sets duration (0=persistent, 1-8=seconds)
             if len(body) >= 2 and body[0].isdigit() and body[1] == " ":
                 duration = int(body[0])
                 body = body[2:]
             else:
                 duration = 3
-            # Allow \n for line breaks
-            body = body.replace("\\n", "\n")
-            await self._client.display_message(body, duration=duration)
+            # | separates line one and line two
+            parts = body.split("|", maxsplit=1)
+            line_one = parts[0]
+            line_two = parts[1] if len(parts) > 1 else ""
+            await self._client.show_osd_message(line_one, line_two, duration=duration)
             return
 
         if cmd == "labels" and not arg:
