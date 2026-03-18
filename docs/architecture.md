@@ -1,10 +1,45 @@
-# State Management Design
+# Architecture
+
+The integration has no external dependencies. Communication with the Lumagen is handled by `client.py`, a self-contained async TCP client.
+
+```
+┌────────────────────────────────────────────────────┐
+│                  LumagenClient                     │
+│                                                    │
+│  asyncio.open_connection(host, port)               │
+│  ┌────────────┐  ┌──────────────┐  ┌────────────┐  │
+│  │ _read_loop │  │ send_command │  │ _keepalive │  │
+│  └─────┬──────┘  └──────────────┘  └────────────┘  │
+│        │ parses lines, updates state               │
+│        ▼                                           │
+│  LumagenState (dataclass)                          │
+│        │ calls on_state_changed callback           │
+│        ▼                                           │
+│  LumagenCoordinator.async_set_updated_data()       │
+└────────────────────────────────────────────────────┘
+```
+
+## Event-Driven Updates
+
+The coordinator sets `update_interval=None` — no polling. All state updates come from the TCP stream:
+
+- **Mode changes**: the Lumagen pushes `!I25,…` unsolicited (Full v5)
+- **Power changes**: `Power-up complete.` / `POWER OFF.` sentinels
+- **Input/memory changes**: included in ZQI25 response
+- **Keepalive**: `ZQI25` sent after 30 s of idle; any received data resets
+  the timer
+
+Device state is split into config (stored on disk) and signal (unsolicited). The following **State Management** section details the startup sequence, optimistic vs authoritative state, NLS caveats, and connection lifecycle.
+
+For the full RS-232 command and query reference, see the [RS-232 Command Reference](./rs232_command_reference.md).
+
+## State Management
 
 The HA integration categorizes Lumagen device state into two tiers based
 on how often each piece of data changes, which determines when and how it
 is fetched.
 
-## 1. Config state (stored on disk, fetched on demand)
+### 1. Config state (stored on disk, fetched on demand)
 
 Data that is configured once on the Lumagen and rarely changes. Persisted
 to HA storage (`ha_lumagen.<entry_id>.info`) so it survives HA restarts
@@ -23,7 +58,7 @@ Model, serial, firmware, and labels are shown in the UI but not exposed
 as separate entities — identity fields live in HA's device info, and
 labels populate the Input select dropdown.
 
-### What we deliberately don't expose as HA entities
+#### What we deliberately don't expose as HA entities
 
 The Lumagen has many settings that are configured once per input (or
 globally) via the Lumagen menu and then left alone. These are poor
@@ -55,7 +90,7 @@ with 2-second timeouts each. The device can be slow to respond after
 boot, causing timeouts and retries. Since these values almost never
 change, caching them avoids unnecessary device traffic and startup delays.
 
-## 2. Signal state (unsolicited + keepalive)
+### 2. Signal state (unsolicited + keepalive)
 
 Volatile state that changes as the source signal changes or the user
 switches inputs/memory. The Lumagen reports most of this automatically
@@ -91,7 +126,7 @@ Any received data — including unsolicited ZQI25 reports — resets the idle
 timer. This means during active use (source changes, input switches), no
 keepalive traffic is generated; the device's own reports prove liveness.
 
-## 3. Optimistic vs authoritative state
+### 3. Optimistic vs authoritative state
 
 Some controls set optimistic state for instant UI feedback, then let the
 next device response confirm or correct it.
@@ -109,7 +144,7 @@ next device response confirm or correct it.
 - Reset auto aspect (ZY550): queries I54 + I25 afterward to get the
   device's actual state.
 
-### NLS caveats
+#### NLS caveats
 
 NLS (Non-Linear Stretch) on the Lumagen remote is a two-button sequence:
 press an aspect ratio (1.33, 1.78, or 1.85) then press NLS. The
@@ -124,7 +159,7 @@ Known device-level issues:
   aspect. Selecting "Auto" re-enables it.
 - "Reset auto aspect" clears NLS and re-enables auto aspect detection.
 
-### Aspect / auto aspect interaction
+#### Aspect / auto aspect interaction
 
 | Action              | Auto aspect | NLS    | Aspect              |
 |---------------------|-------------|--------|---------------------|
@@ -136,7 +171,7 @@ Known device-level issues:
 
 *NLS engagement depends on device firmware; 1.85 NLS is unreliable.
 
-## Startup sequence
+### Startup sequence
 
 1. Connect to device, wait for TCP session (response-driven `wait_for`,
    5 s timeout).
@@ -159,7 +194,7 @@ Note: `None` to `on` transitions (initial state discovery after HA
 restart or reconnect) do NOT trigger the power-on handler — the startup
 sequence already handles this case.
 
-## Connection lifecycle
+### Connection lifecycle
 
 - **Keepalive timeout:** If the probe gets no response within 5 seconds
   (and no other data arrives), the connection is considered dead and a

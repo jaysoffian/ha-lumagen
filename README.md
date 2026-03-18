@@ -249,40 +249,6 @@ If you use a Denon/Marantz AVR with the [built-in HA integration](https://www.ho
   mode: single
 ```
 
-## Architecture
-
-The integration has no external dependencies. Communication with the Lumagen is handled by `client.py`, a self-contained async TCP client.
-
-```
-┌────────────────────────────────────────────────────┐
-│                  LumagenClient                     │
-│                                                    │
-│  asyncio.open_connection(host, port)               │
-│  ┌────────────┐  ┌──────────────┐  ┌────────────┐  │
-│  │ _read_loop │  │ send_command │  │ _keepalive │  │
-│  └─────┬──────┘  └──────────────┘  └────────────┘  │
-│        │ parses lines, updates state               │
-│        ▼                                           │
-│  LumagenState (dataclass)                          │
-│        │ calls on_state_changed callback           │
-│        ▼                                           │
-│  LumagenCoordinator.async_set_updated_data()       │
-└────────────────────────────────────────────────────┘
-```
-
-### Event-Driven Updates
-
-The coordinator sets `update_interval=None` — no polling. All state updates come from the TCP stream:
-
-- **Mode changes**: the Lumagen pushes `!I25,…` unsolicited (Full v5)
-- **Power changes**: `Power-up complete.` / `POWER OFF.` sentinels
-- **Input/memory changes**: included in ZQI25 response
-- **Keepalive**: `ZQI25` sent after 30 s of idle; any received data resets
-  the timer
-
-Device state is split into config (stored on disk) and signal (unsolicited). See [docs/state_management.md](docs/state_management.md) for the full design including startup sequence, optimistic vs authoritative state, NLS caveats, and connection lifecycle.
-
-For the full RS-232 command and query reference, see [docs/rs232_command_reference.md](docs/rs232_command_reference.md).
 
 ## Troubleshooting
 
@@ -309,18 +275,6 @@ Labels are cached on disk. If you see default names:
 
 NLS can be unreliable at the firmware level (see [NLS caveats](#nls-non-linear-stretch) above). The integration always queries the device for authoritative state after NLS commands, so the UI reflects what the device actually did.
 
-## Development
-
-Requires [uv](https://docs.astral.sh/uv/).
-
-```bash
-# Set up the dev environment
-uv sync
-
-# Run all checks (ruff, pyright, pytest, trailing whitespace, etc.)
-pre-commit run --all-files
-```
-
 ### TUI
 
 A standalone Textual TUI for exercising the client against a real Lumagen:
@@ -332,29 +286,6 @@ LUMAGEN_HOST=lrp LUMAGEN_PORT=5555 ./tui.py
 ```
 
 <img src="tui.svg" alt="TUI screenshot" width="600">
-
-### Repo layout
-
-```
-custom_components/ha_lumagen/
-  client.py        — async TCP client, RS-232 protocol, state dataclass
-  coordinator.py   — HA DataUpdateCoordinator (event-driven, no polling)
-  entity.py        — shared base entity (device_info, availability)
-  config_flow.py   — single-step IP/port config flow
-  sensor.py        — signal status sensors
-  select.py        — input, aspect ratio, memory selects
-  switch.py        — power, auto aspect switches
-  button.py        — reload config, reset auto aspect, show input aspect
-  remote.py        — menu navigation commands
-  const.py         — domain, defaults, errors
-  services.yaml    — HA service descriptions for OSD services
-tui.py             — standalone Textual TUI for interactive testing
-docs/
-  rs232_command_reference.md — full Lumagen RS-232 command + query reference
-  state_management.md        — state tier design, startup sequence, connection lifecycle
-tests/
-  test_client.py   — response parsing and protocol tests
-```
 
 ## License
 
