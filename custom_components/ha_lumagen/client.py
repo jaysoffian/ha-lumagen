@@ -35,8 +35,8 @@ LabelCategory = Literal["A", "B", "C", "D", "0", "1", "2", "3"]
 
 # Aspect ratio numeric codes (I24 SSS/AAA fields) → display names
 ASPECT_RATIO_NAMES: dict[int, str] = {
-    133: "4:3",
-    178: "16:9",
+    133: "1.33",
+    178: "1.78",
     185: "1.85",
     190: "1.90",
     200: "2.00",
@@ -49,13 +49,13 @@ ASPECT_RATIO_NAMES: dict[int, str] = {
 }
 
 # Display name → RS232 command(s) for setting aspect.
-# NLS requires a base aspect first (e.g. 4:3 then N), so the NLS
+# NLS requires a base aspect first (e.g. 1.33 then N), so the NLS
 # entries are two-command sequences.
 ASPECT_COMMANDS: dict[str, list[str]] = {
     "Auto": ["~"],
-    "4:3": ["["],
+    "1.33": ["["],
     "Letterbox": ["]"],
-    "16:9": ["*"],
+    "1.78": ["*"],
     "1.85": ["/"],
     "1.90": ["A"],
     "2.00": ["C"],
@@ -65,16 +65,16 @@ ASPECT_COMMANDS: dict[str, list[str]] = {
     "2.40": ["G"],
     "2.55": ["+W"],
     "2.76": ["+N"],
-    "4:3 NLS": ["[", "N"],
-    "16:9 NLS": ["*", "N"],
+    "1.33 NLS": ["[", "N"],
+    "1.78 NLS": ["*", "N"],
     "1.85 NLS": ["/", "N"],
 }
 
 # I20 aspect code → display name
 _I20_ASPECT_CODES: dict[str, str] = {
-    "0": "4:3",
+    "0": "1.33",
     "1": "Letterbox",
-    "2": "16:9",
+    "2": "1.78",
     "3": "1.85",
     "4": "2.35",
     "8": "1.85 ALT",
@@ -181,7 +181,7 @@ class LumagenState:
     input_video_status: InputVideoStatus | None = None
 
     # Source (from I24)
-    source_content_aspect: str | None = None  # "4:3", "16:9", "2.40", …
+    source_content_aspect: str | None = None  # "1.33", "1.78", "2.40", …
     source_raster_aspect: str | None = None
     detected_content_aspect: str | None = None
     detected_raster_aspect: str | None = None

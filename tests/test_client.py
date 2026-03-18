@@ -128,8 +128,8 @@ class TestAspectName:
     @pytest.mark.parametrize(
         ("code", "expected"),
         [
-            ("133", "4:3"),
-            ("178", "16:9"),
+            ("133", "1.33"),
+            ("178", "1.78"),
             ("185", "1.85"),
             ("190", "1.90"),
             ("200", "2.00"),
@@ -281,14 +281,14 @@ class TestHandleFullInfo:
         assert state.source_vertical_rate == 60
         assert state.source_vertical_resolution == 2160
         assert state.input_config_number == 0
-        assert state.source_raster_aspect == "16:9"
+        assert state.source_raster_aspect == "1.78"
         assert state.source_content_aspect == "2.40"
         assert state.nls_active is False
         assert state.output_cms == 0
         assert state.output_style == 0
         assert state.output_vertical_rate == 60
         assert state.output_vertical_resolution == 2160
-        assert state.output_aspect == "16:9"
+        assert state.output_aspect == "1.78"
         # v2+ fields should be untouched
         assert state.output_colorspace is None
         assert state.source_dynamic_range is None
@@ -338,7 +338,7 @@ class TestHandleFullInfo:
         state = LumagenState()
         _handle_full_info(state, fields)
         assert state._changed
-        assert state.detected_raster_aspect == "16:9"
+        assert state.detected_raster_aspect == "1.78"
         assert state.detected_content_aspect == "2.40"
 
     def test_v5_fields(self):
@@ -511,7 +511,7 @@ class TestProcessLine:
         assert s.source_mode == "Progressive"
         assert s.logical_input == 1
         assert s.physical_input == 3
-        assert s.detected_raster_aspect == "16:9"
+        assert s.detected_raster_aspect == "1.78"
         assert s.detected_content_aspect == "2.40"
 
     def test_i24_unsolicited(self):
