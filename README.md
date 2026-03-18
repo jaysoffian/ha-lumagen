@@ -2,7 +2,7 @@
 
 Home Assistant custom integration for Lumagen Radiance Pro video processor.
 
-This integration requires a TCP/IP to Serial adapter such as the [Global Cache iTach IP2SL](https://www.amazon.com/Global-Cache-iTach-Serial-IP2SL/dp/B0051BU1X4) or [USR-TCP232-302](https://www.amazon.com/USR-TCP232-302-Serial-Ethernet-Converter-Support/dp/B01GPGPEBM) connected to the Lumagen's RS-232 port. 
+This integration requires a TCP/IP to Serial adapter such as the [Global Cache iTach IP2SL](https://www.amazon.com/Global-Cache-iTach-Serial-IP2SL/dp/B0051BU1X4) or [USR-TCP232-302](https://www.amazon.com/USR-TCP232-302-Serial-Ethernet-Converter-Support/dp/B01GPGPEBM) connected to the Lumagen's RS-232 port.
 
 The adapter must provide bidirectional transparent bridging between its network and serial connections as is the case for the IP2SL and USR-TCP232-302 adapters.
 
@@ -23,27 +23,16 @@ The adapter serial port settings must match the Lumagen's RS-232 port settings (
 
 The Lumagen should be configured as follows for the integration to work correctly.
 
-**MENU → Other → I/O Setup → RS-232 Setup:**
-
-| Setting              | Value     | Note |
-|----------------------|-----------|------|
-| Echo-RS232           | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. *This integration should work either way, but is tested with it On.* |
-| Echo-USB             | On        | Lumagen recommends using “Echo = On” (the default). If set to Off it may affect the ability to do software updates. *Mentioned only for completeness as the adapter connects to the RS-232 port.* |
-| **Delimiters**           | **Off**       | Lumagen recommends "Delimiter Mode = Off". This works reliably and is easier to implement. **This integration WILL NOT work otherwise.** |
-| Report mode changes  | Full v5   | Optional but recommended. *Enables the integration to receive real-time updates from the Lumagen.* |
-
-**MENU → Other → OnOff Setup:**
-
-| Setting      | Enabled | Note |
-|--------------|---------|------|
-| On Message   | N       | Message may interfere with integration. |
-| Off Message  | N       | Message may interfere with integration. |
-
-**MENU → Input → Options → Aspect Setup:**
-
-| Setting    | Value    | Note |
-|------------|----------|------|
-| Aspect Opts| Extended | Optional but recommended. Enables detection/selection of 4:3 Pillarbox, 1.375 Pillarbox, 1.66 Pillarbox, 2.10, 2.55, and 2.76 aspect ratios. |
+1. **MENU → Other → I/O Setup → RS-232 Setup:**
+   - **Echo-RS232**: On (Lumagen recommends "On". If set to "Off" it may affect the ability to do software updates. *This integration should work either way, but is tested with it On.*)
+   - **Echo-USB**: On (Lumagen recommends "On". If set to "Off" it may affect the ability to do software updates. *Mentioned only for completeness as the TCP/IP to serial adapter connects to the RS-232 port.*)
+   - **Delimiters**: Off (Lumagen recommends "Off". This works reliably and is easier to implement.  *This integration WILL NOT work unless Delimiters=Off.*)
+   - **Report mode changes**: Full v5 (Optional but recommended. *Enables the integration to receive real-time updates from the Lumagen.*)
+2. **MENU → Other → OnOff Setup:**
+    - **On Message**: N (Message may interfere with integration.)
+    - **Off Message**: N (Message may interfere with integration.)
+3. **MENU → Input → Options → Aspect Setup:**
+   - **Aspect Opts**: Extended (Optional but recommended. Enables detection/selection of 4:3 Pillarbox, 1.375 Pillarbox, 1.66 Pillarbox, 2.10, 2.55, and 2.76 aspect ratios.)
 
 ## Installation
 
@@ -146,23 +135,15 @@ The Aspect Ratio select and Auto Aspect switch are kept in sync:
 
 ### NLS (Non-Linear Stretch)
 
-NLS stretches a narrower aspect to fill a wider display non-linearly
-(more stretch at the edges, less in the center). The integration offers
-three NLS variants:
+NLS stretches a narrower aspect to fill a wider display non-linearly (more stretch at the edges, less in the center). The integration offers three NLS variants:
 
 - **1.33 NLS** — stretch 1.33 (4:3) to 1.78 (16:9)
 - **1.78 NLS** — stretch 1.78 (16:9) to 2.35/2.40
 - **1.85 NLS** — stretch 1.85 to 2.35/2.40
 
-On the Lumagen remote, NLS is a two-button sequence (e.g. press 1.78 then
-NLS). The integration sends both commands automatically.
+On the Lumagen remote, NLS is a two-button sequence (e.g. press 1.78 then NLS). The integration sends both commands automatically.
 
-**Caveat:** NLS behavior can be unreliable at the firmware level. In
-testing, 1.33 NLS and 1.78 NLS work consistently, but **1.85 NLS works
-roughly 50% of the time** — the device sometimes sets the aspect to 1.85
-without engaging NLS. This is a firmware limitation. The integration
-queries the device for authoritative state after sending NLS commands, so
-the UI will always show what the device actually did.
+\* **Caveat:** NLS behavior can be unreliable at the firmware level. In testing, 1.33 NLS and 1.78 NLS work consistently, but **1.85 NLS works roughly 50% of the time** — the device sometimes sets the aspect to 1.85 without engaging NLS. This is a firmware limitation. The integration queries the device for authoritative state after sending NLS commands, so the UI will always show what the device actually did.
 
 ## Usage Examples
 
@@ -251,10 +232,7 @@ automation:
 
 #### Show Denon AVR volume on the Lumagen OSD
 
-If you use a Denon/Marantz AVR with the
-[built-in HA integration](https://www.home-assistant.io/integrations/denonavr/),
-you can mirror volume changes on the Lumagen display — no separate daemon
-needed:
+If you use a Denon/Marantz AVR with the [built-in HA integration](https://www.home-assistant.io/integrations/denonavr/), you can mirror volume changes on the Lumagen display — no separate daemon needed:
 
 ```yaml
 - alias: "Show Denon volume on Lumagen"
@@ -275,30 +253,28 @@ needed:
 
 ## Architecture
 
-The integration has no external dependencies. Communication with the Lumagen is
-handled by `client.py`, a self-contained async TCP client.
+The integration has no external dependencies. Communication with the Lumagen is handled by `client.py`, a self-contained async TCP client.
 
 ```
-┌──────────────────────────────────────────────────┐
-│                  LumagenClient                   │
-│                                                  │
-│  asyncio.open_connection(host, port)             │
-│  ┌────────────┐  ┌─────────────┐  ┌──────────┐  │
-│  │ _read_loop │  │ send_command│  │ _keepalive│  │
-│  └─────┬──────┘  └─────────────┘  └──────────┘  │
-│        │ parses lines, updates state             │
-│        ▼                                         │
-│  LumagenState (dataclass)                        │
-│        │ calls on_state_changed callback         │
-│        ▼                                         │
-│  LumagenCoordinator.async_set_updated_data()     │
-└──────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────┐
+│                  LumagenClient                     │
+│                                                    │
+│  asyncio.open_connection(host, port)               │
+│  ┌────────────┐  ┌──────────────┐  ┌────────────┐  │
+│  │ _read_loop │  │ send_command │  │ _keepalive │  │
+│  └─────┬──────┘  └──────────────┘  └────────────┘  │
+│        │ parses lines, updates state               │
+│        ▼                                           │
+│  LumagenState (dataclass)                          │
+│        │ calls on_state_changed callback           │
+│        ▼                                           │
+│  LumagenCoordinator.async_set_updated_data()       │
+└────────────────────────────────────────────────────┘
 ```
 
 ### Event-Driven Updates
 
-The coordinator sets `update_interval=None` — no polling. All state updates
-come from the TCP stream:
+The coordinator sets `update_interval=None` — no polling. All state updates come from the TCP stream:
 
 - **Mode changes**: the Lumagen pushes `!I25,…` unsolicited (Full v5)
 - **Power changes**: `Power-up complete.` / `POWER OFF.` sentinels
@@ -306,21 +282,17 @@ come from the TCP stream:
 - **Keepalive**: `ZQI25` sent after 30 s of idle; any received data resets
   the timer
 
-Device state is split into config (stored on disk) and signal (unsolicited).
-See [docs/state_management.md](docs/state_management.md) for the full design
-including startup sequence, optimistic vs authoritative state, NLS caveats,
-and connection lifecycle.
+Device state is split into config (stored on disk) and signal (unsolicited). See [docs/state_management.md](docs/state_management.md) for the full design including startup sequence, optimistic vs authoritative state, NLS caveats, and connection lifecycle.
 
-For the full RS-232 command and query reference, see
-[docs/rs232_command_reference.md](docs/rs232_command_reference.md).
+For the full RS-232 command and query reference, see [docs/rs232_command_reference.md](docs/rs232_command_reference.md).
 
 ## Troubleshooting
 
 ### Connection fails during setup
 
-- Verify the TCP-to-serial adapter is reachable at the configured IP/port
-- Confirm the adapter's serial settings match the Lumagen (9600 8N1)
-- Check that the Lumagen is powered on (the alive query needs a response)
+- Verify the TCP/IP-to-serial adapter is reachable at the configured IP/port
+- Confirm the adapter's serial settings match the Lumagen's (9600 8N1)
+- Try with the Lumagen powered on. It may not respond if its standby power is configured to "Lowest".
 
 ### Entities show unavailable
 
@@ -337,9 +309,7 @@ Labels are cached on disk. If you see default names:
 
 ### NLS aspect shows unexpected result
 
-NLS can be unreliable at the firmware level (see [NLS caveats](#nls-non-linear-stretch)
-above). The integration always queries the device for authoritative state
-after NLS commands, so the UI reflects what the device actually did.
+NLS can be unreliable at the firmware level (see [NLS caveats](#nls-non-linear-stretch) above). The integration always queries the device for authoritative state after NLS commands, so the UI reflects what the device actually did.
 
 ## Development
 
