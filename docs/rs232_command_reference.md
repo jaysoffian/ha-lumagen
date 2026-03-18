@@ -4,31 +4,13 @@ Sources:
 - [Tech Tip 11 - Radiance RS-232 control (11/20/2023)](https://www.lumagen.com/s/Tip0011_RS232CommandInterface_111023.pdf)
 - [Radiance Pro firmware changelog](https://www.lumagen.com/software-updates/radiance-pro-updates)
 
-This is a reference for building a TCP client (e.g. for Home Assistant / Homebridge) that talks to a Lumagen Radiance Pro via a TCP-to-serial adapter (e.g. Global Cache IP2SL or USR-TCP232-302) connected to its RS-232 port. It is assumed that by connecting to the TCP-to-serial adapter over TCP, the connection faithfully echoes data to the RS-232 port and vice-versa.
+This is a reference for building a TCP client that talks to a Lumagen Radiance Pro via a TCP/IP to Serial adapter (e.g. Global Cache IP2SL or USR-TCP232-302) connected to the Lumagen's RS-232 port. The adapter must provide bidirectional transparent bridging between network and serial. Data transfer must not be interpreted or altered in any way by the adapter.
 
-## Prerequisites
+---
 
-The customer must configure their TCP-to-serial adapter to match the Lumagen's RS-232 settings. The default Lumagen RS232 port settings are 9600 bps 8n1:
+## Connection & Protocol
 
-- **Data Rate**: 9600 bps
-- **Data Size**: 8 bits
-- **Parity**: None
-- **Stop Bits**: 1
-- **Flow control**: None
-
-The customer must also configure the Lumagen with the following RS-232 port related settings:
-
-- **MENU → Other → I/O Setup → RS-232 Setup**:
-    - **Echo**: On (The Radiance will echo all characters sent to it.)
-    - **Delimiters**: Off
-    - **Report mode changes**: Full v5 (The Radiance will send a string upon mode changes as if the respective query command was sent.)
-- **MENU → Other → OnOff Setup**:
-    - **OnMessage**: Off / Disabled (If set, turns off echoing of the original query command.)
-    - **OffMessage**: Off / Disabled (If set, turns off echoing of the original query command.)
-
-Extended aspect ratios (MENU → Input → Options → Aspect Setup → Aspect Opts → Extended) must also be enabled to detect to select/detect the following ratios: 4:3 Pillarbox, 1.375 Pillarbox, 1.66 Pillarbox, 2.10, 2.55, 2.76.
-
-## Protocol Notes
+### Protocol Notes
 
 - Most commands are bare ASCII — just send the bytes, **no carriage return**.
 - Commands marked with `<CR>` **require** a carriage return (`\r`, 0x0D) terminator. Sending `<CR>` on commands that don't need it brings up the Info page.
@@ -36,56 +18,63 @@ Extended aspect ratios (MENU → Input → Options → Aspect Setup → Aspect O
 - `_` (underscore) is a no-op, always ignored.
 - Any byte outside hex 20–7A acts as a terminator. Bytes above 0x7F are masked with 0x7F.
 - Multi-character commands (e.g. `*N`) can be sent without delay between characters.
-- **Echo**: With Echo=On (the assumed setting), the Lumagen echoes every byte it receives back to the sender. A query like `ZQS00` produces the byte stream `ZQS00!S00,Ok\r\n` — the echoed command bytes concatenated with the response. Clients must strip the echoed prefix before parsing the response.
+- **Echo**: With Echo=On (the assumed setting), the Lumagen echoes every byte it receives back to the sender. A query like `ZQS00` produces the byte stream `ZQS00!S00,Ok\r\n` — the echoed command bytes concatenated with the response. Clients must strip the echoed prefix before parsing the response. Lumagen recommends Echo=On; if set to Off, software updates may not work. For completeness, the available echo settings are:
+    - On (default) — echo all characters sent to it.
+    - Off — only send a message at power on/off.
+    - Off with Status — send power/input changes in `ZQS02` / `ZQI00` format.
 - The Lumagen sends unsolicited information upon various state changes (power on, power off, video signal changes) depending upon its configuration. An event driven client should be prepared to receive these updates and update itself accordingly.
+- The Lumagen also sends messages as it is operated by IR or by other clients connected to the TCP-to-serial adapter.
+- **Power on/off messages**: When the Lumagen powers on with echo enabled, it sends `Power-up complete.\r\n`. When powering off (standby), it sends `POWER OFF.\r\n`. These can be used as sentinels to confirm the operation completed.
+- **Power On/Off Message (OnMessage/OffMessage)**: Can send an ASCII string out the RS-232 port to turn on or off a display. Enabling this turns off echoing of the original query command (the query response is still sent). It is recommended these messages are turned off.
+- **Delimiter mode**: This reference assumes delimiters are off, as recommended by Lumagen. Having no delimiters works reliably and is easier to implement.
 
----
+### RS-232 Link Commands
 
-## How Lumagen Inputs Work
+| Command | Description |
+|---------|-------------|
+| `ZD<0-3>` | Set delimiter mode (0=off, 1=on, 2=ack/nack, 3=checksum+ack/nack) — **no `<CR>`** |
+| `ZE<0-2>` | Set echo (0=off, 1=on, 2=off+status) — **no `<CR>`** |
+| `ZW<xxx><CR>` | Delay processing xxx ms (max 30000) |
+| `ZYSX<CR>` | Set baud (D=9.6k, M=28.8k, F=57.6k, 1=115.2k, 2=230.4k, 3=460.8k) |
 
-The Radiance Pro has three layers of input abstraction:
+### Baud Rate Switching over TCP
 
-### Physical Inputs
+The Lumagen defaults to 9600 baud. For faster communication, you can switch both the Lumagen and the TCP-to-serial adapter to a higher speed. This is not needed for simple remote control, but may be beneficial for configuration backup/restore. (Not documented here.)
 
-The number of physical HDMI input ports varies by model:
+**Order matters:** send the Lumagen baud command and the adapter baud command back-to-back in the same TCP write, so the adapter forwards the Lumagen command at the old speed before switching itself.
 
-| Model | Physical Inputs | Outputs |
-|-------|----------------|---------|
-| 4140  | 1              | 1       |
-| 4240  | 2              | 2       |
-| 4242  | 4              | 2       |
-| 4244  | 6              | 2       |
-| 4246  | 8              | 2       |
-| 4444  | 6              | 4       |
-| 4446  | 8              | 4       |
-| 5244  | 6              | 2       |
-| 5348  | 10             | 3       |
+#### Lumagen baud command
 
-### Logical (Virtual) Inputs
+`ZYSX<CR>` where X is:
 
-Each physical input can be mapped to one or more **logical inputs** (also called virtual inputs). The protocol supports up to 19 logical inputs. This allows a single physical port to appear as multiple sources with different settings (e.g. different aspect ratios or color profiles for the same HDMI port).
+| X | Baud |
+|---|------|
+| `D` | 9600 (default) |
+| `M` | 28800 |
+| `F` | 57600 |
+| `1` | 115200 |
+| `2` | 230400 |
+| `3` | 460800 |
 
-The remote selects logical inputs: buttons 1–9 select inputs 1–9, and the `+10` prefix accesses inputs 10–19 (e.g. `+10` then `0` selects input 10). On the 5348, pressing `0` without `+10` is a shortcut for input 10.
+Return to 9600 before using Lumagen update utilities.
 
-### Input (Configuration) Memories
+#### USR-TCP232-302 baud command
 
-The Radiance Pro has four input memories (MEMA, MEMB, MEMC and MEMD). Each input memory has sub-memories for each supported input resolution and rate which are automatically selected based on the input resolution and vertical-rate. The "Other" entry is selected for input resolutions and vertical rates not specified explicitly. Each input resolution and vertical rate has 8 sub-memories which are programmable on a per-input and per-input-memory basis. Different inputs and input memories can each be independently programed to one of the 8 sub-memories for each listed resolution and vertical rate.
-
-Each input memory, and sub-memory, is independent of the other memories. To allow the memories to be used for mode selection (i.e. day/night), by default, the memory type remains unchanged when a new input is selected. (i.e. If input 2 memory B is active, pressing "INPUT, 3" selects input 3 memory B).
-
-### Input Labels
-
-Labels are stored per input memory, indexed 0–9 (label index 0 = logical input 1, index 9 = logical input 10). The label query `ZQS1{memory}{index}` retrieves them — e.g. `ZQS1A0` gets the label for input 1 in MEMA.
-
-### Configuration Chain
-
-Each input memory has sub-memories automatically selected by input resolution and 2D/3D mode. Each sub-memory links to an output **Mode** (0–7), **CMS** (0–7), and **Style** (0–7):
+The USR-TCP232-302/E2 accepts a binary serial-port reconfiguration packet:
 
 ```
-Logical Input → Input Memory (A-D) → Resolution Sub-memory → Mode + CMS + Style
+Header:  0x55 0xAA 0x55
+Payload: 3-byte big-endian baud rate + 1 byte data format (0x03 = 8N1)
+Trailer: 1-byte checksum (sum of payload bytes mod 256)
 ```
 
-By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and Style 0.
+Example for 115200 baud (0x01C200):
+
+```
+55 AA 55  01 C2 00 03  C6
+```
+
+See "USR-TCP232-E2 User Manual" V1.1.3, pages 50–51.
 
 ---
 
@@ -192,13 +181,15 @@ By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and 
 
 ---
 
-## Query Protocol
+## Query Commands
+
+### Query Protocol
 
 - All queries: `ZQ` + category (`I`, `S`, `O`) + two-digit code. **No terminator.**
 - Response: `!` + last 3 chars of query + comma-separated data + `\r\n`
 - Ack/Nack (`!Y` / `!N`): terminated `\n\r` (0x0A 0x0D) — note reversed order.
 
-## Query Commands — System (ZQS)
+### System Queries (ZQS)
 
 | Command | Description | Example Response |
 |---------|-------------|-----------------|
@@ -207,8 +198,9 @@ By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and 
 | `ZQS02` | Power state | `!S02,0` (off) / `!S02,1` (on) |
 | `ZQS03` | Zoom step % | 5 or 15 |
 | `ZQS04` | Trigger status (units with output triggers only) | `!S04,<trig1>,<trig2>` (0=low, 1=high) |
+| `ZQS05`–`ZQS09` | Reserved | |
 
-### Query Command — Labels (ZQS1XY)
+#### Labels (ZQS1XY)
 
 Given command `ZQS1XY`, X and Y determine which label you're querying. The maximum label length varies per label type.
 
@@ -236,7 +228,7 @@ Example responses:
 - `!S12,CMS0`
 - `!S13,2.40`
 
-## Query Commands — Input (ZQI)
+### Input Queries (ZQI)
 
 | Command | Description | Response |
 |---------|-------------|----------|
@@ -261,19 +253,20 @@ Example responses:
 | `ZQI18` | Output config for current input | `!I18,<out1>,<out2>,<mode>,<3d>,<cms>,<style>` |
 | `ZQI19` | Use `ZQI20` instead | |
 | `ZQI20` | Input aspect | `!I20,<code><nls>` — code=0–9, nls='N' or '-' |
-| `ZQI21`–`ZQI25` | See [Information Queries](#query-commands--information-zqi21zqi25) below |
+| `ZQI21`–`ZQI25` | See [Information Queries](#information-queries-zqi21zqi25) below |
 | `ZQI26`–`ZQI29` | Reserved |
 | `ZQI30` | Sharpness | Values per `ZY521ELS` format |
 | `ZQI31`–`ZQI49` | Reserved |
-| `ZQI50` | Rec 2020 support | `!I50,Y` or `!I50,N` |
+| `ZQI50` | Rec 2020 support | `!I50,Y` or `!I50,N` — for the display connected to the main video output (Output 4 on 44XX, Output 2 on 42XX) |
 | `ZQI51` | HDR test pattern Info Frame data | `!I51,P0X,P0Y,P1X,P1Y,P2X,P2Y,WPX,WPY,MAX,MIN,CLL,FALL` |
 | `ZQI52` | HDR status | `!I52,<V>,<Min>,<Max>,<Cll>` (V: 0=SDR, 1=HDR) |
 | `ZQI53` | Game mode | 0=off, 1=on |
 | `ZQI54` | Auto aspect status | 0=off, 1=on |
+| `ZQI55`–`ZQI99` | Reserved |
 
 \* Input setting is combined with output setting; final value clamped to register max.
 
-### ZQI02 Test Pattern Groups
+#### ZQI02 Test Pattern Groups
 
 | Group | Sub | Pattern |
 |-------|-----|---------|
@@ -338,7 +331,7 @@ Example responses:
 
 Groups `m`–`r` (desaturated windows) are not in the menu; RS-232 control only.
 
-### ZQI18 Fields
+#### ZQI18 Fields
 
 | Field | Values |
 |-------|--------|
@@ -348,7 +341,7 @@ Groups `m`–`r` (desaturated windows) are not in the menu; RS-232 control only.
 | cms | 0–7 |
 | style | 0–7 |
 
-### ZQI20 Aspect Codes
+#### ZQI20 Aspect Codes
 
 | Code | Aspect |
 |------|--------|
@@ -361,7 +354,7 @@ Groups `m`–`r` (desaturated windows) are not in the menu; RS-232 control only.
 | 8 | ALT-1.85 (1.85 in 1.78 letterbox) |
 | 9 | ALT-2.35 (= 2.40) |
 
-### ZQI51 Fields
+#### ZQI51 Fields
 
 Returns HDR test pattern Info Frame data (values set by `ZY540`–`ZY546`, returned even if not activated by `ZY547`):
 
@@ -377,7 +370,7 @@ Returns HDR test pattern Info Frame data (values set by `ZY540`–`ZY546`, retur
 
 See CEA 861.3 for value definitions.
 
-## Query Commands — Information (ZQI21–ZQI25)
+### Information Queries (ZQI21–ZQI25)
 
 | Command | Description | Response |
 |-------|-------------|-------------|
@@ -387,7 +380,7 @@ See CEA 861.3 for value definitions.
 | `ZQI24` | Full v4 |  Full v3 + `,JJJ,LLL` |
 | `ZQI25` | Full v5 |  Full v4 + `,MEM,PWR` |
 
-### Information Response Fields
+#### Information Response Fields
 
 | Field | Description | Query Version |
 |-------|-------------|-------------|
@@ -421,7 +414,22 @@ See CEA 861.3 for value definitions.
 - Parsers should tolerate additional comma-delimited fields appended to the latest full info response that may be present in future firmware.
 - The `ZQI21`–`ZQI25` response is also sent by the Lumagen unsolicited whenever it detects mode changes, depending upon the "report mode changes" setting.
 
-## Query Commands — Output (ZQO)
+#### Report Mode Changes
+
+When enabled (MENU → Other → I/O Setup → RS-232 Setup → Report mode changes), mode changes cause the unit to send an unsolicited string in the format of the selected query response.
+
+| Setting | Response Format |
+|---------|-----------------|
+| Off | (none) |
+| Input | `ZQI01` + `ZQI18` |
+| Output | `ZQO01` |
+| Full | `ZQI21` |
+| Full v2 | `ZQI22` |
+| Full v3 | `ZQI23` |
+| Full v4 | `ZQI24` |
+| Full v5 | `ZQI25` |
+
+### Output Queries (ZQO)
 
 | Command | Description | Response |
 |---------|-------------|----------|
@@ -454,19 +462,11 @@ See CEA 861.3 for value definitions.
 | `ZQO90` | Color temp R pts 11–20 | 12pt: point 12; 21pt: points 11–20. *See also `ZQO10`* |
 | `ZQO91` | Color temp G pts 11–20 | 12pt: point 12; 21pt: points 11–20. *See also `ZQO11`* |
 | `ZQO92` | Color temp B pts 11–20 | 12pt: point 12; 21pt: points 11–20. *See also `ZQO12`* |
+| `ZQO93`–`ZQO99` | Reserved | |
 
 ---
 
 ## Set Commands (ZY) — All require `<CR>` terminator
-
-### RS232 Configuration
-
-| Command | Description |
-|---------|-------------|
-| `ZD<0-3>` | Set delimiter mode (0=off, 1=on, 2=ack/nack, 3=checksum+ack/nack) — **no `<CR>`** |
-| `ZE<0-2>` | Set echo (0=off, 1=on, 2=off+status) — **no `<CR>`** |
-| `ZW<xxx><CR>` | Delay processing xxx ms (max 30000) |
-| `ZYSX<CR>` | Set baud (D=9.6k, M=28.8k, F=57.6k, 1=115.2k, 2=230.4k, 3=460.8k) |
 
 ### Output Settings
 
@@ -548,7 +548,7 @@ See CEA 861.3 for value definitions.
 | `ZY5161XXSVVV<CR>` | Select + set vertical shift (S=+/-, VVV=0–511) |
 | `ZY517GGGME<CR>` | Darbee (GGG=000–120 or relative +/-01–99 or KKK; M=P/G/H/K; E=0/1/K) |
 | `ZY518PRRSCTGGBB<CR>` | HDR mapping (P=group, RR=ratio 31–95, S=shape 0–7, C=clip 0–7, T=trans 0–7, GG=gamma 8–24, BB=black 1–15) |
-| `ZY520X<CR>` | Toggle HDMI hotplug (X=0–7 input, 'A'=all) |
+| `ZY520X<CR>` | Toggle HDMI hotplug (X=0–7 for inputs 1–8, 'A'=all) |
 | `ZY521ELS<CR>` | Sharpness (E=Y/N enable, L=0–7 level, S=H/N sensitivity) |
 | `ZY522EnHnVS<CR>` | H/V sharpness (n=+/-, H,V=0–7, S=H/N) |
 | `ZY523X<CR>` | Reinterlace arrow key control (0=disallow, 1=allow, 2=allow with OSD) |
@@ -616,50 +616,48 @@ Given command `ZY524{X}{Y}{label}`, X and Y determine which label you're setting
 
 ---
 
-## Addendum: Baud Rate Switching over TCP
+## Appendix: How Lumagen Inputs Work
 
-The Lumagen defaults to 9600 baud. For faster communication (e.g. firmware updates),
-you can switch both the Lumagen and the TCP/serial adapter to a higher speed.
+The Radiance Pro has three layers of input abstraction:
 
-**Order matters:** send the Lumagen baud command and the adapter baud command back-to-back
-in the same TCP write, so the adapter forwards the Lumagen command at the old speed before
-switching itself.
+### Physical Inputs
 
-### Lumagen baud command
+The number of physical HDMI input ports varies by model:
 
-`ZYSX<CR>` where X is:
+| Model | Physical Inputs | Outputs |
+|-------|----------------|---------|
+| 4140  | 1              | 1       |
+| 4240  | 2              | 2       |
+| 4242  | 4              | 2       |
+| 4244  | 6              | 2       |
+| 4246  | 8              | 2       |
+| 4444  | 6              | 4       |
+| 4446  | 8              | 4       |
+| 5244  | 6              | 2       |
+| 5348  | 10             | 3       |
 
-| X | Baud |
-|---|------|
-| `D` | 9600 (default) |
-| `M` | 28800 |
-| `F` | 57600 |
-| `1` | 115200 |
-| `2` | 230400 |
-| `3` | 460800 |
+### Logical (Virtual) Inputs
 
-Return to 9600 before using Lumagen update utilities.
+Each physical input can be mapped to one or more **logical inputs** (also called virtual inputs). The protocol supports up to 19 logical inputs. This allows a single physical port to appear as multiple sources with different settings (e.g. different aspect ratios or color profiles for the same HDMI port).
 
-### USR-TCP232-302 baud command
+The remote selects logical inputs: buttons 1–9 select inputs 1–9, and the `+10` prefix accesses inputs 10–19 (e.g. `+10` then `0` selects input 10). On the 5348, pressing `0` without `+10` is a shortcut for input 10.
 
-The USR-TCP232-302/E2 accepts a binary serial-port reconfiguration packet:
+### Input (Configuration) Memories
+
+The Radiance Pro has four input memories (MEMA, MEMB, MEMC and MEMD). Each input memory has sub-memories for each supported input resolution and rate which are automatically selected based on the input resolution and vertical-rate. The "Other" entry is selected for input resolutions and vertical rates not specified explicitly. Each input resolution and vertical rate has 8 sub-memories which are programmable on a per-input and per-input-memory basis. Different inputs and input memories can each be independently programed to one of the 8 sub-memories for each listed resolution and vertical rate.
+
+Each input memory, and sub-memory, is independent of the other memories. To allow the memories to be used for mode selection (i.e. day/night), by default, the memory type remains unchanged when a new input is selected. (i.e. If input 2 memory B is active, pressing "INPUT, 3" selects input 3 memory B).
+
+### Input Labels
+
+Labels are stored per input memory, indexed 0–9 (label index 0 = logical input 1, index 9 = logical input 10). The label query `ZQS1{memory}{index}` retrieves them — e.g. `ZQS1A0` gets the label for input 1 in MEMA.
+
+### Configuration Chain
+
+Each input memory has sub-memories automatically selected by input resolution and 2D/3D mode. Each sub-memory links to an output **Mode** (0–7), **CMS** (0–7), and **Style** (0–7):
 
 ```
-Header:  0x55 0xAA 0x55
-Payload: 3-byte big-endian baud rate + 1 byte data format (0x03 = 8N1)
-Trailer: 1-byte checksum (sum of payload bytes mod 256)
+Logical Input → Input Memory (A-D) → Resolution Sub-memory → Mode + CMS + Style
 ```
 
-Example for 115200 baud (0x01C200):
-
-```
-55 AA 55  01 C2 00 03  C6
-```
-
-See "USR-TCP232-E2 User Manual" V1.1.3, pages 50–51.
-
-### Power on/off messages
-
-When the Lumagen powers on with echo enabled, it sends `Power-up complete.\r\n`.
-When powering off (standby), it sends `POWER OFF.\r\n`.
-These can be used as sentinels to confirm the operation completed.
+By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and Style 0.
