@@ -314,7 +314,7 @@ HELP_TEXT = """\
   a / b / c / d — input memory
 
 [bold]Video Processing[/]
-  aspect <name> — 4:3, 16:9, 2.40, NLS, …
+  aspect <name> — 1.33, 1.78, 2.40, NLS, …
   mode <1-8> — output custom mode
   cms <1-8> — output CMS
   style <1-8> — output style
