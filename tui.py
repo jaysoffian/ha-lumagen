@@ -45,11 +45,42 @@ class CommandInput(Input):
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("tab", "complete", "Tab completion", show=False),
+        Binding("up", "history_prev", "Previous command", show=False),
+        Binding("down", "history_next", "Next command", show=False),
     ]
 
     def __init__(self, completions: list[str], **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._completions = completions
+        self._history: list[str] = []
+        self._history_idx: int = 0
+        self._saved_input: str = ""
+
+    def add_to_history(self, cmd: str) -> None:
+        if cmd and (not self._history or self._history[-1] != cmd):
+            self._history.append(cmd)
+        self._history_idx = len(self._history)
+        self._saved_input = ""
+
+    def action_history_prev(self) -> None:
+        if not self._history:
+            return
+        if self._history_idx == len(self._history):
+            self._saved_input = self.value
+        if self._history_idx > 0:
+            self._history_idx -= 1
+            self.value = self._history[self._history_idx]
+            self.cursor_position = len(self.value)
+
+    def action_history_next(self) -> None:
+        if self._history_idx >= len(self._history):
+            return
+        self._history_idx += 1
+        if self._history_idx == len(self._history):
+            self.value = self._saved_input
+        else:
+            self.value = self._history[self._history_idx]
+        self.cursor_position = len(self.value)
 
     def action_complete(self) -> None:
         """Readline-style tab completion."""
@@ -549,6 +580,7 @@ class LumagenTUI(App):
         event.input.value = ""
         if not raw:
             return
+        self.query_one("#input-bar", CommandInput).add_to_history(raw)
         await self._dispatch_command(raw)
 
     async def _dispatch_command(self, raw: str) -> None:
