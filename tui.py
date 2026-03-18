@@ -8,7 +8,6 @@ import json
 import logging
 import pathlib
 import sys
-import textwrap
 from collections.abc import Callable
 from datetime import datetime
 from typing import Annotated, Any, ClassVar, cast
@@ -260,22 +259,13 @@ class StatePanel(Static):
     _LABEL_WIDTH = max(len(label) + 1 for label, _, fmt in _STATE_FIELDS if fmt)
 
     def render_state(self, state: LumagenState) -> str:
-        width = self.size.width or 30
-        val_width = width - self._LABEL_WIDTH - 1  # 1 for space
         lines: list[str] = []
         for label, _key, fmt in _STATE_FIELDS:
             if fmt is None:
                 lines.append("")
                 continue
             val = fmt(state) or "—"
-            if val_width > 0 and len(val) > val_width:
-                wrapped = textwrap.wrap(val, val_width)
-                indent = " " * (self._LABEL_WIDTH + 1)
-                first = f"{label + ':':<{self._LABEL_WIDTH}s} {wrapped[0]}"
-                lines.append(first)
-                lines.extend(f"{indent}{w}" for w in wrapped[1:])
-            else:
-                lines.append(f"{label + ':':<{self._LABEL_WIDTH}s} {val}")
+            lines.append(f"{label + ':':<{self._LABEL_WIDTH}s} {val}")
         return "\n".join(lines)
 
     def update_state(self, state: LumagenState) -> None:
