@@ -669,9 +669,11 @@ class LumagenTUI(App):
                 log.write("[red]Label index must be >= 1[/]")
                 return
             label_text = label_parts[1]
-            if len(label_text) > 30:
+            max_len = 10 if category in "ABCD0" else 7 if category == "1" else 8
+            if len(label_text) > max_len:
                 log.write(
-                    f"[red]Label text must be <=30 chars, got {len(label_text)}[/]"
+                    f"[red]Label text must be <={max_len} chars,"
+                    f" got {len(label_text)}[/]"
                 )
                 return
             cat = cast("LabelCategory", category)

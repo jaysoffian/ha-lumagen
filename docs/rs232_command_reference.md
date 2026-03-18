@@ -202,12 +202,12 @@ By default all sub-memories point to Auto mode, CMS 0 (SDR) or CMS 1 (HDR), and 
 
 Given command `ZQS1XY`, X and Y determine which label you're querying.
 
-| X | Y | Label |
+| X | Y | Label | Max Length |
 |---|---|------------------|
-| `A`, `B`, `C`, or `D` | 0–9 | Input label 0–9 for MEMA, MEMB, MEMC, or MEMD. |
-| `1` | 0–7 | Custom mode  label 0–7 |
-| `2` | 0–7 | CMS label 0–7 |
-| `3` | 0–7 | Style label 0–7
+| `A`, `B`, `C`, or `D` | 0–9 | Input label 0–9 for MEMA, MEMB, MEMC, or MEMD. | 10 characters |
+| `1` | 0–7 | Custom mode label 0–7 | 7 characters |
+| `2` | 0–7 | CMS label 0–7 | 8 characters |
+| `3` | 0–7 | Style label 0–7 | 8 characters |
 
 To enumerate all labels, loop over:
 
@@ -444,7 +444,17 @@ Note: some `ZQO` commands have been omitted from above. See [Tech Tip 11 - Radia
 | `ZY520X<CR>` | Toggle HDMI hotplug (X=0–7 input, 'A'=all) |
 | `ZY521ELS<CR>` | Sharpness (E=Y/N enable, L=0–7 level, S=H/N sensitivity) |
 | `ZY522EnHnVS<CR>` | H/V sharpness (n=+/-, H,V=0–7, S=H/N) |
-| `ZY524XYlabel<CR>` | Set label (X=A–D mem/0=all/1=mode/2=CMS/3=style; Y=index; label=text) |
+
+### Setting Labels
+
+Given command `ZY524{X}{Y}{label}`, X and Y determine which label you’re setting to "label". The maximum label length varies per label type. The Lumagen truncates overlong labels.
+
+| Command | Description | Max Length |
+|---------|-------------|------------|
+| `ZY524XYlabel<CR>` | Set input label X (memory 'A'-'D' or '0' for all) on input Y ('0'-'7') to "label" | 10 characters |
+| `ZY5241Ylabel<CR>` | Set custom mode label Y ('0'-'7') to "label" | 7 characters |
+| `ZY5242Ylabel<CR>` | Set CMS label Y ('0'-'7') to "label" | 8 characters |
+| `ZY5243Ylabel<CR>` | Set style label Y ('0'-'7') to "label" | 8 characters |
 
 ### Auto Aspect / Game Mode
 
