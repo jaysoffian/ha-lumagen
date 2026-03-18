@@ -252,9 +252,11 @@ class StatePanel(Static):
     DEFAULT_CSS = """
     StatePanel {
         width: 1fr;
-        padding: 1 2;
+        padding: 0 0;
     }
     """
+
+    _LABEL_WIDTH = max(len(label) + 1 for label, _, fmt in _STATE_FIELDS if fmt)
 
     def render_state(self, state: LumagenState) -> str:
         lines: list[str] = []
@@ -263,7 +265,7 @@ class StatePanel(Static):
                 lines.append("")
                 continue
             val = fmt(state)
-            lines.append(f"  {label + ':':<18s} {val}")
+            lines.append(f"{label + ':':<{self._LABEL_WIDTH}s} {val}")
         return "\n".join(lines)
 
     def update_state(self, state: LumagenState) -> None:
@@ -358,7 +360,7 @@ class LumagenTUI(App):
         height: 1fr;
     }
     #state-panel {
-        width: 40;
+        width: 32;
         border: solid $accent;
         border-title-color: $text;
     }
@@ -815,7 +817,7 @@ class LumagenTUI(App):
         # State panel (fixed 40) + help panel (49) + log + borders/gaps
         # Estimate remaining space for the log pane
         main = self.query_one("#main")
-        available = main.size.width - 40 - 49  # state + help widths
+        available = main.size.width - 32 - 49  # state + help widths
         log_panel.display = available >= self._LOG_MIN_WIDTH
 
     def on_resize(self, event: Resize) -> None:
