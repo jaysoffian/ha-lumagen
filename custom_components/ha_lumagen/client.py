@@ -1024,7 +1024,7 @@ class LumagenClient:
 
         # 0 = persistent (protocol digit 9), 1-8 = seconds
         digit = 9 if duration == 0 else max(1, min(8, duration))
-        payload = f"{line_one}\n{line_two}" if line_two else line_one
+        payload = f"{line_one:<30}{line_two}" if line_two else line_one
         prefix = f"ZB{block_char}" if block_char else ""
         await self.send_command(f"{prefix}ZT{digit}{payload}\r")
 
