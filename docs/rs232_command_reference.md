@@ -104,7 +104,7 @@ See "USR-TCP232-E2 User Manual" V1.1.3, pages 50–51.
 | `+` | Add 10 to next digit for input selection |
 | `P` | Previous input |
 | `L` | Output zone select |
-| `#` | ALT key (use `:` if delimiter mode is enabled) |
+| `#` | ALT key |
 
 ## ASCII Commands — Source Aspect
 
@@ -133,7 +133,7 @@ See "USR-TCP232-E2 User Manual" V1.1.3, pages 50–51.
 | `G` | 2.40 | |
 | `N` | NLS toggle | Send source aspect first |
 | `V` | Auto Aspect Disable | |
-| `~` | Auto Aspect Enable | Use `?` if delimiter mode is enabled |
+| `~` | Auto Aspect Enable | |
 
 ### Extended Aspects
 
