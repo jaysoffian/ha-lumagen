@@ -49,6 +49,14 @@ SWITCH_ENTITIES: tuple[LumagenSwitchEntityDescription, ...] = (
         turn_on_fn=lambda c: c.client.set_auto_aspect(True),
         turn_off_fn=lambda c: c.client.set_auto_aspect(False),
     ),
+    LumagenSwitchEntityDescription(
+        key="nls",
+        name="NLS",
+        icon="mdi:stretch-to-page-outline",
+        is_on_fn=lambda s: s.nls_active,
+        turn_on_fn=lambda c: c.client.toggle_nls(),
+        turn_off_fn=lambda c: c.client.toggle_nls(),
+    ),
 )
 
 
