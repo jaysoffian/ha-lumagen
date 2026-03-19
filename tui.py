@@ -366,6 +366,8 @@ _COMMAND_SUGGESTIONS = sorted(
         "osd ",
         "osdaspect",
         *[f"remote {k}" for k in REMOTE_COMMANDS if not k.isdigit()],
+        "remote 0..9",
+        "remote 10+",
         "save",
         "hotplug",
     }
