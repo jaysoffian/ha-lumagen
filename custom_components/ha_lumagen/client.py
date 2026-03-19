@@ -52,8 +52,8 @@ ASPECT_RATIO_NAMES: dict[int, str] = {
 # Display name → RS232 command string for setting aspect.
 ASPECT_COMMANDS: dict[str, str] = {
     "Auto": "~",
-    "1.33": "[",
     "Letterbox": "]",
+    "1.33": "[",
     "1.78": "*",
     "1.85": "/",
     "1.90": "A",
@@ -64,9 +64,6 @@ ASPECT_COMMANDS: dict[str, str] = {
     "2.40": "G",
     "2.55": "+W",
     "2.76": "+N",
-    "1.33 NLS": "[N",
-    "1.78 NLS": "*N",
-    "1.85 NLS": "/N",
 }
 
 # I20 aspect code → display name
@@ -885,33 +882,31 @@ class LumagenClient:
         """Set source aspect ratio by display name.
 
         Selecting "Auto" enables auto aspect detection; any other
-        selection (including NLS variants) disables it.
-
-        For single-command aspects, we set optimistic state immediately.
-        For NLS (two-command sequence), we skip optimistic state because
-        the device fires an intermediate I24 after the base aspect
-        command that would overwrite it.  Instead we let the final I24
-        (after the NLS command) provide the authoritative state.
+        selection disables it.
         """
         cmd = ASPECT_COMMANDS.get(aspect)
         if cmd is None:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
         await self.send_command(cmd)
-        is_nls = aspect.endswith("NLS")
-        if not is_nls:
-            self.state.clear_changed()
-            if aspect == "Auto":
-                self.state.nls_active = False
-                self.state.auto_aspect = True
-            else:
-                self.state.nls_active = False
-                self.state.source_content_aspect = aspect
-                self.state.auto_aspect = False
-            if self.state._changed:
-                self._notify_state_changed()
+        self.state.clear_changed()
+        if aspect == "Auto":
+            self.state.nls_active = False
+            self.state.auto_aspect = True
+        else:
+            self.state.nls_active = False
+            self.state.source_content_aspect = aspect
+            self.state.auto_aspect = False
+        if self.state._changed:
+            self._notify_state_changed()
         # Query authoritative state from device
         await self.send_command("ZQI54")
+        await self.send_command("ZQI25")
+
+    async def toggle_nls(self) -> None:
+        """Toggle Non-Linear Stretch on or off."""
+        await self.send_command("N")
+        # Query authoritative state — NLS flag is in I25
         await self.send_command("ZQI25")
 
     async def send_remote_command(self, command: str) -> None:

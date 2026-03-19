@@ -314,7 +314,8 @@ HELP_TEXT = """\
   a / b / c / d — input memory
 
 [bold]Video Processing[/]
-  aspect <name> — 1.33, 1.78, 2.40, NLS, …
+  aspect <name> — 1.33, 1.78, 2.40, …
+  nls — toggle non-linear stretch
   mode <1-8> — output custom mode
   cms <1-8> — output CMS
   style <1-8> — output style
@@ -359,6 +360,7 @@ _COMMAND_SUGGESTIONS = sorted(
         "game off",
         "autoaspect on",
         "autoaspect off",
+        "nls",
         "subtitle off",
         "subtitle 3%",
         "subtitle 6%",
@@ -670,6 +672,10 @@ class LumagenTUI(App):
                 await self._client.set_auto_aspect(False)
             else:
                 log.write("[red]Usage: autoaspect on / autoaspect off[/]")
+            return
+
+        if cmd == "nls":
+            await self._client.toggle_nls()
             return
 
         if cmd == "label" and arg:
