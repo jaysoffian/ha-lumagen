@@ -210,9 +210,7 @@ def _input_summary(s: LumagenState) -> str:
     if s.logical_input is None:
         return "—"
     mem = s.input_memory or "A"
-    idx = (s.logical_input or 1) - 1
-    label = s.input_labels.get(f"{mem}{idx}")
-    suffix = f" ({label})" if label else ""
+    suffix = f" ({s.input_label})" if s.input_label else ""
     return f"{s.logical_input}{mem}{suffix}"
 
 
@@ -223,16 +221,14 @@ def _physical_in(s: LumagenState) -> str:
 def _cms(s: LumagenState) -> str:
     if s.output_cms is None:
         return "—"
-    label = s.cms_labels.get(f"2{s.output_cms}")
-    suffix = f" ({label})" if label else ""
+    suffix = f" ({s.cms_label})" if s.cms_label else ""
     return f"{s.output_cms + 1}{suffix}"
 
 
 def _style(s: LumagenState) -> str:
     if s.output_style is None:
         return "—"
-    label = s.style_labels.get(f"3{s.output_style}")
-    suffix = f" ({label})" if label else ""
+    suffix = f" ({s.style_label})" if s.style_label else ""
     return f"{s.output_style + 1}{suffix}"
 
 

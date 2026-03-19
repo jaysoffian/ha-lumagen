@@ -225,6 +225,28 @@ class LumagenState:
             return "Letterbox"
         return self.source_content_aspect
 
+    @property
+    def input_label(self) -> str | None:
+        """Label for the current logical input and memory."""
+        if self.logical_input is None:
+            return None
+        mem = self.input_memory or "A"
+        return self.input_labels.get(f"{mem}{self.logical_input - 1}")
+
+    @property
+    def cms_label(self) -> str | None:
+        """Label for the current output CMS."""
+        if self.output_cms is None:
+            return None
+        return self.cms_labels.get(f"2{self.output_cms}")
+
+    @property
+    def style_label(self) -> str | None:
+        """Label for the current output style."""
+        if self.output_style is None:
+            return None
+        return self.style_labels.get(f"3{self.output_style}")
+
     def __setattr__(self, name: str, value: object) -> None:
         try:
             old = object.__getattribute__(self, name)
