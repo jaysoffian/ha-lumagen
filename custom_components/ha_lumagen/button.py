@@ -22,14 +22,14 @@ async def async_setup_entry(
     coordinator: LumagenCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
         [
-            LumagenRefreshConfigButton(coordinator),
+            LumagenReloadConfigButton(coordinator),
             LumagenDisplayInputAspectButton(coordinator),
         ]
     )
 
 
-class LumagenRefreshConfigButton(LumagenEntity, ButtonEntity):
-    """Button to refresh identity and labels from the device."""
+class LumagenReloadConfigButton(LumagenEntity, ButtonEntity):
+    """Button to reload identity, config, and labels from the device."""
 
     _attr_name = "Reload config"
     _attr_icon = "mdi:refresh"
@@ -37,7 +37,7 @@ class LumagenRefreshConfigButton(LumagenEntity, ButtonEntity):
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{coordinator.entry.entry_id}_refresh_labels"
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_reload_config"
 
     def _update_attrs(self) -> None:
         super()._update_attrs()
@@ -48,7 +48,7 @@ class LumagenRefreshConfigButton(LumagenEntity, ButtonEntity):
         self._attr_available = self.coordinator.last_update_success and data.connected
 
     async def async_press(self) -> None:
-        """Fetch identity and labels from the device."""
+        """Reload identity, config, and labels from the device."""
         await self.coordinator.reload_config()
 
 
