@@ -1048,12 +1048,6 @@ class LumagenClient:
         await self.send_command("~" if enabled else "V")
         await self.send_command("ZQI54")
 
-    async def reset_auto_aspect(self) -> None:
-        """Reset auto aspect detection (re-evaluate current source)."""
-        await self.send_command("ZY550\r")
-        await self.send_command("ZQI54")
-        await self.send_command("ZQI25")
-
     async def set_game_mode(self, enabled: bool) -> None:
         """Enable or disable game mode."""
         await self.send_command(f"ZY551{'1' if enabled else '0'}\r")
