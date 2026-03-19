@@ -49,26 +49,24 @@ ASPECT_RATIO_NAMES: dict[int, str] = {
 }
 
 
-# Display name → RS232 command(s) for setting aspect.
-# NLS requires a base aspect first (e.g. 1.33 then N), so the NLS
-# entries are two-command sequences.
-ASPECT_COMMANDS: dict[str, list[str]] = {
-    "Auto": ["~"],
-    "1.33": ["["],
-    "Letterbox": ["]"],
-    "1.78": ["*"],
-    "1.85": ["/"],
-    "1.90": ["A"],
-    "2.00": ["C"],
-    "2.10": ["+j"],
-    "2.20": ["E"],
-    "2.35": ["K"],
-    "2.40": ["G"],
-    "2.55": ["+W"],
-    "2.76": ["+N"],
-    "1.33 NLS": ["[", "N"],
-    "1.78 NLS": ["*", "N"],
-    "1.85 NLS": ["/", "N"],
+# Display name → RS232 command string for setting aspect.
+ASPECT_COMMANDS: dict[str, str] = {
+    "Auto": "~",
+    "1.33": "[",
+    "Letterbox": "]",
+    "1.78": "*",
+    "1.85": "/",
+    "1.90": "A",
+    "2.00": "C",
+    "2.10": "+j",
+    "2.20": "E",
+    "2.35": "K",
+    "2.40": "G",
+    "2.55": "+W",
+    "2.76": "+N",
+    "1.33 NLS": "[N",
+    "1.78 NLS": "*N",
+    "1.85 NLS": "/N",
 }
 
 # I20 aspect code → display name
@@ -895,12 +893,11 @@ class LumagenClient:
         command that would overwrite it.  Instead we let the final I24
         (after the NLS command) provide the authoritative state.
         """
-        cmds = ASPECT_COMMANDS.get(aspect)
-        if cmds is None:
+        cmd = ASPECT_COMMANDS.get(aspect)
+        if cmd is None:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
-        for cmd in cmds:
-            await self.send_command(cmd)
+        await self.send_command(cmd)
         is_nls = aspect.endswith("NLS")
         if not is_nls:
             self.state.clear_changed()
