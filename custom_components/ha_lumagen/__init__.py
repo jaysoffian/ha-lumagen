@@ -43,7 +43,8 @@ SHOW_OSD_MESSAGE_SCHEMA = vol.Schema(
 
 SHOW_OSD_VOLUME_BAR_SCHEMA = vol.Schema(
     {
-        vol.Required("volume"): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
+        vol.Required("level"): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1.0)),
+        vol.Optional("label", default=None): vol.Any(None, cv.string),
     }
 )
 
@@ -70,7 +71,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     async def handle_show_osd_volume_bar(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass)
-        await coordinator.client.show_osd_volume_bar(call.data["volume"])
+        await coordinator.client.show_osd_volume_bar(
+            call.data["level"], label=call.data.get("label")
+        )
 
     async def handle_clear_osd_message(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass)

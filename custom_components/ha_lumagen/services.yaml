@@ -32,19 +32,25 @@ show_osd_message:
 
 show_osd_volume_bar:
   name: Show OSD volume bar
-  description: Show a volume bar on the Lumagen OSD (scaled 0-80).
+  description: Show a volume bar on the Lumagen OSD.
   fields:
-    volume:
-      name: Volume
-      description: Volume level (0-100).
+    level:
+      name: Volume level
+      description: Volume level (0.0–1.0).
       required: true
-      example: 63.5
+      example: 0.635
       selector:
         number:
           min: 0
-          max: 100
-          step: 0.5
+          max: 1
+          step: 0.005
           mode: slider
+    label:
+      name: Volume label
+      description: Label (max 5 chars) to show in front of volume bar. Defaults to volume percentage (e.g "65.5%").
+      example: "-16.5"
+      selector:
+        text:
 
 clear_osd_message:
   name: Clear OSD message
