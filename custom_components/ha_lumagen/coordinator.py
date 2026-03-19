@@ -54,7 +54,10 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
     # -- Internal -----------------------------------------------------------
 
     async def async_load_stored_state(self) -> bool:
-        """Load identity + labels from disk into client state. Returns True if found."""
+        """Load identity, config, and labels from disk into client state.
+
+        Returns True if found.
+        """
         data = await self._store.async_load()
         if not data:
             return False
@@ -79,7 +82,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         return True
 
     async def async_save_stored_state(self) -> None:
-        """Persist identity + labels to disk."""
+        """Persist identity, config, and labels to disk."""
         s = self.client.state
         await self._store.async_save(
             {
