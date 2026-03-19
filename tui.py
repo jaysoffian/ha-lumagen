@@ -253,10 +253,11 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     ("", "", None),
     ("Source", "_source_summary", _source_summary),
     ("Dynamic Range", "source_dynamic_range", lambda s: s.source_dynamic_range or "—"),
+    ("Source Aspect", "source_aspect", lambda s: s.source_aspect or "—"),
     (
         "Content Aspect",
         "source_content_aspect",
-        lambda s: s.source_aspect or "—",
+        lambda s: s.source_content_aspect or "—",
     ),
     ("Raster Aspect", "source_raster_aspect", lambda s: s.source_raster_aspect or "—"),
     ("NLS", "nls_active", lambda s: "Active" if s.nls_active else "Off"),
