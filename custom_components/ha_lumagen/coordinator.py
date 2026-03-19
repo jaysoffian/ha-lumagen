@@ -44,17 +44,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
 
     def on_state_changed(self) -> None:
         """Called (sync) by the client whenever device state changes."""
-        new_data = copy.deepcopy(self.client.state)
-
-        old_power = self.data.power if self.data else None
-
-        # Detect transition to active — skip initial state discovery (old_power
-        # is None) since __init__.py already fetches runtime state at startup.
-        if new_data.power == "on" and old_power is not None and old_power != "on":
-            _LOGGER.info("Device powered on — scheduling runtime state fetch")
-            self.hass.async_create_task(self._on_power_on())
-
-        self.async_set_updated_data(new_data)
+        self.async_set_updated_data(copy.deepcopy(self.client.state))
 
     def on_connection_changed(self, connected: bool) -> None:
         """Called (sync) by the client on connect / disconnect."""
@@ -62,14 +52,6 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         self.async_set_updated_data(copy.deepcopy(self.client.state))
 
     # -- Internal -----------------------------------------------------------
-
-    async def _on_power_on(self) -> None:
-        """After power-on, wait for the device to settle then query state."""
-        await asyncio.sleep(10)
-        try:
-            await self.client.fetch_runtime_state()
-        except Exception:
-            _LOGGER.exception("Error querying state after power-on")
 
     async def async_load_stored_state(self) -> bool:
         """Load identity + labels from disk into client state. Returns True if found."""

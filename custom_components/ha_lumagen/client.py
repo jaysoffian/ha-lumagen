@@ -214,6 +214,17 @@ class LumagenState:
         default_factory=list, init=False, repr=False, compare=False
     )
 
+    @property
+    def source_aspect(self) -> str | None:
+        """Content aspect with Letterbox detection.
+
+        When raster is 1.33 (4:3) and content is 1.78 (16:9), the source
+        is a letterboxed 16:9 image inside a 4:3 frame.
+        """
+        if self.source_raster_aspect == "1.33" and self.source_content_aspect == "1.78":
+            return "Letterbox"
+        return self.source_content_aspect
+
     def __setattr__(self, name: str, value: object) -> None:
         try:
             old = object.__getattribute__(self, name)
@@ -440,6 +451,8 @@ class LumagenClient:
         self._on_connection_changed: Callable[[bool], None] | None = None
         self._last_recv: float = 0.0
         self._write_lock = asyncio.Lock()
+        self._last_power: PowerState | None = None
+        self._power_on_task: asyncio.Task[None] | None = None
         self._state_waiters: list[
             tuple[asyncio.Event, Callable[[LumagenState], bool]]
         ] = []
@@ -469,7 +482,12 @@ class LumagenClient:
         self._running = False
         tasks = [
             t
-            for t in (self._reconnect_task, self._keepalive_task, self._read_task)
+            for t in (
+                self._reconnect_task,
+                self._keepalive_task,
+                self._read_task,
+                self._power_on_task,
+            )
             if t and not t.done()
         ]
         for task in tasks:
@@ -715,12 +733,33 @@ class LumagenClient:
                 await self._on_disconnect()
 
     def _notify_state_changed(self) -> None:
+        power = self.state.power
+        if power == "on" and self._last_power is not None and self._last_power != "on":
+            self._schedule_power_on_refresh()
+        if power is not None:
+            self._last_power = power
+
         if self._on_state_changed:
             self._on_state_changed()
         if self._state_waiters:
             for event, predicate in self._state_waiters:
                 if predicate(self.state):
                     event.set()
+
+    def _schedule_power_on_refresh(self) -> None:
+        """Schedule a delayed state refresh after power-on."""
+        if self._power_on_task and not self._power_on_task.done():
+            self._power_on_task.cancel()
+        self._power_on_task = asyncio.create_task(self._power_on_refresh())
+
+    async def _power_on_refresh(self) -> None:
+        """Wait for device to settle after power-on, then re-query state."""
+        _LOGGER.info("Power on detected — refreshing state in 10s")
+        await asyncio.sleep(10)
+        try:
+            await self.fetch_runtime_state()
+        except Exception:
+            _LOGGER.exception("Error querying state after power-on")
 
     async def wait_for(
         self,

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import pathlib
@@ -257,7 +256,7 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     (
         "Content Aspect",
         "source_content_aspect",
-        lambda s: s.source_content_aspect or "—",
+        lambda s: s.source_aspect or "—",
     ),
     ("Raster Aspect", "source_raster_aspect", lambda s: s.source_raster_aspect or "—"),
     ("NLS", "nls_active", lambda s: "Active" if s.nls_active else "Off"),
@@ -445,7 +444,6 @@ class LumagenTUI(App):
         self._host = host
         self._port = port
         self._client = InstrumentedClient()
-        self._last_power: str | None = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -510,20 +508,7 @@ class LumagenTUI(App):
             log.write("[red]Connection failed.[/]")
 
     def _on_state_changed(self) -> None:
-        power = self._client.state.power
-        if power == "on" and self._last_power != "on":
-            self.call_later(self._on_power_on)
-        self._last_power = power
         self.call_later(self._refresh_state)
-
-    @work(exclusive=False, group="power_on")
-    async def _on_power_on(self) -> None:
-        """After power-on, wait for device to settle then re-query state."""
-        log = self.query_one("#log", RichLog)
-        log.write("[dim]Power on detected — refreshing state in 10s…[/]")
-        await asyncio.sleep(10)
-        await self._client.fetch_runtime_state()
-        self._refresh_state()
 
     def _on_connection_changed(self, connected: bool) -> None:
         def _update() -> None:
