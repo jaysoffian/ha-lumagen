@@ -55,9 +55,7 @@ async def _select_input_source(coord: LumagenCoordinator, option: str) -> None:
 
 
 def _current_aspect(data: LumagenState, _coord: LumagenCoordinator) -> str | None:
-    if data.source_raster_aspect == "1.33" and data.source_content_aspect == "1.78":
-        return "Letterbox"
-    return data.source_content_aspect
+    return data.source_aspect
 
 
 async def _select_aspect(coord: LumagenCoordinator, option: str) -> None:
