@@ -244,6 +244,26 @@ class LumagenState:
 # Response handlers — mutate state directly; changes tracked by __setattr__
 # ---------------------------------------------------------------------------
 
+_RESPONSE_HANDLERS: dict[str, Callable[[LumagenState, list[str]], None]] = {}
+
+
+def _on(
+    *codes: str,
+) -> Callable[
+    [Callable[[LumagenState, list[str]], None]],
+    Callable[[LumagenState, list[str]], None],
+]:
+    """Register a function as the handler for one or more response codes."""
+
+    def decorator(
+        fn: Callable[[LumagenState, list[str]], None],
+    ) -> Callable[[LumagenState, list[str]], None]:
+        for code in codes:
+            _RESPONSE_HANDLERS[code] = fn
+        return fn
+
+    return decorator
+
 
 def _aspect_name(code: str) -> str | None:
     """Convert numeric aspect code ('240') to display name ('2.40')."""
@@ -258,7 +278,8 @@ def _aspect_name(code: str) -> str | None:
     return None
 
 
-def _handle_device_id(state: LumagenState, fields: list[str]) -> None:
+@_on("S01")
+def _on_device_id(state: LumagenState, fields: list[str]) -> None:
     """S01 — model, sw_revision, model_number, serial_number."""
     if len(fields) < 4:
         return
@@ -268,14 +289,16 @@ def _handle_device_id(state: LumagenState, fields: list[str]) -> None:
     state.serial_number = fields[3]
 
 
-def _handle_power(state: LumagenState, fields: list[str]) -> None:
+@_on("S02")
+def _on_power(state: LumagenState, fields: list[str]) -> None:
     """S02 — 0 = standby, 1 = active."""
     if not fields:
         return
     state.power = "on" if fields[0] == "1" else "off"
 
 
-def _handle_input_info(state: LumagenState, fields: list[str]) -> None:
+@_on("I00")
+def _on_input_info(state: LumagenState, fields: list[str]) -> None:
     """I00 — logical input, input memory, physical input."""
     if len(fields) < 3:
         return
@@ -299,7 +322,8 @@ def _parse_outputs_on(hex_str: str) -> int | None:
         return None
 
 
-def _handle_full_info(state: LumagenState, fields: list[str]) -> None:
+@_on("I21", "I22", "I23", "I24", "I25")
+def _on_full_info(state: LumagenState, fields: list[str]) -> None:
     """I21/I22/I23/I24/I25 — full device info.
 
     Field indices (0-based after splitting on commas):
@@ -362,21 +386,24 @@ def _handle_full_info(state: LumagenState, fields: list[str]) -> None:
     state.power = "on" if fields[24] == "1" else "off"
 
 
-def _handle_game_mode(state: LumagenState, fields: list[str]) -> None:
+@_on("I53")
+def _on_game_mode(state: LumagenState, fields: list[str]) -> None:
     """I53 — game mode status."""
     if not fields:
         return
     state.game_mode = fields[0] == "1"
 
 
-def _handle_auto_aspect(state: LumagenState, fields: list[str]) -> None:
+@_on("I54")
+def _on_auto_aspect(state: LumagenState, fields: list[str]) -> None:
     """I54 — auto aspect status (fw ≥041824)."""
     if not fields:
         return
     state.auto_aspect = fields[0] == "1"
 
 
-def _handle_aspect_mode(state: LumagenState, fields: list[str]) -> None:
+@_on("I20")
+def _on_aspect_mode(state: LumagenState, fields: list[str]) -> None:
     """I20 — input aspect and NLS status.
 
     Response: !I20,<code><nls> where code=0-9 and nls='N' or '-'.
@@ -393,21 +420,6 @@ def _handle_aspect_mode(state: LumagenState, fields: list[str]) -> None:
         val = val[:-1]
     if name := _I20_ASPECT_CODES.get(val):
         state.source_content_aspect = name
-
-
-RESPONSE_HANDLERS: dict[str, Callable[[LumagenState, list[str]], None]] = {
-    "S01": _handle_device_id,
-    "S02": _handle_power,
-    "I00": _handle_input_info,
-    "I20": _handle_aspect_mode,
-    "I21": _handle_full_info,
-    "I22": _handle_full_info,
-    "I23": _handle_full_info,
-    "I24": _handle_full_info,
-    "I25": _handle_full_info,
-    "I53": _handle_game_mode,
-    "I54": _handle_auto_aspect,
-}
 
 
 # ---------------------------------------------------------------------------
@@ -500,7 +512,7 @@ class LumagenClient:
         if self._on_connection_changed:
             self._on_connection_changed(True)
 
-    async def _handle_disconnect(self) -> None:
+    async def _on_disconnect(self) -> None:
         """Tear down current connection and start reconnect loop."""
         if not self._running or self._disconnecting:
             return
@@ -573,7 +585,7 @@ class LumagenClient:
                 break
 
         if self._running:
-            await self._handle_disconnect()
+            await self._on_disconnect()
 
     def _process_line(self, line: str) -> None:
         """Parse a single line from the TCP stream."""
@@ -594,7 +606,7 @@ class LumagenClient:
         # Label response: !S1<cat>,<label text>
         # Check before the general regex because the code is only 2 chars (S1).
         if label_match := _LABEL_RE.search(line):
-            self._handle_label_response(line, label_match)
+            self._on_label_response(line, label_match)
             return
 
         # Normal response: !<letter><2 digits>,<fields>
@@ -609,7 +621,7 @@ class LumagenClient:
         if name == "S00":
             return
 
-        handler = RESPONSE_HANDLERS.get(name)
+        handler = _RESPONSE_HANDLERS.get(name)
         if handler:
             try:
                 self.state.clear_changed()
@@ -627,7 +639,7 @@ class LumagenClient:
             except Exception:
                 _LOGGER.debug("Error in handler for %s", name, exc_info=True)
 
-    def _handle_label_response(self, line: str, match: re.Match[str]) -> None:
+    def _on_label_response(self, line: str, match: re.Match[str]) -> None:
         """Extract label text and correlate with the pending query."""
         rest = line[match.end() :]  # everything after "!S1<cat>,"
 
@@ -688,7 +700,7 @@ class LumagenClient:
                 return
             if self._last_recv == before:
                 _LOGGER.warning("Keepalive timeout — reconnecting")
-                await self._handle_disconnect()
+                await self._on_disconnect()
                 return
 
     # -- Sending ------------------------------------------------------------
@@ -705,7 +717,7 @@ class LumagenClient:
                 await self._writer.drain()
             except (OSError, ConnectionError) as err:
                 _LOGGER.error("Send error: %s", err)
-                await self._handle_disconnect()
+                await self._on_disconnect()
 
     def _notify_state_changed(self) -> None:
         if self._on_state_changed:

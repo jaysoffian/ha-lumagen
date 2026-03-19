@@ -510,12 +510,12 @@ class LumagenTUI(App):
     def _on_state_changed(self) -> None:
         power = self._client.state.power
         if power == "on" and self._last_power != "on":
-            self.call_later(self._handle_power_on)
+            self.call_later(self._on_power_on)
         self._last_power = power
         self.call_later(self._refresh_state)
 
     @work(exclusive=False, group="power_on")
-    async def _handle_power_on(self) -> None:
+    async def _on_power_on(self) -> None:
         """After power-on, wait for device to settle then re-query state."""
         log = self.query_one("#log", RichLog)
         log.write("[dim]Power on detected — refreshing state in 10s…[/]")

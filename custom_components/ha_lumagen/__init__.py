@@ -60,7 +60,7 @@ def _get_coordinator(hass: HomeAssistant) -> LumagenCoordinator:
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up domain-level services."""
 
-    async def handle_show_osd_message(call: ServiceCall) -> None:
+    async def show_osd_message(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass)
         await coordinator.client.show_osd_message(
             line_one=call.data["line_one"],
@@ -69,31 +69,29 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             block_char=call.data["block_char"],
         )
 
-    async def handle_show_osd_volume_bar(call: ServiceCall) -> None:
+    async def show_osd_volume_bar(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass)
         await coordinator.client.show_osd_volume_bar(
             call.data["level"], label=call.data.get("label")
         )
 
-    async def handle_clear_osd_message(call: ServiceCall) -> None:
+    async def clear_osd_message(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass)
         await coordinator.client.clear_osd_message()
 
     hass.services.async_register(
         DOMAIN,
         SERVICE_SHOW_OSD_MESSAGE,
-        handle_show_osd_message,
+        show_osd_message,
         SHOW_OSD_MESSAGE_SCHEMA,
     )
     hass.services.async_register(
         DOMAIN,
         SERVICE_SHOW_OSD_VOLUME_BAR,
-        handle_show_osd_volume_bar,
+        show_osd_volume_bar,
         SHOW_OSD_VOLUME_BAR_SCHEMA,
     )
-    hass.services.async_register(
-        DOMAIN, SERVICE_CLEAR_OSD_MESSAGE, handle_clear_osd_message
-    )
+    hass.services.async_register(DOMAIN, SERVICE_CLEAR_OSD_MESSAGE, clear_osd_message)
 
     return True
 
@@ -110,8 +108,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await client.connect(
             host,
             port,
-            on_state_changed=coordinator.handle_state_changed,
-            on_connection_changed=coordinator.handle_connection_changed,
+            on_state_changed=coordinator.on_state_changed,
+            on_connection_changed=coordinator.on_connection_changed,
         )
 
         if not await client.wait_for(lambda s: s.connected, timeout=5):
