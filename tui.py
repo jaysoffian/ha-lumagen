@@ -393,8 +393,7 @@ class LumagenTUI(App):
         scrollbar-size: 1 1;
     }
     #help-panel {
-        width: 49;
-        max-width: 100%;
+        width: 1fr;
         border: solid $success;
         border-title-color: $text;
         scrollbar-size: 1 1;
@@ -459,7 +458,7 @@ class LumagenTUI(App):
                 yield Static(HELP_TEXT, id="help-content", markup=True)
         yield CommandInput(
             _COMMAND_SUGGESTIONS,
-            placeholder="Enter command (Ctrl+H for help)",
+            placeholder="Enter command (Ctrl+H for help; Ctrl+Q to quit)",
             id="input-bar",
         )
 
