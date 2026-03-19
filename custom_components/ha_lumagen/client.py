@@ -838,7 +838,7 @@ class LumagenClient:
         return await self.get_labels()
 
     async def get_labels(self) -> int:
-        """Query all labels (inputs A0-D7, custom modes, CMS, styles).
+        """Query all labels (inputs A0-D9, custom modes, CMS, styles).
 
         Populates the per-category state fields and returns the number of
         labels that failed to resolve (0 = complete success).
@@ -1124,7 +1124,7 @@ class LumagenClient:
 
         *category*: 'A'-'D' (input per input memory), '0' (all input memories),
                     '1' (custom mode), '2' (CMS), '3' (style).
-        *index*: label index (0-7 for all categories).
+        *index*: label index (0-9 for inputs, 0-7 for others).
         *text*: label text (max 10 for inputs, 7 for custom modes,
                 8 for CMS/styles).
         """
