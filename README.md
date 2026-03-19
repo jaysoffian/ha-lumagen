@@ -38,7 +38,7 @@ The Lumagen should be configured as follows for the integration to work correctl
 
 1. Install [HACS](https://hacs.xyz)
 2. Open HACS → Integrations
-3. Three-dot menu ( ⠇) → Custom repositories
+3. Open triple-dot menu ( ⠇) → Custom repositories
 4. Add this repository's URL (`https://github.com/jaysoffian/ha_lumagen`), category "Integration"
 5. Install this integration and restart Home Assistant
 
@@ -182,63 +182,144 @@ data:
 
 The integration registers domain-level services for OSD control:
 
-- `ha_lumagen.display_message`: Show an OSD message (up to 60 chars, two 30-char lines). Set `block_char: true` to render `X` as █.
-- `ha_lumagen.display_volume`: Show a volume bar (0-100) for 1 second, scaled for a 0-80 useful range.
-- `ha_lumagen.clear_message`: Clear any OSD message.
+- `ha_lumagen.show_osd_message`: Show an OSD message
+- `ha_lumagen.show_osd_volume_bar`: Show a volume bar
+- `ha_lumagen.clear_osd_message`: Clear any OSD message
+
+Example:
 
 ```yaml
-# Show a custom message for 5 seconds
-action: ha_lumagen.display_message
+action: ha_lumagen.show_osd_message
 data:
-  message: "Hello World"
-  duration: 5
+  line_one: "Hello" # Maximum 30 characters (ASCII 0x20 - 0x7a)
+  line_two: "World" # Optional second line
+  duration: 5 # Clear in 5 secs. Max is 9. Default is 3. Use 0 to disable clearing.
+  block_char: "X" # Optional character to render as █ if it appears in message.
 
-# Show a volume bar
-action: ha_lumagen.display_volume
+# Show a volume bar on the Lumagen's OSD like so:
+# |63.5% ███████████████████     |
+action: ha_lumagen.show_osd_volume_bar
 data:
-  volume: 63.5
+  level: 0.635
 ```
 
 ### Automation Examples
 
+**Settings → Automations & scenes → +Create automation → Create new automation → triple-dot menu (⠇) → Edit in YAML**
+
 #### Switch input on playback
 
 ```yaml
-automation:
-  - alias: "Switch to Apple TV"
-    trigger:
-      - platform: state
-        entity_id: media_player.apple_tv
-        to: "playing"
-    action:
-      - action: select.select_option
-        target:
-          entity_id: select.lumagen_radiancepro_input
-        data:
-          option: "HDMI 2"
+alias: "Switch to Apple TV"
+trigger:
+  - platform: state
+    entity_id: media_player.apple_tv
+    to: "playing"
+action:
+  - action: select.select_option
+    target:
+      entity_id: select.lumagen_radiancepro_input
+    data:
+      option: "HDMI 2"
 ```
 
-#### Show Denon AVR volume on the Lumagen OSD
+#### Show AVR volume on the Lumagen OSD
 
-If you use a Denon/Marantz AVR with the [built-in HA integration](https://www.home-assistant.io/integrations/denonavr/), you can mirror volume changes on the Lumagen display — no separate daemon needed:
+This example uses the Lumagen OSD to show volume changes from a Denon/Marantz AVR connected with the [built-in HA integration](https://www.home-assistant.io/integrations/denonavr/).
+
+The volume is displayed on a single line within the Lumagen's 30 character-wide OSD like so: `63.5% ███████████████         `
 
 ```yaml
-- alias: "Show Denon volume on Lumagen"
-  triggers:
-    - trigger: state
-      entity_id: media_player.denon_avr_x3800h  # adjust to your entity
-      attribute: volume_level
-  conditions:
-    # Skip when volume_level is None (e.g. AVR powering on/off)
-    - condition: template
-      value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
-  actions:
-    - action: ha_lumagen.display_volume
-      data:
-        volume: "{{ trigger.to_state.attributes.volume_level * 100 }}"
-  mode: single
+alias: "Show AVR volume on Lumagen"
+triggers:
+  - trigger: state
+    entity_id: media_player.denon_avr_x3800h  # adjust to your entity
+    attribute: volume_level
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
+actions:
+  - action: ha_lumagen.show_osd_volume_bar
+    data:
+      level: "{{ trigger.to_state.attributes.volume_level }}"
+mode: single
 ```
 
+#### Scale volume bar to a max volume limit
+
+If you limited your AVR's maximum volume (e.g. to 80 out of 100), the bar will never fill completely. This example scales the bar so that volume level 0.8 is a full bar: `80.0% ████████████████████████`
+
+```yaml
+alias: "Show AVR volume on Lumagen (scaled)"
+triggers:
+  - trigger: state
+    entity_id: media_player.denon_avr_x3800h
+    attribute: volume_level
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
+actions:
+  - action: ha_lumagen.show_osd_volume_bar
+    data:
+      level: "{{ trigger.to_state.attributes.volume_level / 0.8 }}"
+      label: >-
+        {% if trigger.to_state.attributes.volume_level == 0 %}
+          Min
+        {% elif trigger.to_state.attributes.volume_level >= 0.8 %}
+          Max
+        {% else %}
+          {{ (trigger.to_state.attributes.volume_level * 100) | round(1) }}
+        {% endif %}
+mode: single
+```
+
+#### Show volume in decibels
+
+This example displays the volume level in decibels (-80.0 - 18.0)
+
+```yaml
+alias: "Show AVR volume on Lumagen (dB)"
+triggers:
+  - trigger: state
+    entity_id: media_player.denon_avr_x3800h
+    attribute: volume_level
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
+actions:
+  - action: ha_lumagen.show_osd_volume_bar
+    data:
+      level: "{{ trigger.to_state.attributes.volume_level }}"
+      label: >-
+        {% if trigger.to_state.attributes.volume_level == 0 %}
+          Min
+        {% elif trigger.to_state.attributes.volume_level == 1 %}
+          Max
+        {% else %}
+          {{ (trigger.to_state.attributes.volume_level * 100 - 80) | round(1) }}
+        {% endif %}
+mode: single
+```
+
+#### Show mute status on the Lumagen OSD
+
+```yaml
+alias: "Show mute on Lumagen"
+triggers:
+  - trigger: state
+    entity_id: media_player.denon_avr_x3800h  # adjust to your entity
+    attribute: is_volume_muted
+actions:
+  - if: "{{ trigger.to_state.attributes.is_volume_muted }}"
+    then:
+      - action: ha_lumagen.show_osd_message
+        data:
+          line_one: "Mute"
+          duration: 0
+    else:
+      - action: ha_lumagen.clear_osd_message
+mode: single
+```
 
 ## Troubleshooting
 

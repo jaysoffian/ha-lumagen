@@ -48,6 +48,7 @@ ASPECT_RATIO_NAMES: dict[int, str] = {
     276: "2.76",
 }
 
+
 # Display name → RS232 command(s) for setting aspect.
 # NLS requires a base aspect first (e.g. 1.33 then N), so the NLS
 # entries are two-command sequences.
@@ -962,18 +963,36 @@ class LumagenClient:
         prefix = f"ZB{block_char}" if block_char else ""
         await self.send_command(f"{prefix}ZT{digit}{payload}\r")
 
-    async def show_osd_volume_bar(self, volume: float) -> None:
-        """Show a volume bar on the OSD.
-
-        Uses ZBX to set the block character (█), then ZT1 to display for 1s.
-        Format: ``vol  ████████████████         `` (4-char number + 25-char bar).
-        Bar is scaled for volume range 0-80.
+    async def show_osd_volume_bar(self, level: float, label: str | None = None) -> None:
         """
-        bar_width = 25
-        vol_limit = 80
-        bar = "X" * int(min(volume, vol_limit) / vol_limit * bar_width)
-        vol = f"{volume:.1f}" if volume < 100 else "max"
-        await self.send_command(f"ZBXZT1{vol:>4} {bar:{bar_width}}\r")
+        Show volume bar on the OSD.
+
+        - level: level (0.0 - 1.0) which determines width of bar (0 - 24 blocks)
+        - label: shown in front of volume bar instead of numeric level (5 chars max)
+
+        The Lumagen can display two lines of 30 characters each. We show a single line
+        using 5 characters for the label, a space, and the remaining 24 characters as
+        a bar of block characters, like so:
+
+            0        1         2         3
+            123456789012345678901234567890
+           +------------------------------+
+           |63.5% ███████████████████     |
+           +------------------------------+
+
+        The message is displayed for 1 second.
+        """
+        level = max(min(level, 1.0), 0)  # clamp to 0 - 1
+        if label is None:
+            if level == 0:
+                label = "Min"
+            elif level == 1:
+                label = "Max"
+            else:
+                label = f"{level:.1%}"
+        bar_width = 24
+        bar = "X" * int(level * bar_width)
+        await self.send_command(f"ZBXZT1{label:5.5} {bar:{bar_width}}\r")
 
     async def clear_osd_message(self) -> None:
         """Clear any OSD message."""
