@@ -320,7 +320,7 @@ HELP_TEXT = """\
   cms <1-8> — output CMS
   style <1-8> — output style
   game on / off — game mode
-  autoaspect on / off — auto aspect
+  autoaspect on / off / reset — auto aspect
   subtitle off / 3% / 6%
 
 [bold]Hardware[/]
@@ -360,6 +360,7 @@ _COMMAND_SUGGESTIONS = sorted(
         "game off",
         "autoaspect on",
         "autoaspect off",
+        "autoaspect reset",
         "nls",
         "subtitle off",
         "subtitle 3%",
@@ -670,8 +671,10 @@ class LumagenTUI(App):
                 await self._client.set_auto_aspect(True)
             elif arg.lower() in ("off", "0"):
                 await self._client.set_auto_aspect(False)
+            elif arg.lower() == "reset":
+                await self._client.reset_auto_aspect()
             else:
-                log.write("[red]Usage: autoaspect on / autoaspect off[/]")
+                log.write("[red]Usage: autoaspect on / off / reset[/]")
             return
 
         if cmd == "nls":
