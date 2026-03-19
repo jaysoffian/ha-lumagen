@@ -170,10 +170,28 @@ STATUS_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (
         value_fn=lambda data: data.output_cms,
     ),
     LumagenSensorEntityDescription(
+        key="output_cms_label",
+        name="Output CMS Label",
+        icon="mdi:palette",
+        value_fn=lambda data: data.cms_label,
+    ),
+    LumagenSensorEntityDescription(
         key="output_style",
         name="Output Style",
         icon="mdi:image-filter-hdr",
         value_fn=lambda data: data.output_style,
+    ),
+    LumagenSensorEntityDescription(
+        key="output_style_label",
+        name="Output Style Label",
+        icon="mdi:image-filter-hdr",
+        value_fn=lambda data: data.style_label,
+    ),
+    LumagenSensorEntityDescription(
+        key="input_label",
+        name="Input Label",
+        icon="mdi:label-outline",
+        value_fn=lambda data: data.input_label,
     ),
 )
 
