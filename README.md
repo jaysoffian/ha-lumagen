@@ -223,7 +223,9 @@ action:
       option: "HDMI 2"
 ```
 
-#### Show AVR volume on the Lumagen OSD
+### Lumagen OSD
+
+##### AVR Volume
 
 This example uses the Lumagen OSD to show volume changes from a Denon/Marantz AVR connected with the [built-in HA integration](https://www.home-assistant.io/integrations/denonavr/).
 
@@ -245,9 +247,9 @@ actions:
 mode: single
 ```
 
-#### Scale volume bar to a max volume limit
+##### AVR  Volume (scaled)
 
-If you limited your AVR's maximum volume (e.g. to 80 out of 100), the bar will never fill completely. This example scales the bar so that volume level 0.8 is a full bar: `80.0% ████████████████████████`
+If you limited your AVR's maximum volume (e.g. 80), the bar will never fill completely. This example scales the bar so that volume level 0.8 is a full bar: `80.0% ████████████████████████`
 
 ```yaml
 alias: "Show AVR volume on Lumagen (scaled)"
@@ -273,9 +275,14 @@ actions:
 mode: single
 ```
 
-#### Show volume in decibels
+##### AVR Volume (decibels)
 
-This example displays the volume level in decibels (-80.0 - 18.0)
+Denon / Marantz AVRs can display their volume in in two scales:
+
+1. **0 – 98**: Default. 80 is reference volume.
+2. **79.5 dB — 18.0 dB**: 0 dB is reference volume.
+
+This example shows how to mimic the decibel scale.
 
 ```yaml
 alias: "Show AVR volume on Lumagen (dB)"
@@ -301,7 +308,9 @@ actions:
 mode: single
 ```
 
-#### Show mute status on the Lumagen OSD
+##### AVR Mute Status
+
+This example displays "Mute" as long as the AVR is muted.
 
 ```yaml
 alias: "Show mute on Lumagen"

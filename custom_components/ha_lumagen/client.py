@@ -1087,9 +1087,7 @@ class LumagenClient:
                 label = "Max"
             else:
                 label = f"{level:.1%}"
-        bar_width = 24
-        bar = "X" * int(level * bar_width)
-        await self.send_command(f"ZBXZT1{label:5.5} {bar:{bar_width}}\r")
+        await self.send_command(f"ZBXZT1{label:<5.5} {'X' * int(level * 24):<24}\r")
 
     async def clear_osd_message(self) -> None:
         """Clear any OSD message."""
