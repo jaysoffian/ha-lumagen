@@ -52,17 +52,6 @@ ASPECT_COMMANDS: dict[str, str] = {
     "2.76": "+N",
 }
 
-# I20 aspect code → display name
-_I20_ASPECT_CODES: dict[str, str] = {
-    "0": "1.33",
-    "1": "Letterbox",
-    "2": "1.78",
-    "3": "1.85",
-    "4": "2.35",
-    "8": "1.85 ALT",
-    "9": "2.40",
-}
-
 # Remote command name → RS232 byte
 REMOTE_COMMANDS: dict[str, str] = {
     "up": "^",
@@ -468,26 +457,6 @@ def _on_auto_aspect(state: LumagenState, fields: list[str]) -> None:
     if not fields:
         return
     state.auto_aspect = fields[0] == "1"
-
-
-@_on("I20")
-def _on_aspect_mode(state: LumagenState, fields: list[str]) -> None:
-    """I20 — input aspect and NLS status.
-
-    Response: !I20,<code><nls> where code=0-9 and nls='N' or '-'.
-    """
-    if not fields:
-        return
-    val = fields[0]
-    # Last char is NLS flag
-    if val.endswith("N"):
-        state.nls_active = True
-        val = val[:-1]
-    elif val.endswith("-"):
-        state.nls_active = False
-        val = val[:-1]
-    if name := _I20_ASPECT_CODES.get(val):
-        state.source_content_aspect = name
 
 
 @_on("S1A", "S1B", "S1C", "S1D", "S11", "S12", "S13")
