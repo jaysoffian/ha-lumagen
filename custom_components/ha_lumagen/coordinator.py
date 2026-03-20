@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -43,12 +42,12 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
 
     def on_state_changed(self) -> None:
         """Called (sync) by the client whenever device state changes."""
-        self.async_set_updated_data(copy.deepcopy(self.client.state))
+        self.async_set_updated_data(self.client.state)
 
     def on_connection_changed(self, connected: bool) -> None:
         """Called (sync) by the client on connect / disconnect."""
         _LOGGER.info("Connection %s", "established" if connected else "lost")
-        self.async_set_updated_data(copy.deepcopy(self.client.state))
+        self.async_set_updated_data(self.client.state)
 
     # -- Internal -----------------------------------------------------------
 
@@ -61,7 +60,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         if not data:
             return False
         self.client.state.load_stored_dict(data)
-        self.async_set_updated_data(copy.deepcopy(self.client.state))
+        self.async_set_updated_data(self.client.state)
         _LOGGER.debug("Loaded identity and labels from storage")
         return True
 
@@ -76,7 +75,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
 
     async def _async_update_data(self) -> LumagenState:
         """Fallback for first refresh — returns current state snapshot."""
-        return copy.deepcopy(self.client.state)
+        return self.client.state
 
     async def async_shutdown(self) -> None:
         """Disconnect the client."""
