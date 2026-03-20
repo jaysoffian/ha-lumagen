@@ -9,7 +9,7 @@ import time
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import ClassVar, Literal, cast
+from typing import ClassVar, Literal, cast, get_args
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 PowerState = Literal["on", "off"]
-InputMemory = Literal["A", "B", "C", "D", "a", "b", "c", "d"]
+InputMemory = Literal["A", "B", "C", "D"]
 DynamicRange = Literal["SDR", "HDR"]
 SourceMode = Literal["Progressive", "Interlaced"]
 OutputMode = Literal["Progressive", "Interlaced"]
@@ -448,7 +448,7 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> None:
     if len(fields) < 25:
         return
     mem = fields[23]
-    if mem in ("A", "B", "C", "D"):
+    if mem in get_args(InputMemory):
         state.input_memory = cast("InputMemory", mem)
     state.power = "on" if fields[24] == "1" else "off"
 
@@ -961,13 +961,12 @@ class LumagenClient:
             self._notify_state_changed()
 
     async def select_memory(self, memory: InputMemory) -> None:
-        """Select input memory (A / B / C / D, case-insensitive)."""
-        upper = memory.upper()
-        if upper not in ("A", "B", "C", "D"):
+        """Select input memory (A / B / C / D)."""
+        if memory not in get_args(InputMemory):
             raise ValueError(f"Invalid input memory: {memory!r}")
-        await self.send_command(upper.lower())
+        await self.send_command(memory.lower())
         self.state.clear_changed()
-        self.state.input_memory = cast("InputMemory", upper)
+        self.state.input_memory = memory
         if self.state.changed:
             self._notify_state_changed()
 
