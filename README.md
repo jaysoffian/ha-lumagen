@@ -54,23 +54,26 @@ Copy `custom_components/ha_lumagen` into your Home Assistant `custom_components`
 
 The integration tests the connection before completing setup. Configuration information that rarely changes (identity, firmware revision, game mode, and labels) are loaded from your Lumagen at this time and then cached across HA restarts. Use the **Reload config** button to refresh this information in the future.
 
+After setup, go to **Settings → Devices & Services → Lumagen → Configure** to choose which aspect ratios appear in the Aspect Ratio select menu.
+
 ## Entities
 
 ### Switches
 
 - **Power** — Turn device on / standby.
 - **Auto Aspect** — Enable / disable auto aspect detection.
+- **NLS** — Toggle non-linear stretch (see [NLS](#nls-non-linear-stretch) below).
 
 ### Buttons
 
-- **Reset auto aspect** — Send reset auto aspect detection command (`ZY550`).
 - **Show input aspect** — Show input and aspect info on the Lumagen OSD.
+- **Restart outputs** — Restart outputs if your TV/projector has trouble locking on the signal.
 - **Reload config** — Reload rarely changing configuration information (identity, firmware revision, game mode, and labels) from your Lumagen.
 
 ### Selects
 
 - **Input** — Select input.
-- **Aspect Ratio** — Auto, 1.33, Letterbox, 1.78, 1.85–2.76, plus NLS variants (see below).
+- **Aspect Ratio** — Auto, Letterbox, 1.33, 1.78, 1.85, 1.90, 2.00, 2.10, 2.20, 2.35, 2.40, 2.55, 2.76. Which ratios appear in the menu is [configurable](#configuration).
 - **Memory** — Select input memory A / B / C / D.
 
 ### Sensors
@@ -99,7 +102,10 @@ All sensors require the device to be active (not in standby).
 - **Output 3D Mode** — Off / Frame Sequential / Frame Packed / Top-Bottom / Side-by-Side
 - **Active Outputs** — Which outputs are active (1–4)
 - **Output CMS** — Active color management system (0–7)
+- **Output CMS Label** — Label for the active CMS
 - **Output Style** — Active output style (0–7)
+- **Output Style Label** — Label for the active output style
+- **Input Label** — Label for the current input
 
 Device identity (model, serial, firmware) is shown in HA's device info rather than as separate entities.
 
@@ -108,32 +114,26 @@ Device identity (model, serial, firmware) is shown in HA's device info rather th
 Send navigation and control commands to the Lumagen menu system.
 
 Available commands: `up`, `down`, `left`, `right`, `menu`, `ok`, `enter`,
-`exit`, `back`, `home`, `info`, `alt`, `clear`, `previous`, `pip_off`,
-`pip_select`, `pip_swap`, `pip_mode`, `save`, `hdr_setup`, `test_pattern`,
-`osd_on`, `osd_off`, `0`–`9`.
+`exit`, `back`, `home`, `info`, `alt`, `clear`, `help`, `previous`, `pip_off`,
+`pip_select`, `pip_swap`, `pip_mode`, `save`, `zone`, `hdr_setup`,
+`test_pattern`, `osd_on`, `osd_off`, `10+`, `0`–`9`.
 
 ## Aspect Ratio and Auto Aspect
 
 The Aspect Ratio select and Auto Aspect switch are kept in sync:
 
-| Action              | Auto Aspect | NLS    | Aspect              |
-|---------------------|-------------|--------|---------------------|
-| Select "Auto"       | On          | Off    | (device-detected)   |
-| Select a ratio      | Off         | Off    | Set to selection    |
-| Select NLS variant  | Off         | On     | Set to base ratio   |
-| Reset Auto Aspect   | On          | Off    | (device-detected)   |
+| Action              | Auto Aspect | Aspect              |
+|---------------------|-------------|---------------------|
+| Select "Auto"       | On          | (device-detected)   |
+| Select a ratio      | Off         | Set to selection    |
+
+### Configuring the Aspect Ratio Menu
+
+By default all supported aspect ratios appear in the select menu. To show only the ratios you use, go to **Settings → Devices & Services → Lumagen → Configure** and select which ratios to include.
 
 ### NLS (Non-Linear Stretch)
 
-NLS stretches a narrower aspect to fill a wider display non-linearly (more stretch at the edges, less in the center). The integration offers three NLS variants:
-
-- **1.33 NLS** — stretch 1.33 (4:3) to 1.78 (16:9)
-- **1.78 NLS** — stretch 1.78 (16:9) to 2.35/2.40
-- **1.85 NLS** — stretch 1.85 to 2.35/2.40
-
-On the Lumagen remote, NLS is a two-button sequence (e.g. press 1.78 then NLS). The integration sends both commands automatically.
-
-Note: During testing, the **1.85 NLS** variant was found to be flaky. The Lumagen sometimes sets the aspect to 1.85 without engaging NLS. The integration queries the Lumagen for authoritative state after sending NLS commands, so the integration should always show what the Lumagen actually did.
+NLS stretches a narrower aspect to fill a wider display non-linearly (more stretch at the edges, less in the center). NLS is exposed as a dedicated **switch** entity that can be toggled independently of the aspect ratio selection.
 
 ## Usage Examples
 
@@ -349,10 +349,6 @@ mode: single
 1. Confirm you have custom labels configured on your Lumagen
 2. Press the **Reload config** button entity to fetch labels from your Lumagen
 3. Labels are per input memory — switching memories shows that memory's labels
-
-### NLS aspect shows unexpected result
-
-NLS can be unreliable at the firmware level (see [NLS caveats](#nls-non-linear-stretch) above). The integration always queries the device for authoritative state after NLS commands, so the UI reflects what the device actually did.
 
 ### TUI
 
