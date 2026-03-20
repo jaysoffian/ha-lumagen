@@ -30,7 +30,7 @@ The Lumagen should be configured as follows for the integration to work correctl
     - **On Message**: N (Message may interfere with integration.)
     - **Off Message**: N (Message may interfere with integration.)
 3. **MENU → Input → Options → Aspect Setup:**
-   - **Aspect Opts**: Extended (Optional. Enables 1.33, 1.375, 1.66, 2.10, 2.55, and 2.76 aspect ratios. Also see [Configuring the Aspect Ratio Menu](#configuring-the-aspect-ratio-menu) below.)
+   - **Aspect Opts**: Extended (Optional. Enables 1.33, 1.37, 1.66, 2.10, 2.55, and 2.76 aspect ratios. Also see [Configuring the Aspect Ratio Menu](#configuring-the-aspect-ratio-menu) below.)
 
 ## Installation
 
@@ -73,7 +73,7 @@ After setup, go to **Settings → Devices & Services → Lumagen → Configure**
 ### Selects
 
 - **Input** — Select input.
-- **Aspect Ratio** — Auto, Letterbox, 1.33, 1.78, 1.85, 1.90, 2.00, 2.10, 2.20, 2.35, 2.40, 2.55, 2.76. [Configurable](#configuring-the-aspect-ratio-menu).
+- **Aspect Ratio** — Auto, Letterbox, 1.33, 1.37, 1.78, 1.85, 1.90, 2.00, 2.10, 2.20, 2.35, 2.40, 2.55, 2.76. [Configurable](#configuring-the-aspect-ratio-menu).
 - **Memory** — Select input memory A / B / C / D.
 
 ### Sensors

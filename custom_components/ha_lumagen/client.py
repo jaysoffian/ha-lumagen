@@ -39,6 +39,7 @@ ASPECT_COMMANDS: dict[str, str] = {
     "Auto": "~",
     "Letterbox": "l",
     "1.33": "n",
+    "1.37": "+l",
     "1.78": "w",
     "1.85": "j",
     "1.90": "A",
