@@ -822,7 +822,9 @@ class LumagenClient:
         await self.send_command(f"ZQS1{label_id}")
         try:
             await asyncio.wait_for(self.state._pending_label_event.wait(), timeout=2.0)
-            return self.state._pending_label_text
+            text = self.state._pending_label_text
+            _LOGGER.debug("state: label %s = %r", label_id, text)
+            return text
         except TimeoutError:
             _LOGGER.debug("Timeout waiting for label %s", label_id)
             return None
@@ -835,37 +837,34 @@ class LumagenClient:
         Populates the per-category state fields and returns the number of
         labels that failed to resolve (0 = complete success).
         """
-        all_labels: dict[str, str] = {}
-        expected = 0
+        failed = 0
 
         # Input labels: A0-D9 (reverse iteration works around firmware bug)
         for mem in "ABCD":
             for i in reversed(range(10)):
-                expected += 1
                 label_id = f"{mem}{i}"
                 val = await self._query_label(label_id)
                 if val is not None:
-                    all_labels[label_id] = val
+                    self.state.input_labels[label_id] = val
+                else:
+                    failed += 1
 
         # Custom mode (1), CMS (2), Style (3) labels: X0-X7
-        for category in "123":
+        label_dicts = {
+            "1": self.state.custom_mode_labels,
+            "2": self.state.cms_labels,
+            "3": self.state.style_labels,
+        }
+        for category, labels in label_dicts.items():
             for i in range(8):
-                expected += 1
                 label_id = f"{category}{i}"
                 val = await self._query_label(label_id)
                 if val is not None:
-                    all_labels[label_id] = val
+                    labels[label_id] = val
+                else:
+                    failed += 1
 
-        self.state.input_labels = {
-            k: v for k, v in all_labels.items() if k[0] in "ABCD"
-        }
-        self.state.custom_mode_labels = {
-            k: v for k, v in all_labels.items() if k[0] == "1"
-        }
-        self.state.cms_labels = {k: v for k, v in all_labels.items() if k[0] == "2"}
-        self.state.style_labels = {k: v for k, v in all_labels.items() if k[0] == "3"}
-
-        return expected - len(all_labels)
+        return failed
 
     async def set_label(self, category: LabelCategory, index: int, text: str) -> None:
         """Set a label on the device.
