@@ -1,6 +1,6 @@
 # Lumagen Radiance Pro Integration for Home Assistant
 
-This [integration](https://www.home-assistant.io/getting-started/concepts-terminology/#integrations) connects your Lumagen Radiance Pro video processor to your Home Assistant installation.
+This [integration](https://www.home-assistant.io/getting-started/concepts-terminology/#integrations) connects your [Lumagen Radiance Pro](https://www.lumagen.com/products-sales/p/explore-radiance-pro) video processor to your [Home Assistant](https://www.home-assistant.io) installation.
 
 ## TCP/IP to Serial Adapter Setup
 
