@@ -659,7 +659,11 @@ class LumagenClient:
                 _LOGGER.debug("Error in handler for %s", name, exc_info=True)
 
     def _on_label_response(self, line: str, match: re.Match[str]) -> None:
-        """Extract label text and correlate with the pending query."""
+        """Extract label text and correlate with the pending query.
+
+        Ignores label responses that don't match a pending query — these
+        can arrive from OSD activity or other controllers on the bus.
+        """
         rest = line[match.end() :]  # everything after "!S1<cat>,"
 
         # A subsequent response may be concatenated after the label text.
@@ -667,23 +671,18 @@ class LumagenClient:
         next_bang = rest.find("!")
         if next_bang >= 0:
             label_text = rest[:next_bang]
+            # Process the tail even if we ignore this label response.
             self._process_line(rest[next_bang:])
         else:
-            # Labels are max 10 chars; truncate to avoid swallowing
-            # concatenated response data that lacks a '!' delimiter.
             label_text = rest[:10]
 
-        # Determine which label ID this is for
-        label_id = self._pending_label_id
-        if not label_id:
-            # Try to extract the full XY from the echoed query before the '!'
-            echo = line[: match.start()]
-            if id_match := re.search(r"S1(\w{2})", echo):
-                label_id = id_match.group(1)
+        if not self._pending_label_id:
+            _LOGGER.debug("Ignoring unsolicited label response: %s", label_text)
+            return
 
-        if label_id:
-            self._last_label_value = label_text
-        if self._label_event and label_id == self._pending_label_id:
+        _LOGGER.debug("label: id: %r -> %r", self._pending_label_id, label_text)
+        self._last_label_value = label_text
+        if self._label_event:
             self._label_event.set()
 
     # -- Keepalive ----------------------------------------------------------

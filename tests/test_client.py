@@ -535,12 +535,13 @@ class TestProcessLine:
         assert self.client._last_label_value == "Apple TV"
         assert self.client._label_event.is_set()
 
-    def test_label_id_from_echo(self):
-        """When no pending ID, extract from the echoed query."""
+    def test_label_ignored_without_pending_id(self):
+        """Label responses are ignored when no query is pending."""
         self.client._pending_label_id = None
         self.client._label_event = asyncio.Event()
         self.client._process_line("ZQS1B3!S1B,Blu-ray")
-        assert self.client._last_label_value == "Blu-ray"
+        assert self.client._last_label_value is None
+        assert not self.client._label_event.is_set()
 
     def test_label_all_memories(self):
         """Labels from all four input memories are recognized."""
