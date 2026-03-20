@@ -73,7 +73,7 @@ After setup, go to **Settings → Devices & Services → Lumagen → Configure**
 ### Selects
 
 - **Input** — Select input.
-- **Aspect Ratio** — Auto, Letterbox, 1.33, 1.78, 1.85, 1.90, 2.00, 2.10, 2.20, 2.35, 2.40, 2.55, 2.76. Which ratios appear in the menu is [configurable](#configuration).
+- **Aspect Ratio** — Auto, Letterbox, 1.33, 1.78, 1.85, 1.90, 2.00, 2.10, 2.20, 2.35, 2.40, 2.55, 2.76. [Configurable](#configuring-the-aspect-ratio-menu).
 - **Memory** — Select input memory A / B / C / D.
 
 ### Sensors
