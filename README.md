@@ -24,13 +24,13 @@ The Lumagen should be configured as follows for the integration to work correctl
 1. **MENU → Other → I/O Setup → RS-232 Setup:**
    - **Echo-RS232**: On (Lumagen recommends "On". If set to "Off" it may affect the ability to do software updates. *This integration should work either way, but is tested with it On.*)
    - **Echo-USB**: On (Lumagen recommends "On". If set to "Off" it may affect the ability to do software updates. *Mentioned only for completeness as the TCP/IP to serial adapter connects to the RS-232 port.*)
-   - **Delimiters**: Off (Lumagen recommends "Off". This works reliably and is easier to implement.  *This integration WILL NOT work unless Delimiters=Off.*)
+   - **Delimiters**: Off (Lumagen recommends "Off". This works reliably and is easier to implement. *This integration WILL NOT work unless Delimiters=Off.*)
    - **Report mode changes**: Full v5 (Optional but recommended. *Enables the integration to receive real-time updates from the Lumagen.*)
 2. **MENU → Other → OnOff Setup:**
     - **On Message**: N (Message may interfere with integration.)
     - **Off Message**: N (Message may interfere with integration.)
 3. **MENU → Input → Options → Aspect Setup:**
-   - **Aspect Opts**: Extended (Optional but recommended. Enables detection/selection of 4:3 Pillarbox, 1.375 Pillarbox, 1.66 Pillarbox, 2.10, 2.55, and 2.76 aspect ratios.)
+   - **Aspect Opts**: Extended (Optional. Enables 1.33, 1.375, 1.66, 2.10, 2.55, and 2.76 aspect ratios. Also see (Configuring the Aspect Ratio Menu)[#configuring-the-aspect-ratio-menu] below.)
 
 ## Installation
 
