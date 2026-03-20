@@ -130,15 +130,35 @@ _RESPONSE_RE = re.compile(r"!([A-Z][A-Z0-9]{2}),(.*)")
 # ---------------------------------------------------------------------------
 
 
+class LabelDict(dict[str, str]):
+    """Dict that logs and tracks mutations like LumagenState.__setattr__.
+
+    Each ``__setitem__`` call that changes a value emits a debug log and
+    sets ``_dirty``.  ``LumagenState.clear_changed`` resets the flag.
+    """
+
+    __slots__ = ("_dirty",)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._dirty = False
+
+    def __setitem__(self, key: str, value: str) -> None:
+        old = self.get(key)
+        if old != value:
+            _LOGGER.debug("state: labels[%s]: %r -> %r", key, old, value)
+            self._dirty = True
+        super().__setitem__(key, value)
+
+
 @dataclass
 class LumagenState:
     """Flat device state, updated in place by response handlers.
 
-    Tracks field-level changes via ``__setattr__``.  Any assignment that
-    actually modifies a value appends the field name to ``_changed`` and
-    emits a debug log line.  Callers should call ``clear_changed()``
-    before a batch of updates and inspect ``_changed`` (truthy if any
-    field was modified) afterward to decide whether to notify listeners.
+    Tracks field-level changes via ``__setattr__`` and ``LabelDict``.
+    Any assignment that actually modifies a value emits a debug log line.
+    Callers should call ``clear_changed()`` before a batch of updates and
+    inspect ``changed`` afterward to decide whether to notify listeners.
     """
 
     # Connection
@@ -190,10 +210,7 @@ class LumagenState:
     auto_aspect: bool | None = None
 
     # Labels (populated by get_labels / set_label)
-    input_labels: dict[str, str] = field(default_factory=dict)
-    custom_mode_labels: dict[str, str] = field(default_factory=dict)
-    cms_labels: dict[str, str] = field(default_factory=dict)
-    style_labels: dict[str, str] = field(default_factory=dict)
+    labels: LabelDict = field(default_factory=LabelDict)
 
     # Label query correlation (not part of equality/repr)
     _pending_label_text: str | None = field(
@@ -225,21 +242,21 @@ class LumagenState:
         if self.logical_input is None:
             return None
         mem = self.input_memory or "A"
-        return self.input_labels.get(f"{mem}{self.logical_input - 1}")
+        return self.labels.get(f"{mem}{self.logical_input - 1}")
 
     @property
     def cms_label(self) -> str | None:
         """Label for the current output CMS."""
         if self.output_cms is None:
             return None
-        return self.cms_labels.get(f"2{self.output_cms}")
+        return self.labels.get(f"2{self.output_cms}")
 
     @property
     def style_label(self) -> str | None:
         """Label for the current output style."""
         if self.output_style is None:
             return None
-        return self.style_labels.get(f"3{self.output_style}")
+        return self.labels.get(f"3{self.output_style}")
 
     def __setattr__(self, name: str, value: object) -> None:
         try:
@@ -257,9 +274,15 @@ class LumagenState:
                     changed.append(name)
         object.__setattr__(self, name, value)
 
+    @property
+    def changed(self) -> bool:
+        """True if any field or label was modified since last clear."""
+        return bool(self._changed) or self.labels._dirty
+
     def clear_changed(self) -> None:
-        """Reset the change-tracking list."""
+        """Reset the change-tracking list and label dirty flag."""
         object.__getattribute__(self, "_changed").clear()
+        self.labels._dirty = False
 
 
 # ---------------------------------------------------------------------------
@@ -627,13 +650,13 @@ class LumagenClient:
         if "Power-up complete" in line:
             self.state.clear_changed()
             self.state.power = "on"
-            if self.state._changed:
+            if self.state.changed:
                 self._notify_state_changed()
             return
         if "POWER OFF" in line:
             self.state.clear_changed()
             self.state.power = "off"
-            if self.state._changed:
+            if self.state.changed:
                 self._notify_state_changed()
             return
 
@@ -656,7 +679,7 @@ class LumagenClient:
                 handler(self.state, fields)
                 # Always notify on I2x — even unchanged values are
                 # authoritative and must clear optimistic entity state.
-                if self.state._changed or name in (
+                if self.state.changed or name in (
                     "I21",
                     "I22",
                     "I23",
@@ -811,7 +834,7 @@ class LumagenClient:
         """
         mem = self.state.input_memory or "A"
         return [
-            f"{self.state.input_labels.get(f'{mem}{i}', 'Input')} ({i + 1})"
+            f"{self.state.labels.get(f'{mem}{i}', 'Input')} ({i + 1})"
             for i in range(10)
         ]
 
@@ -837,19 +860,11 @@ class LumagenClient:
             _LOGGER.warning("Label %s event fired but text was never set", label_id)
             return False
 
-        _LOGGER.debug("state: label %s = %r", label_id, text)
-
-        if category in "ABCD":
-            self.state.input_labels[label_id] = text
-        elif category == "0":
+        if category == "0":
             for mem in "ABCD":
-                self.state.input_labels[f"{mem}{index}"] = text
-        elif category == "1":
-            self.state.custom_mode_labels[label_id] = text
-        elif category == "2":
-            self.state.cms_labels[label_id] = text
-        elif category == "3":
-            self.state.style_labels[label_id] = text
+                self.state.labels[f"{mem}{index}"] = text
+        else:
+            self.state.labels[label_id] = text
         return True
 
     async def get_labels(self) -> int:
@@ -927,7 +942,7 @@ class LumagenClient:
             return
         self.state.clear_changed()
         self.state.logical_input = number
-        if self.state._changed:
+        if self.state.changed:
             self._notify_state_changed()
 
     async def select_memory(self, memory: InputMemory) -> None:
@@ -938,7 +953,7 @@ class LumagenClient:
         await self.send_command(upper.lower())
         self.state.clear_changed()
         self.state.input_memory = cast("InputMemory", upper)
-        if self.state._changed:
+        if self.state.changed:
             self._notify_state_changed()
 
     async def set_aspect(self, aspect: str) -> None:
@@ -960,7 +975,7 @@ class LumagenClient:
             self.state.nls_active = False
             self.state.source_content_aspect = aspect
             self.state.auto_aspect = False
-        if self.state._changed:
+        if self.state.changed:
             self._notify_state_changed()
         # Query authoritative state from device
         await self.send_command("ZQI54")

@@ -73,10 +73,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         if "auto_aspect" in data:
             s.auto_aspect = data["auto_aspect"]
         # Labels
-        s.input_labels = data.get("input_labels", {})
-        s.custom_mode_labels = data.get("custom_mode_labels", {})
-        s.cms_labels = data.get("cms_labels", {})
-        s.style_labels = data.get("style_labels", {})
+        s.labels.update(data.get("labels", {}))
         self.async_set_updated_data(copy.deepcopy(s))
         _LOGGER.debug("Loaded identity and labels from storage")
         return True
@@ -92,10 +89,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
                 "serial_number": s.serial_number,
                 "game_mode": s.game_mode,
                 "auto_aspect": s.auto_aspect,
-                "input_labels": s.input_labels,
-                "custom_mode_labels": s.custom_mode_labels,
-                "cms_labels": s.cms_labels,
-                "style_labels": s.style_labels,
+                "labels": dict(s.labels),
             }
         )
 
