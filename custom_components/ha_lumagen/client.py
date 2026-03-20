@@ -838,17 +838,13 @@ class LumagenClient:
         await self.send_command("ZQI53")
         await self.send_command("ZQI54")
 
-    async def reload_config(self) -> int:
-        """Re-fetch identity, config state, and all labels.
-
-        Returns the number of labels that failed to resolve (0 = success).
-        """
+    async def reload_config(self) -> None:
+        """Re-fetch identity, config state, and all labels."""
         await self.query_identity()
         await self.send_command("ZQI53")
         await self.send_command("ZQI54")
-        failed = await self.query_labels()
+        await self.query_labels()
         self._notify_state_changed()
-        return failed
 
     # -- Labels -------------------------------------------------------------
 
@@ -893,27 +889,17 @@ class LumagenClient:
             self.state._labels[label_id] = text
         return True
 
-    async def query_labels(self) -> int:
-        """Query all labels (inputs A0-D9, custom modes, CMS, styles).
-
-        Populates the per-category state fields and returns the number of
-        labels that failed to resolve (0 = complete success).
-        """
-        failed = 0
-
+    async def query_labels(self) -> None:
+        """Query all labels (inputs A0-D9, custom modes, CMS, styles)."""
         # Input labels: A0-D9 (reverse iteration works around firmware bug)
         for c in ("A", "B", "C", "D"):
             for i in reversed(range(10)):
-                if not await self._query_label(c, i):
-                    failed += 1
+                await self._query_label(c, i)
 
         # Custom mode (1), CMS (2), Style (3) labels: X0-X7
         for c in ("1", "2", "3"):
             for i in range(8):
-                if not await self._query_label(c, i):
-                    failed += 1
-
-        return failed
+                await self._query_label(c, i)
 
     async def set_label(self, category: LabelCategory, index: int, text: str) -> None:
         """Set a label on the device.
