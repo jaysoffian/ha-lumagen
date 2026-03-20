@@ -30,7 +30,7 @@ The Lumagen should be configured as follows for the integration to work correctl
     - **On Message**: N (Message may interfere with integration.)
     - **Off Message**: N (Message may interfere with integration.)
 3. **MENU → Input → Options → Aspect Setup:**
-   - **Aspect Opts**: Extended (Optional. Enables 1.33, 1.375, 1.66, 2.10, 2.55, and 2.76 aspect ratios. Also see (Configuring the Aspect Ratio Menu)[#configuring-the-aspect-ratio-menu] below.)
+   - **Aspect Opts**: Extended (Optional. Enables 1.33, 1.375, 1.66, 2.10, 2.55, and 2.76 aspect ratios. Also see [Configuring the Aspect Ratio Menu](#configuring-the-aspect-ratio-menu) below.)
 
 ## Installation
 
