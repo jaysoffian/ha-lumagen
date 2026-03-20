@@ -110,38 +110,33 @@ See "USR-TCP232-E2 User Manual" V1.1.3, pages 50–51.
 
 | RS232 | Aspect | Notes |
 |-------|--------|-------|
-| `n` | 4:3 | Previous zoom |
-| `[` | 4:3 | No zoom |
-| `[N` | 4:3 NLS | No zoom |
-| `l` | Letterbox | Previous zoom |
+| `n` | 1.33 | Previous zoom\* |
+| `[` | 1.33 | No zoom |
+| `l` | Letterbox | Previous zoom\* |
 | `]` | Letterbox | No zoom |
-| `]N` | Letterbox NLS | No zoom |
-| `w` | 16:9 | Previous zoom |
-| `*` | 16:9 | No zoom |
-| `*N` | 16:9 NLS | No zoom |
-| `j` | 1.85 | Previous zoom |
+| `w` | 1.78 | Previous zoom\* |
+| `*` | 1.78 | No zoom |
+| `j` | 1.85 | Previous zoom\* |
 | `/` | 1.85 | No zoom |
-| `/N` | 1.85 NLS | No zoom |
 | `A` | 1.90 | |
-| `AN` | 1.90 NLS | |
 | `C` | 2.00 | |
-| `CN` | 2.00 NLS | |
 | `E` | 2.20 | |
-| `EN` | 2.20 NLS | |
-| `W` | 2.35 | Previous zoom |
+| `W` | 2.35 | Previous zoom\* |
 | `K` | 2.35 | No zoom |
 | `G` | 2.40 | |
 | `N` | NLS toggle | Send source aspect first |
 | `V` | Auto Aspect Disable | |
 | `~` | Auto Aspect Enable | |
 
+\* Lumagen Remote Control uses Previous Zoom variants.
+
 ### Extended Aspects
 
 | RS232 | Aspect |
 |-------|--------|
-| `+n` | 4:3 Pillarbox |
-| `+l` | 1.375 Pillarbox |
-| `+w` | 1.66 Pillarbox |
+| `+n` | 1.33 |
+| `+l` | 1.37 |
+| `+w` | 1.66 |
 | `+j` | 2.10 |
 | `+W` | 2.55 |
 | `+N` | 2.76 |
@@ -205,7 +200,7 @@ See "USR-TCP232-E2 User Manual" V1.1.3, pages 50–51.
 Given command `ZQS1XY`, X and Y determine which label you're querying. The maximum label length varies per label type.
 
 | X | Y | Label | Max Length |
-|---|---|------------------|
+|---|---|-------|-----------|
 | `A`, `B`, `C`, or `D` | 0–9 | Input label 0–9 for MEMA, MEMB, MEMC, or MEMD. | 10 characters |
 | `1` | 0–7 | Custom mode label 0–7 | 7 characters |
 | `2` | 0–7 | CMS label 0–7 | 8 characters |
@@ -227,6 +222,8 @@ Example responses:
 - `!S11,Custom0`
 - `!S12,CMS0`
 - `!S13,2.40`
+
+Note that the `ZQS1` response does not include the label slot (`Y`), so the client has to keep track of which label it most recently queried. Clients should _not_ try to parse unsolicited label responses (i.e. responses to a different client) nor rely on their own query being echoed back in the response.
 
 ### Input Queries (ZQI)
 
