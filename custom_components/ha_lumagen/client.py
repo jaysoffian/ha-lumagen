@@ -9,7 +9,7 @@ import time
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import Literal, cast
+from typing import ClassVar, Literal, cast
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -210,7 +210,7 @@ class LumagenState:
     auto_aspect: bool | None = None
 
     # Labels (populated by get_labels / set_label)
-    labels: LabelDict = field(default_factory=LabelDict)
+    _labels: LabelDict = field(default_factory=LabelDict)
 
     # Label query correlation (not part of equality/repr)
     _pending_label_text: str | None = field(
@@ -221,9 +221,9 @@ class LumagenState:
     )
 
     # Change tracking (not part of equality/repr)
-    _changed: list[str] = field(
-        default_factory=list, init=False, repr=False, compare=False
-    )
+    _dirty: bool = field(default=False, init=False, repr=False, compare=False)
+
+    # -- Derived properties -------------------------------------------------
 
     @property
     def source_aspect(self) -> str | None:
@@ -242,21 +242,27 @@ class LumagenState:
         if self.logical_input is None:
             return None
         mem = self.input_memory or "A"
-        return self.labels.get(f"{mem}{self.logical_input - 1}")
+        return self._labels.get(f"{mem}{self.logical_input - 1}")
 
     @property
     def cms_label(self) -> str | None:
         """Label for the current output CMS."""
         if self.output_cms is None:
             return None
-        return self.labels.get(f"2{self.output_cms}")
+        return self._labels.get(f"2{self.output_cms}")
 
     @property
     def style_label(self) -> str | None:
         """Label for the current output style."""
         if self.output_style is None:
             return None
-        return self.labels.get(f"3{self.output_style}")
+        return self._labels.get(f"3{self.output_style}")
+
+    def labels_by_prefix(self, prefix: str) -> dict[str, str]:
+        """Return sorted labels whose key starts with *prefix*."""
+        return {k: v for k, v in sorted(self._labels.items()) if k[0] == prefix}
+
+    # -- Change tracking ----------------------------------------------------
 
     def __setattr__(self, name: str, value: object) -> None:
         try:
@@ -266,23 +272,43 @@ class LumagenState:
         else:
             if old != value and not name.startswith("_"):
                 _LOGGER.debug("state: %s: %r -> %r", name, old, value)
-                # _changed may not exist yet during __init__ when a
-                # keyword arg overrides a field that was already set
-                # to its default value by the dataclass-generated code.
-                changed = self.__dict__.get("_changed")
-                if changed is not None:
-                    changed.append(name)
+                self.__dict__["_dirty"] = True
         object.__setattr__(self, name, value)
 
     @property
     def changed(self) -> bool:
         """True if any field or label was modified since last clear."""
-        return bool(self._changed) or self.labels._dirty
+        return self._dirty or self._labels._dirty
 
     def clear_changed(self) -> None:
-        """Reset the change-tracking list and label dirty flag."""
-        object.__getattribute__(self, "_changed").clear()
-        self.labels._dirty = False
+        """Reset change-tracking flags."""
+        self.__dict__["_dirty"] = False
+        self._labels._dirty = False
+
+    # -- Serialization ------------------------------------------------------
+
+    _STORED_FIELDS: ClassVar[tuple[str, ...]] = (
+        "model_name",
+        "software_revision",
+        "model_number",
+        "serial_number",
+        "game_mode",
+        "auto_aspect",
+    )
+
+    def to_stored_dict(self) -> dict[str, object]:
+        """Return a JSON-serializable snapshot of persistent state."""
+        data: dict[str, object] = {k: getattr(self, k) for k in self._STORED_FIELDS}
+        data["labels"] = dict(self._labels)
+        return data
+
+    def load_stored_dict(self, data: dict[str, object]) -> None:
+        """Restore persistent state from a dict (e.g. loaded from disk)."""
+        for key in self._STORED_FIELDS:
+            if key in data:
+                setattr(self, key, data[key])
+        if "labels" in data:
+            self._labels.update(data["labels"])  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -834,7 +860,7 @@ class LumagenClient:
         """
         mem = self.state.input_memory or "A"
         return [
-            f"{self.state.labels.get(f'{mem}{i}', 'Input')} ({i + 1})"
+            f"{self.state._labels.get(f'{mem}{i}', 'Input')} ({i + 1})"
             for i in range(10)
         ]
 
@@ -862,9 +888,9 @@ class LumagenClient:
 
         if category == "0":
             for mem in "ABCD":
-                self.state.labels[f"{mem}{index}"] = text
+                self.state._labels[f"{mem}{index}"] = text
         else:
-            self.state.labels[label_id] = text
+            self.state._labels[label_id] = text
         return True
 
     async def get_labels(self) -> int:

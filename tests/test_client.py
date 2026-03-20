@@ -604,7 +604,7 @@ class TestGetSourceList:
     def test_with_labels(self):
         client = _make_client()
         client.state.input_memory = "A"
-        client.state.labels.update({"A0": "Apple TV", "A1": "Blu-ray", "A2": "Cable"})
+        client.state._labels.update({"A0": "Apple TV", "A1": "Blu-ray", "A2": "Cable"})
         sources = client.get_source_list()
         assert sources[0] == "Apple TV (1)"
         assert sources[1] == "Blu-ray (2)"
@@ -615,13 +615,13 @@ class TestGetSourceList:
     def test_defaults_to_memory_a(self):
         client = _make_client()
         client.state.input_memory = None
-        client.state.labels["A0"] = "HDMI 1"
+        client.state._labels["A0"] = "HDMI 1"
         assert client.get_source_list()[0] == "HDMI 1 (1)"
 
     def test_respects_current_memory(self):
         client = _make_client()
         client.state.input_memory = "B"
-        client.state.labels.update({"A0": "Wrong", "B0": "Right"})
+        client.state._labels.update({"A0": "Wrong", "B0": "Right"})
         assert client.get_source_list()[0] == "Right (1)"
 
 
