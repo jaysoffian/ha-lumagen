@@ -1153,3 +1153,7 @@ class LumagenClient:
         """Toggle HDMI hotplug on an input (or all inputs if None)."""
         target = str(input_num) if input_num is not None else "A"
         await self.send_command(f"ZY520{target}\r")
+
+    async def restart_outputs(self) -> None:
+        """Restart outputs via ALT, PREV remote sequence."""
+        await self.send_command("#P")
