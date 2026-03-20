@@ -2,6 +2,13 @@ show_osd_message:
   name: Show OSD message
   description: Show an OSD message on the Lumagen.
   fields:
+    device_id:
+      name: Device
+      description: The Lumagen device to target.
+      required: true
+      selector:
+        device:
+          integration: ha_lumagen
     line_one:
       name: Line one
       description: First line of text (up to 30 chars).
@@ -34,6 +41,13 @@ show_osd_volume_bar:
   name: Show OSD volume bar
   description: Show a volume bar on the Lumagen OSD.
   fields:
+    device_id:
+      name: Device
+      description: The Lumagen device to target.
+      required: true
+      selector:
+        device:
+          integration: ha_lumagen
     level:
       name: Volume level
       description: Volume level (0.0–1.0).
@@ -55,3 +69,11 @@ show_osd_volume_bar:
 clear_osd_message:
   name: Clear OSD message
   description: Clear any OSD message from the Lumagen.
+  fields:
+    device_id:
+      name: Device
+      description: The Lumagen device to target.
+      required: true
+      selector:
+        device:
+          integration: ha_lumagen

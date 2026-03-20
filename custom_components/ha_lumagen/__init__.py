@@ -8,8 +8,9 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
 
 from .client import LumagenClient
 from .const import DEFAULT_PORT, DOMAIN
@@ -32,6 +33,7 @@ SERVICE_CLEAR_OSD_MESSAGE = "clear_osd_message"
 
 SHOW_OSD_MESSAGE_SCHEMA = vol.Schema(
     {
+        vol.Required("device_id"): cv.string,
         vol.Required("line_one"): cv.string,
         vol.Optional("line_two", default=""): cv.string,
         vol.Optional("duration", default=3): vol.All(
@@ -43,25 +45,41 @@ SHOW_OSD_MESSAGE_SCHEMA = vol.Schema(
 
 SHOW_OSD_VOLUME_BAR_SCHEMA = vol.Schema(
     {
+        vol.Required("device_id"): cv.string,
         vol.Required("level"): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1.0)),
         vol.Optional("label", default=None): vol.Any(None, cv.string),
     }
 )
 
+CLEAR_OSD_MESSAGE_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): cv.string,
+    }
+)
 
-def _get_coordinator(hass: HomeAssistant) -> LumagenCoordinator:
-    """Return the first (and usually only) coordinator."""
-    coordinators: dict = hass.data.get(DOMAIN, {})
-    if not coordinators:
-        raise ValueError("No Lumagen devices configured")
-    return next(iter(coordinators.values()))
+
+def _get_coordinator(hass: HomeAssistant, device_id: str) -> LumagenCoordinator:
+    """Resolve a device_id to its LumagenCoordinator."""
+    dev_reg = dr.async_get(hass)
+    device = dev_reg.async_get(device_id)
+    if device is None:
+        raise ServiceValidationError(f"Unknown device: {device_id}")
+
+    coordinators: dict[str, LumagenCoordinator] = hass.data.get(DOMAIN, {})
+    for identifier in device.identifiers:
+        if identifier[0] == DOMAIN:
+            entry_id = identifier[1]
+            if entry_id in coordinators:
+                return coordinators[entry_id]
+
+    raise ServiceValidationError(f"No Lumagen coordinator for device: {device_id}")
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up domain-level services."""
 
     async def show_osd_message(call: ServiceCall) -> None:
-        coordinator = _get_coordinator(hass)
+        coordinator = _get_coordinator(hass, call.data["device_id"])
         await coordinator.client.show_osd_message(
             line_one=call.data["line_one"],
             line_two=call.data["line_two"],
@@ -70,13 +88,13 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         )
 
     async def show_osd_volume_bar(call: ServiceCall) -> None:
-        coordinator = _get_coordinator(hass)
+        coordinator = _get_coordinator(hass, call.data["device_id"])
         await coordinator.client.show_osd_volume_bar(
             call.data["level"], label=call.data.get("label")
         )
 
     async def clear_osd_message(call: ServiceCall) -> None:
-        coordinator = _get_coordinator(hass)
+        coordinator = _get_coordinator(hass, call.data["device_id"])
         await coordinator.client.clear_osd_message()
 
     hass.services.async_register(
@@ -91,7 +109,12 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         show_osd_volume_bar,
         SHOW_OSD_VOLUME_BAR_SCHEMA,
     )
-    hass.services.async_register(DOMAIN, SERVICE_CLEAR_OSD_MESSAGE, clear_osd_message)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_CLEAR_OSD_MESSAGE,
+        clear_osd_message,
+        CLEAR_OSD_MESSAGE_SCHEMA,
+    )
 
     return True
 
