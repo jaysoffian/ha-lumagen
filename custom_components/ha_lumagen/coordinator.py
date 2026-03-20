@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import copy
 import logging
 
@@ -70,25 +69,10 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         """Persist identity, config, and labels to disk."""
         await self._store.async_save(self.client.state.to_stored_dict())
 
-    async def reload_config(self, max_attempts: int = 5) -> None:
+    async def reload_config(self) -> None:
         """Re-fetch identity, config state, and labels from device."""
-        for attempt in range(max_attempts):
-            failed = await self.client.reload_config()
-            if failed == 0:
-                await self.async_save_stored_state()
-                return
-            delay = 5 * (attempt + 1)
-            _LOGGER.warning(
-                "%d label(s) failed — retrying in %ds (attempt %d/%d)",
-                failed,
-                delay,
-                attempt + 1,
-                max_attempts,
-            )
-            await asyncio.sleep(delay)
-        _LOGGER.error(
-            "Some labels could not be fetched after %d attempts", max_attempts
-        )
+        await self.client.reload_config()
+        await self.async_save_stored_state()
 
     async def _async_update_data(self) -> LumagenState:
         """Fallback for first refresh — returns current state snapshot."""
