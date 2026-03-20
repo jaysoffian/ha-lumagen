@@ -23,11 +23,11 @@ The "No zoom" variants (`[`, `]`, `*`, `/`, `K`) force letterbox zoom off as
 a side effect.  The "Previous zoom" variants preserve the existing zoom
 setting, which is less surprising for automation.
 
-## NLS is a standalone toggle
+## NLS is a standalone button
 
-`N` toggles NLS on/off independent of the current aspect ratio.  The compound
-commands like `*N` (16:9 + NLS) are just convenience shortcuts equivalent to
-pressing the aspect button then the NLS button.
+`N` acts on the current aspect ratio.  The compound commands like `*N`
+(16:9 + NLS) are just convenience shortcuts equivalent to pressing the aspect
+button then the NLS button.
 
 - Selecting a new aspect ratio clears NLS (except 1.85 — see below).
 - AA Enable (`~`) clears NLS.

@@ -311,7 +311,7 @@ HELP_TEXT = """\
 
 [bold]Video Processing[/]
   aspect <name> — 1.33, 1.78, 2.40, …
-  nls — toggle non-linear stretch
+  nls — non-linear stretch
   mode <1-8> — output custom mode
   cms <1-8> — output CMS
   style <1-8> — output style

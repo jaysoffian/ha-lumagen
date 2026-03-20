@@ -25,6 +25,7 @@ async def async_setup_entry(
             LumagenReloadConfigButton(coordinator),
             LumagenDisplayInputAspectButton(coordinator),
             LumagenRestartOutputsButton(coordinator),
+            LumagenNlsButton(coordinator),
         ]
     )
 
@@ -81,3 +82,18 @@ class LumagenRestartOutputsButton(LumagenEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Restart outputs via ALT, PREV remote sequence."""
         await self.coordinator.client.restart_outputs()
+
+
+class LumagenNlsButton(LumagenEntity, ButtonEntity):
+    """Send the NLS command to the Lumagen."""
+
+    _attr_translation_key = "nls"
+    _attr_icon = "mdi:stretch-to-page-outline"
+
+    def __init__(self, coordinator: LumagenCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_nls"
+
+    async def async_press(self) -> None:
+        """Send the NLS command and poll for updated state."""
+        await self.coordinator.client.toggle_nls()

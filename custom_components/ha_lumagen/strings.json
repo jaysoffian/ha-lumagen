@@ -62,7 +62,8 @@
     "button": {
       "reload_config": { "name": "Reload Config" },
       "display_input_aspect": { "name": "Show Input Aspect" },
-      "restart_outputs": { "name": "Restart Outputs" }
+      "restart_outputs": { "name": "Restart Outputs" },
+      "nls": { "name": "NLS" }
     },
     "select": {
       "input": { "name": "Input" },
@@ -71,8 +72,7 @@
     },
     "switch": {
       "power": { "name": "Power" },
-      "auto_aspect": { "name": "Auto Aspect" },
-      "nls": { "name": "NLS" }
+      "auto_aspect": { "name": "Auto Aspect" }
     },
     "remote": {
       "remote": { "name": "Remote" }
