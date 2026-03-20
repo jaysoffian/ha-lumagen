@@ -178,9 +178,11 @@ data:
     - enter
 ```
 
-### Services
+### On-Screen Display
 
-The integration registers domain-level services for OSD control:
+The Lumagen Radiance Pro has an On-Screen Display that can show up to two lines of 30 characters each.
+
+This integration provides the following [services](./custom_components/ha_lumagen/services.yaml) to control the OSD:
 
 - `ha_lumagen.show_osd_message`: Show an OSD message
 - `ha_lumagen.show_osd_volume_bar`: Show a volume bar
@@ -196,11 +198,7 @@ data:
   duration: 5 # Clear in 5 secs. Max is 9. Default is 3. Use 0 to disable clearing.
   block_char: "X" # Optional character to render as █ if it appears in message.
 
-# Show a volume bar on the Lumagen's OSD like so:
-# |63.5% ███████████████████     |
-action: ha_lumagen.show_osd_volume_bar
-data:
-  level: 0.635
+# See volume bar examples below
 ```
 
 ### Automation Examples
@@ -223,13 +221,13 @@ action:
       option: "HDMI 2"
 ```
 
-### Lumagen OSD
+### Control the On-Screen Display
 
 ##### AVR Volume
 
-This example uses the Lumagen OSD to show volume changes from a Denon/Marantz AVR connected with the [built-in HA integration](https://www.home-assistant.io/integrations/denonavr/).
+Show volume changes from the [Denon AVR integration](https://www.home-assistant.io/integrations/denonavr/) on the Lumagen's OSD: `63.5% ███████████████         `
 
-The volume is displayed on a single line within the Lumagen's 30 character-wide OSD like so: `63.5% ███████████████         `
+The volume change is displayed for 1 second.
 
 ```yaml
 alias: "Show AVR volume on Lumagen"
@@ -247,9 +245,11 @@ actions:
 mode: single
 ```
 
-##### AVR  Volume (scaled)
+##### AVR Volume (scaled)
 
-If you limited your AVR's maximum volume (e.g. 80), the bar will never fill completely. This example scales the bar so that volume level 0.8 is a full bar: `80.0% ████████████████████████`
+Scale the bar so that volume level 0.8 is a full bar: `80.0% ████████████████████████`
+
+You might want to do this if you set a volume limit on your AVR.
 
 ```yaml
 alias: "Show AVR volume on Lumagen (scaled)"
@@ -277,12 +277,9 @@ mode: single
 
 ##### AVR Volume (decibels)
 
-Denon / Marantz AVRs can display their volume in in two scales:
+Show the volume level in decibels instead of a percentage: `-16.5 ███████████████         `
 
-1. **0 – 98**: Default. 80 is reference volume.
-2. **79.5 dB — 18.0 dB**: 0 dB is reference volume.
-
-This example shows how to mimic the decibel scale.
+Denon / Marantz AVRs can display their volume in decibels (-79.5 dB — +18.0 dB) as an alternative to the 0–98 scale. This is how you'd mimic the decibel display.
 
 ```yaml
 alias: "Show AVR volume on Lumagen (dB)"
@@ -310,7 +307,7 @@ mode: single
 
 ##### AVR Mute Status
 
-This example displays "Mute" as long as the AVR is muted.
+Show "Mute" on screen as long as the AVR is muted.
 
 ```yaml
 alias: "Show mute on Lumagen"
