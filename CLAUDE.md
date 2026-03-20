@@ -1,6 +1,9 @@
 # CLAUDE.md
 
-## Pre-flight
+## Git
+- Always commit as Jay Soffian — set both author and committer via environment variables:
+  `GIT_AUTHOR_NAME="Jay Soffian" GIT_AUTHOR_EMAIL="jay@soffian.org" GIT_COMMITTER_NAME="Jay Soffian" GIT_COMMITTER_EMAIL="jay@soffian.org"`
+- Do NOT include Claude session links in commit messages.
 - Always verify `git status` is clean before making changes.
 
 ## Verification
