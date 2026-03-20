@@ -120,12 +120,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         if not has_stored:
             # First-ever setup — fetch identity and save
-            await client.fetch_identity()
+            await client.query_identity()
             if not await client.wait_for(lambda s: s.model_name is not None, timeout=5):
                 _LOGGER.warning("Identity query timed out")
 
         # Always query power (runtime)
-        await client.fetch_power()
+        await client.query_power()
         if not await client.wait_for(lambda s: s.power is not None, timeout=5):
             _LOGGER.warning("Power query timed out")
 
@@ -136,7 +136,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         # If device is on, fetch runtime state
         if client.state.power == "on":
-            await client.fetch_runtime_state()
+            await client.query_runtime_state()
             await client.wait_for(lambda s: s.logical_input is not None, timeout=5)
 
     except ConfigEntryNotReady:
