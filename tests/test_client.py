@@ -7,8 +7,6 @@ import asyncio
 import pytest
 
 from custom_components.ha_lumagen.client import (
-    ASPECT_COMMANDS,
-    ASPECT_RATIO_NAMES,
     REMOTE_COMMANDS,
     LumagenClient,
     LumagenState,
@@ -149,13 +147,13 @@ class TestAspectName:
         assert _aspect_name("166") == "1.66"
 
     def test_zero(self):
-        assert _aspect_name("0") is None
+        assert _aspect_name("0") == "0.00"
 
     def test_non_numeric(self):
-        assert _aspect_name("abc") is None
+        assert _aspect_name("abc") == "0.00"
 
     def test_empty(self):
-        assert _aspect_name("") is None
+        assert _aspect_name("") == "0.00"
 
 
 # ---------------------------------------------------------------------------
@@ -637,14 +635,6 @@ class TestGetSourceList:
 
 
 class TestConstants:
-    def test_all_named_aspects_have_commands(self):
-        """Every aspect in ASPECT_RATIO_NAMES should be settable."""
-        for code, name in ASPECT_RATIO_NAMES.items():
-            assert name in ASPECT_COMMANDS, (
-                f"Aspect {name} (code {code}) is in ASPECT_RATIO_NAMES "
-                f"but missing from ASPECT_COMMANDS"
-            )
-
     def test_remote_commands_all_single_byte(self):
         """Every remote command should be a single ASCII byte."""
         for name, cmd in REMOTE_COMMANDS.items():

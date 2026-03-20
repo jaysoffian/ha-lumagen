@@ -33,21 +33,6 @@ LabelCategory = Literal["A", "B", "C", "D", "0", "1", "2", "3"]
 # Constants
 # ---------------------------------------------------------------------------
 
-# Aspect ratio numeric codes (I24 SSS/AAA fields) → display names
-ASPECT_RATIO_NAMES: dict[int, str] = {
-    133: "1.33",
-    178: "1.78",
-    185: "1.85",
-    190: "1.90",
-    200: "2.00",
-    210: "2.10",
-    220: "2.20",
-    235: "2.35",
-    240: "2.40",
-    255: "2.55",
-    276: "2.76",
-}
-
 
 # Display name → RS232 command string for setting aspect.
 ASPECT_COMMANDS: dict[str, str] = {
@@ -296,17 +281,13 @@ def _on(
     return decorator
 
 
-def _aspect_name(code: str) -> str | None:
+def _aspect_name(code: str) -> str:
     """Convert numeric aspect code ('240') to display name ('2.40')."""
     try:
         val = int(code)
     except ValueError:
-        return None
-    if name := ASPECT_RATIO_NAMES.get(val):
-        return name
-    if val > 0:
-        return f"{val / 100:.2f}"
-    return None
+        val = 0
+    return f"{val / 100:.2f}"
 
 
 @_on("S01")
