@@ -34,7 +34,7 @@ class LumagenSwitchEntityDescription(SwitchEntityDescription):
 SWITCH_ENTITIES: tuple[LumagenSwitchEntityDescription, ...] = (
     LumagenSwitchEntityDescription(
         key="power",
-        name="Power",
+        translation_key="power",
         icon="mdi:power",
         is_on_fn=lambda s: s.power == "on",
         turn_on_fn=lambda c: c.client.power_on(),
@@ -43,7 +43,7 @@ SWITCH_ENTITIES: tuple[LumagenSwitchEntityDescription, ...] = (
     ),
     LumagenSwitchEntityDescription(
         key="auto_aspect",
-        name="Auto Aspect",
+        translation_key="auto_aspect",
         icon="mdi:aspect-ratio",
         is_on_fn=lambda s: s.auto_aspect,
         turn_on_fn=lambda c: c.client.set_auto_aspect(True),
@@ -51,7 +51,7 @@ SWITCH_ENTITIES: tuple[LumagenSwitchEntityDescription, ...] = (
     ),
     LumagenSwitchEntityDescription(
         key="nls",
-        name="NLS",
+        translation_key="nls",
         icon="mdi:stretch-to-page-outline",
         is_on_fn=lambda s: s.nls_active,
         turn_on_fn=lambda c: c.client.toggle_nls(),

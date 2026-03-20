@@ -86,7 +86,7 @@ async def _select_memory(coord: LumagenCoordinator, option: str) -> None:
 SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
     LumagenSelectEntityDescription(
         key="input",
-        name="Input",
+        translation_key="input",
         icon="mdi:video-input-hdmi",
         current_option_fn=_current_input_source,
         select_option_fn=_select_input_source,
@@ -94,7 +94,7 @@ SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
     ),
     LumagenSelectEntityDescription(
         key="aspect_ratio",
-        name="Aspect Ratio",
+        translation_key="aspect_ratio",
         icon="mdi:aspect-ratio",
         current_option_fn=_current_aspect,
         select_option_fn=_select_aspect,
@@ -102,7 +102,7 @@ SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
     ),
     LumagenSelectEntityDescription(
         key="memory",
-        name="Memory",
+        translation_key="memory",
         icon="mdi:memory",
         current_option_fn=_current_memory,
         select_option_fn=_select_memory,

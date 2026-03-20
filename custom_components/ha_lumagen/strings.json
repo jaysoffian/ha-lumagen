@@ -41,19 +41,23 @@
       "source_raster_aspect": { "name": "Source Raster Aspect Ratio" },
       "source_dynamic_range": { "name": "Source Dynamic Range" },
       "source_mode": { "name": "Source Mode" },
+      "input_video_status": { "name": "Input Video Status" },
+      "source_3d_mode": { "name": "Source 3D Mode" },
       "nls_active": { "name": "NLS Active" },
       "detected_content_aspect": { "name": "Detected Content Aspect Ratio" },
       "detected_raster_aspect": { "name": "Detected Raster Aspect Ratio" },
       "output_vertical_resolution": { "name": "Output Resolution" },
       "output_vertical_rate": { "name": "Output Refresh Rate" },
       "output_aspect": { "name": "Output Aspect Ratio" },
+      "output_3d_mode": { "name": "Output 3D Mode" },
+      "outputs_on": { "name": "Active Outputs" },
+      "output_mode": { "name": "Output Mode" },
       "output_colorspace": { "name": "Output Colorspace" },
       "output_cms": { "name": "Output CMS" },
+      "output_cms_label": { "name": "Output CMS Label" },
       "output_style": { "name": "Output Style" },
-      "model_name": { "name": "Model Name" },
-      "software_revision": { "name": "Software Revision" },
-      "model_number": { "name": "Model Number" },
-      "serial_number": { "name": "Serial Number" }
+      "output_style_label": { "name": "Output Style Label" },
+      "input_label": { "name": "Input Label" }
     },
     "button": {
       "reload_config": { "name": "Reload Config" },
@@ -62,8 +66,13 @@
     },
     "select": {
       "input": { "name": "Input" },
-      "input_aspect_ratio": { "name": "Input Aspect Ratio" },
+      "aspect_ratio": { "name": "Aspect Ratio" },
       "memory": { "name": "Memory" }
+    },
+    "switch": {
+      "power": { "name": "Power" },
+      "auto_aspect": { "name": "Auto Aspect" },
+      "nls": { "name": "NLS" }
     },
     "remote": {
       "remote": { "name": "Remote" }
