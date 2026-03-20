@@ -119,12 +119,10 @@ _3D_MODE: dict[str, ThreeDMode] = {
     "8": "Side-by-Side",
 }
 
-# Regex for normal responses: !<letter><2digits>,<fields>
-_RESPONSE_RE = re.compile(r"!([A-Z]\d{2}),(.*)")
-
-# Regex for label responses: !S1<category>,<label text>
-# Category is A-D (input memories) or 1-3 (custom mode / CMS / style).
-_LABEL_RE = re.compile(r"!S1([A-D123]),")
+# Regex for responses: !<3-char code>,<fields>
+# Code is a letter followed by two alphanumeric characters (e.g. S01, I21,
+# S1A for labels).
+_RESPONSE_RE = re.compile(r"!([A-Z][A-Z0-9]{2}),(.*)")
 
 
 # ---------------------------------------------------------------------------
@@ -191,11 +189,19 @@ class LumagenState:
     game_mode: bool | None = None
     auto_aspect: bool | None = None
 
-    # Labels (populated by get_labels)
+    # Labels (populated by get_labels / set_label)
     input_labels: dict[str, str] = field(default_factory=dict)
     custom_mode_labels: dict[str, str] = field(default_factory=dict)
     cms_labels: dict[str, str] = field(default_factory=dict)
     style_labels: dict[str, str] = field(default_factory=dict)
+
+    # Label query correlation (not part of equality/repr)
+    _pending_label_text: str | None = field(
+        default=None, init=False, repr=False, compare=False
+    )
+    _pending_label_event: asyncio.Event | None = field(
+        default=None, init=False, repr=False, compare=False
+    )
 
     # Change tracking (not part of equality/repr)
     _changed: list[str] = field(
@@ -241,7 +247,7 @@ class LumagenState:
         except AttributeError:
             pass  # Initial assignment during __init__
         else:
-            if old != value and name != "_changed":
+            if old != value and not name.startswith("_"):
                 _LOGGER.debug("state: %s: %r -> %r", name, old, value)
                 # _changed may not exist yet during __init__ when a
                 # keyword arg overrides a field that was already set
@@ -434,6 +440,19 @@ def _on_aspect_mode(state: LumagenState, fields: list[str]) -> None:
         state.source_content_aspect = name
 
 
+@_on("S1A", "S1B", "S1C", "S1D", "S11", "S12", "S13")
+def _on_label(state: LumagenState, fields: list[str]) -> None:
+    """S1x — label text (input memories A-D, custom mode, CMS, style).
+
+    Ignored unless a label query is pending (``_pending_label_event`` is set).
+    """
+    if not state._pending_label_event:
+        _LOGGER.debug("Ignoring unsolicited label response: %s", ",".join(fields))
+        return
+    state._pending_label_text = ",".join(fields)
+    state._pending_label_event.set()
+
+
 # ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
@@ -462,10 +481,6 @@ class LumagenClient:
         self._state_waiters: list[
             tuple[asyncio.Event, Callable[[LumagenState], bool]]
         ] = []
-        # Label query correlation
-        self._pending_label_id: str | None = None
-        self._label_event: asyncio.Event | None = None
-        self._last_label_value: str | None = None
 
     # -- Connection lifecycle -----------------------------------------------
 
@@ -622,13 +637,7 @@ class LumagenClient:
                 self._notify_state_changed()
             return
 
-        # Label response: !S1<cat>,<label text>
-        # Check before the general regex because the code is only 2 chars (S1).
-        if label_match := _LABEL_RE.search(line):
-            self._on_label_response(line, label_match)
-            return
-
-        # Normal response: !<letter><2 digits>,<fields>
+        # Response: !<code>,<fields>
         match = _RESPONSE_RE.search(line)
         if not match:
             return
@@ -657,33 +666,6 @@ class LumagenClient:
                     self._notify_state_changed()
             except Exception:
                 _LOGGER.debug("Error in handler for %s", name, exc_info=True)
-
-    def _on_label_response(self, line: str, match: re.Match[str]) -> None:
-        """Extract label text and correlate with the pending query.
-
-        Ignores label responses that don't match a pending query — these
-        can arrive from OSD activity or other controllers on the bus.
-        """
-        rest = line[match.end() :]  # everything after "!S1<cat>,"
-
-        # A subsequent response may be concatenated after the label text.
-        # Split on '!' which marks the start of the next response.
-        next_bang = rest.find("!")
-        if next_bang >= 0:
-            label_text = rest[:next_bang]
-            # Process the tail even if we ignore this label response.
-            self._process_line(rest[next_bang:])
-        else:
-            label_text = rest[:10]
-
-        if not self._pending_label_id:
-            _LOGGER.debug("Ignoring unsolicited label response: %s", label_text)
-            return
-
-        _LOGGER.debug("label: id: %r -> %r", self._pending_label_id, label_text)
-        self._last_label_value = label_text
-        if self._label_event:
-            self._label_event.set()
 
     # -- Keepalive ----------------------------------------------------------
 
@@ -815,7 +797,37 @@ class LumagenClient:
         await self.fetch_identity()
         await self.send_command("ZQI53")
         await self.send_command("ZQI54")
-        return await self.get_labels()
+        failed = await self.get_labels()
+        self._notify_state_changed()
+        return failed
+
+    # -- Labels -------------------------------------------------------------
+
+    def get_source_list(self) -> list[str]:
+        """Return ordered source labels for the current input memory.
+
+        Labels are stored per input memory at indices 0-9, where label
+        index 0 = logical input 1, index 9 = logical input 10.
+        """
+        mem = self.state.input_memory or "A"
+        return [
+            f"{self.state.input_labels.get(f'{mem}{i}', 'Input')} ({i + 1})"
+            for i in range(10)
+        ]
+
+    async def _query_label(self, label_id: str) -> str | None:
+        """Query a single label by ID. Returns the text or None on timeout."""
+        self.state._pending_label_event = asyncio.Event()
+        self.state._pending_label_text = None
+        await self.send_command(f"ZQS1{label_id}")
+        try:
+            await asyncio.wait_for(self.state._pending_label_event.wait(), timeout=2.0)
+            return self.state._pending_label_text
+        except TimeoutError:
+            _LOGGER.debug("Timeout waiting for label %s", label_id)
+            return None
+        finally:
+            self.state._pending_label_event = None
 
     async def get_labels(self) -> int:
         """Query all labels (inputs A0-D9, custom modes, CMS, styles).
@@ -826,7 +838,7 @@ class LumagenClient:
         all_labels: dict[str, str] = {}
         expected = 0
 
-        # Input labels: A0-D7 (reverse iteration works around firmware bug)
+        # Input labels: A0-D9 (reverse iteration works around firmware bug)
         for mem in "ABCD":
             for i in reversed(range(10)):
                 expected += 1
@@ -853,35 +865,52 @@ class LumagenClient:
         self.state.cms_labels = {k: v for k, v in all_labels.items() if k[0] == "2"}
         self.state.style_labels = {k: v for k, v in all_labels.items() if k[0] == "3"}
 
-        self._notify_state_changed()
         return expected - len(all_labels)
 
-    async def _query_label(self, label_id: str) -> str | None:
-        """Query a single label by ID. Returns the text or None on timeout."""
-        self._pending_label_id = label_id
-        self._label_event = asyncio.Event()
-        self._last_label_value = None
-        await self.send_command(f"ZQS1{label_id}")
-        try:
-            await asyncio.wait_for(self._label_event.wait(), timeout=2.0)
-            return self._last_label_value
-        except TimeoutError:
-            _LOGGER.debug("Timeout waiting for label %s", label_id)
-            return None
-        finally:
-            self._pending_label_id = None
+    async def set_label(self, category: LabelCategory, index: int, text: str) -> None:
+        """Set a label on the device.
 
-    def get_source_list(self) -> list[str]:
-        """Return ordered source labels for the current input memory.
-
-        Labels are stored per input memory at indices 0-9, where label
-        index 0 = logical input 1, index 9 = logical input 10.
+        *category*: 'A'-'D' (input per input memory), '0' (all input memories),
+                    '1' (custom mode), '2' (CMS), '3' (style).
+        *index*: label index (0-9 for inputs, 0-7 for others).
+        *text*: label text (max 10 for inputs, 7 for custom modes,
+                8 for CMS/styles).
         """
-        mem = self.state.input_memory or "A"
-        return [
-            f"{self.state.input_labels.get(f'{mem}{i}', 'Input')} ({i + 1})"
-            for i in range(10)
-        ]
+        if category not in ("A", "B", "C", "D", "0", "1", "2", "3"):
+            raise ValueError(f"Invalid label category: {category!r}")
+        max_index = 9 if category in ("A", "B", "C", "D", "0") else 7
+        if not 0 <= index <= max_index:
+            raise ValueError(
+                f"Label index must be 0-{max_index} for category"
+                f" {category!r}, got {index}"
+            )
+        max_len = (
+            10 if category in ("A", "B", "C", "D", "0") else 7 if category == "1" else 8
+        )
+        if not text.isascii():
+            raise ValueError("Label text must be ASCII only")
+        if len(text) > max_len:
+            raise ValueError(f"Label text must be <={max_len} chars, got {len(text)}")
+        await self.send_command(f"ZY524{category}{index}{text}\r")
+        # Re-fetch to confirm; use the sent text as the authoritative
+        # value since the device may truncate.
+        label_id = f"{category}{index}"
+        await self._query_label(label_id)
+        label_text = text
+        # Update the appropriate label dict
+        if category in ("A", "B", "C", "D"):
+            self.state.input_labels[label_id] = label_text
+        elif category == "0":
+            # Category 0 sets all input memories at once
+            for mem in "ABCD":
+                self.state.input_labels[f"{mem}{index}"] = label_text
+        elif category == "1":
+            self.state.custom_mode_labels[label_id] = label_text
+        elif category == "2":
+            self.state.cms_labels[label_id] = label_text
+        elif category == "3":
+            self.state.style_labels[label_id] = label_text
+        self._notify_state_changed()
 
     # -- Convenience commands -----------------------------------------------
 
@@ -1096,54 +1125,6 @@ class LumagenClient:
         """Enable or disable game mode."""
         await self.send_command(f"ZY551{'1' if enabled else '0'}\r")
         await self.send_command("ZQI53")
-
-    # -- Labels -------------------------------------------------------------
-
-    async def set_label(self, category: LabelCategory, index: int, text: str) -> None:
-        """Set a label on the device.
-
-        *category*: 'A'-'D' (input per input memory), '0' (all input memories),
-                    '1' (custom mode), '2' (CMS), '3' (style).
-        *index*: label index (0-9 for inputs, 0-7 for others).
-        *text*: label text (max 10 for inputs, 7 for custom modes,
-                8 for CMS/styles).
-        """
-        if category not in ("A", "B", "C", "D", "0", "1", "2", "3"):
-            raise ValueError(f"Invalid label category: {category!r}")
-        max_index = 9 if category in ("A", "B", "C", "D", "0") else 7
-        if not 0 <= index <= max_index:
-            raise ValueError(
-                f"Label index must be 0-{max_index} for category"
-                f" {category!r}, got {index}"
-            )
-        max_len = (
-            10 if category in ("A", "B", "C", "D", "0") else 7 if category == "1" else 8
-        )
-        if not text.isascii():
-            raise ValueError("Label text must be ASCII only")
-        if len(text) > max_len:
-            raise ValueError(f"Label text must be <={max_len} chars, got {len(text)}")
-        await self.send_command(f"ZY524{category}{index}{text}\r")
-        # Re-fetch to confirm; use the sent text as the authoritative
-        # value since the device may truncate and the response can have
-        # concatenated protocol data that corrupts the label text.
-        label_id = f"{category}{index}"
-        await self._query_label(label_id)
-        label_text = text
-        # Update the appropriate label dict
-        if category in ("A", "B", "C", "D"):
-            self.state.input_labels[label_id] = label_text
-        elif category == "0":
-            # Category 0 sets all input memories at once
-            for mem in "ABCD":
-                self.state.input_labels[f"{mem}{index}"] = label_text
-        elif category == "1":
-            self.state.custom_mode_labels[label_id] = label_text
-        elif category == "2":
-            self.state.cms_labels[label_id] = label_text
-        elif category == "3":
-            self.state.style_labels[label_id] = label_text
-        self._notify_state_changed()
 
     # -- Misc ---------------------------------------------------------------
 
