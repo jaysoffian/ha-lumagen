@@ -525,6 +525,7 @@ class LumagenClient:
         self._on_connection_changed: Callable[[bool], None] | None = None
         self._last_recv: float = 0.0
         self._write_lock = asyncio.Lock()
+        self._label_lock = asyncio.Lock()
         self._last_power: PowerState | None = None
         self._power_on_task: asyncio.Task[None] | None = None
         self._state_waiters: list[
@@ -840,11 +841,12 @@ class LumagenClient:
 
     async def reload_config(self) -> None:
         """Re-fetch identity, config state, and all labels."""
-        await self.query_identity()
-        await self.send_command("ZQI53")
-        await self.send_command("ZQI54")
-        await self.query_labels()
-        self._notify_state_changed()
+        async with self._label_lock:
+            await self.query_identity()
+            await self.send_command("ZQI53")
+            await self.send_command("ZQI54")
+            await self.query_labels()
+            self._notify_state_changed()
 
     # -- Labels -------------------------------------------------------------
 
@@ -925,9 +927,10 @@ class LumagenClient:
             raise ValueError("Label text must be ASCII only")
         if len(text) > max_len:
             raise ValueError(f"Label text must be <={max_len} chars, got {len(text)}")
-        await self.send_command(f"ZY524{category}{index}{text}\r")
-        if await self._query_label(category, index):
-            self._notify_state_changed()
+        async with self._label_lock:
+            await self.send_command(f"ZY524{category}{index}{text}\r")
+            if await self._query_label(category, index):
+                self._notify_state_changed()
 
     # -- Convenience commands -----------------------------------------------
 
