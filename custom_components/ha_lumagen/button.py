@@ -71,7 +71,7 @@ class LumagenDisplayInputAspectButton(LumagenEntity, ButtonEntity):
 class LumagenRestartOutputsButton(LumagenEntity, ButtonEntity):
     """Restart outputs if TV/projector has trouble locking on the signal."""
 
-    _attr_name = "Restart outputs"
+    _attr_translation_key = "restart_outputs"
     _attr_icon = "mdi:restart"
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:

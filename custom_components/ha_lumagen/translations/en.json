@@ -11,8 +11,7 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the Lumagen device. Please check your connection settings and ensure the device is powered on.",
-      "unknown": "An unexpected error occurred. Please try again."
+      "cannot_connect": "Failed to connect to the Lumagen device. Please check your connection settings and ensure the device is powered on."
     },
     "abort": {
       "already_configured": "This Lumagen device is already configured."
@@ -29,6 +28,45 @@
           "aspect_ratios": "Select which aspect ratios appear in the Aspect Ratio menu. Unselected ratios will not be commandable."
         }
       }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "logical_input": { "name": "Logical Input" },
+      "physical_input": { "name": "Physical Input" },
+      "input_configuration": { "name": "Input Configuration" },
+      "source_vertical_resolution": { "name": "Source Resolution" },
+      "source_vertical_rate": { "name": "Source Refresh Rate" },
+      "source_content_aspect": { "name": "Source Content Aspect Ratio" },
+      "source_raster_aspect": { "name": "Source Raster Aspect Ratio" },
+      "source_dynamic_range": { "name": "Source Dynamic Range" },
+      "source_mode": { "name": "Source Mode" },
+      "nls_active": { "name": "NLS Active" },
+      "detected_content_aspect": { "name": "Detected Content Aspect Ratio" },
+      "detected_raster_aspect": { "name": "Detected Raster Aspect Ratio" },
+      "output_vertical_resolution": { "name": "Output Resolution" },
+      "output_vertical_rate": { "name": "Output Refresh Rate" },
+      "output_aspect": { "name": "Output Aspect Ratio" },
+      "output_colorspace": { "name": "Output Colorspace" },
+      "output_cms": { "name": "Output CMS" },
+      "output_style": { "name": "Output Style" },
+      "model_name": { "name": "Model Name" },
+      "software_revision": { "name": "Software Revision" },
+      "model_number": { "name": "Model Number" },
+      "serial_number": { "name": "Serial Number" }
+    },
+    "button": {
+      "reload_config": { "name": "Reload Config" },
+      "display_input_aspect": { "name": "Show Input Aspect" },
+      "restart_outputs": { "name": "Restart Outputs" }
+    },
+    "select": {
+      "input": { "name": "Input" },
+      "input_aspect_ratio": { "name": "Input Aspect Ratio" },
+      "memory": { "name": "Memory" }
+    },
+    "remote": {
+      "remote": { "name": "Remote" }
     }
   }
 }
