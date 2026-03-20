@@ -61,37 +61,14 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         data = await self._store.async_load()
         if not data:
             return False
-        s = self.client.state
-        # Identity
-        s.model_name = data.get("model_name")
-        s.software_revision = data.get("software_revision")
-        s.model_number = data.get("model_number")
-        s.serial_number = data.get("serial_number")
-        # Config
-        if "game_mode" in data:
-            s.game_mode = data["game_mode"]
-        if "auto_aspect" in data:
-            s.auto_aspect = data["auto_aspect"]
-        # Labels
-        s.labels.update(data.get("labels", {}))
-        self.async_set_updated_data(copy.deepcopy(s))
+        self.client.state.load_stored_dict(data)
+        self.async_set_updated_data(copy.deepcopy(self.client.state))
         _LOGGER.debug("Loaded identity and labels from storage")
         return True
 
     async def async_save_stored_state(self) -> None:
         """Persist identity, config, and labels to disk."""
-        s = self.client.state
-        await self._store.async_save(
-            {
-                "model_name": s.model_name,
-                "software_revision": s.software_revision,
-                "model_number": s.model_number,
-                "serial_number": s.serial_number,
-                "game_mode": s.game_mode,
-                "auto_aspect": s.auto_aspect,
-                "labels": dict(s.labels),
-            }
-        )
+        await self._store.async_save(self.client.state.to_stored_dict())
 
     async def reload_config(self, max_attempts: int = 5) -> None:
         """Re-fetch identity, config state, and labels from device."""

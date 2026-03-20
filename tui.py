@@ -424,16 +424,6 @@ class LumagenTUI(App):
 
     _STATE_FILE = pathlib.Path(__file__).resolve().parent / "tui.state"
 
-    _STORED_FIELDS = (
-        "model_name",
-        "software_revision",
-        "model_number",
-        "serial_number",
-        "game_mode",
-        "auto_aspect",
-        "labels",
-    )
-
     def __init__(self, host: str, port: int) -> None:
         super().__init__()
         self._host = host
@@ -522,8 +512,7 @@ class LumagenTUI(App):
 
     def _save_state(self) -> None:
         """Persist identity, config, and labels to tui.state."""
-        s = self._client.state
-        data = {k: getattr(s, k) for k in self._STORED_FIELDS}
+        data = self._client.state.to_stored_dict()
         self._STATE_FILE.write_text(json.dumps(data, indent=2) + "\n")
 
     def _load_state(self) -> bool:
@@ -534,14 +523,7 @@ class LumagenTUI(App):
             data = json.loads(self._STATE_FILE.read_text())
         except (json.JSONDecodeError, OSError):
             return False
-        s = self._client.state
-        for key in self._STORED_FIELDS:
-            if key not in data:
-                continue
-            if key == "labels":
-                s.labels.update(data[key])
-            else:
-                setattr(s, key, data[key])
+        self._client.state.load_stored_dict(data)
         return True
 
     def _log_sent(self, cmd: str) -> None:
@@ -792,7 +774,7 @@ class LumagenTUI(App):
             ("Styles", "3"),
         ]
         for heading, prefix in label_sets:
-            group = {k: v for k, v in sorted(state.labels.items()) if k[0] == prefix}
+            group = state.labels_by_prefix(prefix)
             if group:
                 log.write(f"[bold]{heading}:[/]")
                 for lid, text in group.items():
