@@ -17,6 +17,19 @@
       "already_configured": "This Lumagen device is already configured."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lumagen Options",
+        "data": {
+          "aspect_ratios": "Aspect Ratios"
+        },
+        "data_description": {
+          "aspect_ratios": "Select which aspect ratios appear in the Aspect Ratio menu. Unselected ratios will not be commandable."
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "logical_input": { "name": "Logical Input" },

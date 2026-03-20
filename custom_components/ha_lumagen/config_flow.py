@@ -7,13 +7,21 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.config_entries import ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
-from .client import LumagenClient
-from .const import DEFAULT_PORT, DOMAIN, ERROR_CANNOT_CONNECT
+from .client import ASPECT_COMMANDS, LumagenClient
+from .const import CONF_ASPECT_RATIOS, DEFAULT_PORT, DOMAIN, ERROR_CANNOT_CONNECT
 
 _LOGGER = logging.getLogger(__name__)
+
+ALL_ASPECT_KEYS = list(ASPECT_COMMANDS.keys())
 
 STEP_USER_SCHEMA = vol.Schema(
     {
@@ -29,6 +37,13 @@ class LumagenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Lumagen."""
 
     VERSION = 1
+
+    @staticmethod
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> OptionsFlow:
+        """Return the options flow handler."""
+        return LumagenOptionsFlow(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -79,3 +94,35 @@ class LumagenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return False
         finally:
             await client.disconnect()
+
+
+class LumagenOptionsFlow(OptionsFlow):
+    """Handle Lumagen options."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self._config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Configure which aspect ratios appear in the select menu."""
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+
+        current = self._config_entry.options.get(CONF_ASPECT_RATIOS, ALL_ASPECT_KEYS)
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_ASPECT_RATIOS, default=current): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(value=k, label=k) for k in ALL_ASPECT_KEYS
+                        ],
+                        multiple=True,
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
+            }
+        )
+
+        return self.async_show_form(step_id="init", data_schema=schema)

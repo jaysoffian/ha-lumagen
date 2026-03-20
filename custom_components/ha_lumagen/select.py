@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .client import ASPECT_COMMANDS, InputMemory, LumagenState
-from .const import DOMAIN
+from .const import CONF_ASPECT_RATIOS, DOMAIN
 from .coordinator import LumagenCoordinator
 from .entity import LumagenEntity
 
@@ -54,8 +54,17 @@ async def _select_input_source(coord: LumagenCoordinator, option: str) -> None:
     await coord.client.select_input(input_number)
 
 
-def _current_aspect(data: LumagenState, _coord: LumagenCoordinator) -> str | None:
-    return data.source_aspect
+def _configured_aspects(coord: LumagenCoordinator) -> list[str]:
+    """Return the user-configured aspect ratio list."""
+    return coord.entry.options.get(CONF_ASPECT_RATIOS, list(ASPECT_COMMANDS.keys()))
+
+
+def _current_aspect(data: LumagenState, coord: LumagenCoordinator) -> str | None:
+    aspect = data.source_aspect
+    if aspect is None:
+        return None
+    configured = _configured_aspects(coord)
+    return aspect if aspect in configured else None
 
 
 async def _select_aspect(coord: LumagenCoordinator, option: str) -> None:
@@ -89,7 +98,7 @@ SELECT_ENTITIES: tuple[LumagenSelectEntityDescription, ...] = (
         icon="mdi:aspect-ratio",
         current_option_fn=_current_aspect,
         select_option_fn=_select_aspect,
-        static_options=list(ASPECT_COMMANDS.keys()),
+        options_fn=_configured_aspects,
     ),
     LumagenSelectEntityDescription(
         key="memory",
