@@ -57,12 +57,16 @@
     },
     "button": {
       "reload_config": { "name": "Reload Config" },
-      "reset_auto_aspect": { "name": "Reset Auto Aspect" }
+      "display_input_aspect": { "name": "Show Input Aspect" },
+      "restart_outputs": { "name": "Restart Outputs" }
     },
     "select": {
       "input": { "name": "Input" },
       "input_aspect_ratio": { "name": "Input Aspect Ratio" },
       "memory": { "name": "Memory" }
+    },
+    "remote": {
+      "remote": { "name": "Remote" }
     }
   }
 }

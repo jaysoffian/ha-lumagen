@@ -20,6 +20,11 @@
 - Runs via `#!/usr/bin/env -S uv run python` — uses the project venv, not `uv run --script`.
 - PEP 723 inline script metadata does NOT apply; new deps go in `pyproject.toml` `[dependency-groups] dev`.
 
+## HA entities
+- When adding or renaming HA entities, update `strings.json` with a matching translation key.
+- Use `_attr_translation_key` (not `_attr_name`) so HA resolves names from `strings.json`.
+- Always keep `translations/en.json` in sync with `strings.json` — HA loads translations from `translations/en.json` at runtime, not `strings.json`.
+
 ## Reference docs
 - `docs/development.md` — development setup, pre-commit details
 - `docs/architecture.md` — architecture, state management, startup sequence, connection lifecycle
