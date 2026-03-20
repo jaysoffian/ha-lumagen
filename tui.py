@@ -482,11 +482,11 @@ class LumagenTUI(App):
         )
 
         if self._client.state.connected:
-            await self._client.fetch_full_state()
+            await self._client.query_full_state()
             self._refresh_state()
             if not has_stored:
                 log.write("[dim]Fetching labels…[/]")
-                await self._client.get_labels()
+                await self._client.query_labels()
                 self._save_state()
                 self._refresh_state()
         else:
@@ -811,7 +811,7 @@ class LumagenTUI(App):
     async def action_refresh_info(self) -> None:
         log = self.query_one("#log", RichLog)
         log.write("[dim]Refreshing signal info…[/]")
-        await self._client.fetch_runtime_state()
+        await self._client.query_runtime_state()
         self._refresh_state()
 
     async def action_reload_config(self) -> None:

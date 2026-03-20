@@ -209,7 +209,7 @@ class LumagenState:
     game_mode: bool | None = None
     auto_aspect: bool | None = None
 
-    # Labels (populated by get_labels / set_label)
+    # Labels (populated by query_labels / set_label)
     _labels: LabelDict = field(default_factory=LabelDict)
 
     # Label query correlation (not part of equality/repr)
@@ -641,7 +641,7 @@ class LumagenClient:
             await self._open_connection()
             if self.state.connected:
                 _LOGGER.info("Reconnected to %s:%s", self._host, self._port)
-                await self.fetch_power()
+                await self.query_power()
                 return
             delay = min(delay * 2, 30.0)
 
@@ -793,7 +793,7 @@ class LumagenClient:
         _LOGGER.info("Power on detected — refreshing state in 10s")
         await asyncio.sleep(10)
         try:
-            await self.fetch_runtime_state()
+            await self.query_runtime_state()
         except Exception:
             _LOGGER.exception("Error querying state after power-on")
 
@@ -818,23 +818,23 @@ class LumagenClient:
 
     # -- State queries ------------------------------------------------------
 
-    async def fetch_identity(self) -> None:
+    async def query_identity(self) -> None:
         """Query device identity (model, firmware, serial)."""
         await self.send_command("ZQS01")
 
-    async def fetch_power(self) -> None:
+    async def query_power(self) -> None:
         """Query power state."""
         await self.send_command("ZQS02")
 
-    async def fetch_runtime_state(self) -> None:
+    async def query_runtime_state(self) -> None:
         """Query signal info (incl. input memory). Startup & power-on."""
         await self.send_command("ZQI25")
 
-    async def fetch_full_state(self) -> None:
+    async def query_full_state(self) -> None:
         """Query identity, power, signal info, and config state."""
-        await self.fetch_identity()
-        await self.fetch_power()
-        await self.fetch_runtime_state()
+        await self.query_identity()
+        await self.query_power()
+        await self.query_runtime_state()
         await self.send_command("ZQI53")
         await self.send_command("ZQI54")
 
@@ -843,10 +843,10 @@ class LumagenClient:
 
         Returns the number of labels that failed to resolve (0 = success).
         """
-        await self.fetch_identity()
+        await self.query_identity()
         await self.send_command("ZQI53")
         await self.send_command("ZQI54")
-        failed = await self.get_labels()
+        failed = await self.query_labels()
         self._notify_state_changed()
         return failed
 
@@ -893,7 +893,7 @@ class LumagenClient:
             self.state._labels[label_id] = text
         return True
 
-    async def get_labels(self) -> int:
+    async def query_labels(self) -> int:
         """Query all labels (inputs A0-D9, custom modes, CMS, styles).
 
         Populates the per-category state fields and returns the number of
