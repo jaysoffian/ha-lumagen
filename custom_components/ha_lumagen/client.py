@@ -815,21 +815,42 @@ class LumagenClient:
             for i in range(10)
         ]
 
-    async def _query_label(self, label_id: str) -> str | None:
-        """Query a single label by ID. Returns the text or None on timeout."""
+    async def _query_label(self, category: LabelCategory, index: int) -> bool:
+        """Query a single label and store the result.
+
+        Returns True if the label was resolved, False on timeout.
+        """
+        label_id = f"{category}{index}"
         self.state._pending_label_event = asyncio.Event()
         self.state._pending_label_text = None
         await self.send_command(f"ZQS1{label_id}")
         try:
             await asyncio.wait_for(self.state._pending_label_event.wait(), timeout=2.0)
-            text = self.state._pending_label_text
-            _LOGGER.debug("state: label %s = %r", label_id, text)
-            return text
         except TimeoutError:
             _LOGGER.debug("Timeout waiting for label %s", label_id)
-            return None
+            return False
         finally:
             self.state._pending_label_event = None
+
+        text = self.state._pending_label_text
+        if text is None:
+            _LOGGER.warning("Label %s event fired but text was never set", label_id)
+            return False
+
+        _LOGGER.debug("state: label %s = %r", label_id, text)
+
+        if category in "ABCD":
+            self.state.input_labels[label_id] = text
+        elif category == "0":
+            for mem in "ABCD":
+                self.state.input_labels[f"{mem}{index}"] = text
+        elif category == "1":
+            self.state.custom_mode_labels[label_id] = text
+        elif category == "2":
+            self.state.cms_labels[label_id] = text
+        elif category == "3":
+            self.state.style_labels[label_id] = text
+        return True
 
     async def get_labels(self) -> int:
         """Query all labels (inputs A0-D9, custom modes, CMS, styles).
@@ -840,28 +861,15 @@ class LumagenClient:
         failed = 0
 
         # Input labels: A0-D9 (reverse iteration works around firmware bug)
-        for mem in "ABCD":
+        for c in ("A", "B", "C", "D"):
             for i in reversed(range(10)):
-                label_id = f"{mem}{i}"
-                val = await self._query_label(label_id)
-                if val is not None:
-                    self.state.input_labels[label_id] = val
-                else:
+                if not await self._query_label(c, i):
                     failed += 1
 
         # Custom mode (1), CMS (2), Style (3) labels: X0-X7
-        label_dicts = {
-            "1": self.state.custom_mode_labels,
-            "2": self.state.cms_labels,
-            "3": self.state.style_labels,
-        }
-        for category, labels in label_dicts.items():
+        for c in ("1", "2", "3"):
             for i in range(8):
-                label_id = f"{category}{i}"
-                val = await self._query_label(label_id)
-                if val is not None:
-                    labels[label_id] = val
-                else:
+                if not await self._query_label(c, i):
                     failed += 1
 
         return failed
@@ -891,25 +899,8 @@ class LumagenClient:
         if len(text) > max_len:
             raise ValueError(f"Label text must be <={max_len} chars, got {len(text)}")
         await self.send_command(f"ZY524{category}{index}{text}\r")
-        # Re-fetch to confirm; use the sent text as the authoritative
-        # value since the device may truncate.
-        label_id = f"{category}{index}"
-        await self._query_label(label_id)
-        label_text = text
-        # Update the appropriate label dict
-        if category in ("A", "B", "C", "D"):
-            self.state.input_labels[label_id] = label_text
-        elif category == "0":
-            # Category 0 sets all input memories at once
-            for mem in "ABCD":
-                self.state.input_labels[f"{mem}{index}"] = label_text
-        elif category == "1":
-            self.state.custom_mode_labels[label_id] = label_text
-        elif category == "2":
-            self.state.cms_labels[label_id] = label_text
-        elif category == "3":
-            self.state.style_labels[label_id] = label_text
-        self._notify_state_changed()
+        if await self._query_label(category, index):
+            self._notify_state_changed()
 
     # -- Convenience commands -----------------------------------------------
 
