@@ -333,6 +333,7 @@ HELP_TEXT = """\
   remote <cmd> — menu, up, ok, exit, …
   save — save config to flash
   hotplug \\[input] — toggle HDMI hotplug
+  restart — restart outputs (ALT+PREV)
 
 [bold]Raw RS232[/]
   Z... — e.g. ZQS01, ZQI24
@@ -370,6 +371,7 @@ _COMMAND_SUGGESTIONS = sorted(
         "remote 10+",
         "save",
         "hotplug",
+        "restart",
     }
 )
 
@@ -688,6 +690,11 @@ class LumagenTUI(App):
             else:
                 await self._client.trigger_hotplug()
             log.write("[green]Hotplug triggered[/]")
+            return
+
+        if cmd == "restart":
+            await self._client.restart_outputs()
+            log.write("[green]Outputs restarted[/]")
             return
 
         if cmd == "previous":

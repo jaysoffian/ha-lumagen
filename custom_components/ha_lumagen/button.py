@@ -24,6 +24,7 @@ async def async_setup_entry(
         [
             LumagenReloadConfigButton(coordinator),
             LumagenDisplayInputAspectButton(coordinator),
+            LumagenRestartOutputsButton(coordinator),
         ]
     )
 
@@ -31,7 +32,7 @@ async def async_setup_entry(
 class LumagenReloadConfigButton(LumagenEntity, ButtonEntity):
     """Button to reload identity, config, and labels from the device."""
 
-    _attr_name = "Reload config"
+    _attr_translation_key = "reload_config"
     _attr_icon = "mdi:refresh"
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -55,7 +56,7 @@ class LumagenReloadConfigButton(LumagenEntity, ButtonEntity):
 class LumagenDisplayInputAspectButton(LumagenEntity, ButtonEntity):
     """Button to display input and aspect info on the OSD."""
 
-    _attr_name = "Show input aspect"
+    _attr_translation_key = "display_input_aspect"
     _attr_icon = "mdi:information-outline"
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:
@@ -65,3 +66,18 @@ class LumagenDisplayInputAspectButton(LumagenEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Show input and aspect on the device OSD."""
         await self.coordinator.client.display_input_aspect()
+
+
+class LumagenRestartOutputsButton(LumagenEntity, ButtonEntity):
+    """Restart outputs if TV/projector has trouble locking on the signal."""
+
+    _attr_name = "Restart outputs"
+    _attr_icon = "mdi:restart"
+
+    def __init__(self, coordinator: LumagenCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_restart_outputs"
+
+    async def async_press(self) -> None:
+        """Restart outputs via ALT, PREV remote sequence."""
+        await self.coordinator.client.restart_outputs()
