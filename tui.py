@@ -431,10 +431,7 @@ class LumagenTUI(App):
         "serial_number",
         "game_mode",
         "auto_aspect",
-        "input_labels",
-        "custom_mode_labels",
-        "cms_labels",
-        "style_labels",
+        "labels",
     )
 
     def __init__(self, host: str, port: int) -> None:
@@ -539,7 +536,11 @@ class LumagenTUI(App):
             return False
         s = self._client.state
         for key in self._STORED_FIELDS:
-            if key in data:
+            if key not in data:
+                continue
+            if key == "labels":
+                s.labels.update(data[key])
+            else:
                 setattr(s, key, data[key])
         return True
 
@@ -781,17 +782,17 @@ class LumagenTUI(App):
     def _show_labels(self, log: RichLog) -> None:
         """Display cached labels in the log panel."""
         state = self._client.state
-        label_sets: list[tuple[str, str, dict[str, str]]] = [
-            ("Inputs (Mem A)", "A", state.input_labels),
-            ("Inputs (Mem B)", "B", state.input_labels),
-            ("Inputs (Mem C)", "C", state.input_labels),
-            ("Inputs (Mem D)", "D", state.input_labels),
-            ("Custom Modes", "1", state.custom_mode_labels),
-            ("CMS", "2", state.cms_labels),
-            ("Styles", "3", state.style_labels),
+        label_sets: list[tuple[str, str]] = [
+            ("Inputs (Mem A)", "A"),
+            ("Inputs (Mem B)", "B"),
+            ("Inputs (Mem C)", "C"),
+            ("Inputs (Mem D)", "D"),
+            ("Custom Modes", "1"),
+            ("CMS", "2"),
+            ("Styles", "3"),
         ]
-        for heading, prefix, labels in label_sets:
-            group = {k: v for k, v in sorted(labels.items()) if k[0] == prefix}
+        for heading, prefix in label_sets:
+            group = {k: v for k, v in sorted(state.labels.items()) if k[0] == prefix}
             if group:
                 log.write(f"[bold]{heading}:[/]")
                 for lid, text in group.items():
