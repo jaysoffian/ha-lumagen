@@ -45,7 +45,7 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
         """Recompute _attr_ values from coordinator data. Override in subclasses.
 
         Availability tiers (subclasses override for their needs):
-        - Base (sensor, select): requires connected AND power == "on"
+        - Base (sensor, select): requires connected AND power
         - Control (switch, button, remote): requires connected only
         - Diagnostic sensors: requires connected only
         """
@@ -53,10 +53,8 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
         if data is None:
             self._attr_available = False
             return
-        self._attr_available = (
-            self.coordinator.last_update_success
-            and data.connected
-            and data.power == "on"
+        self._attr_available = bool(
+            self.coordinator.last_update_success and data.connected and data.power
         )
 
     def _handle_coordinator_update(self) -> None:

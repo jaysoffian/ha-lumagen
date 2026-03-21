@@ -17,7 +17,6 @@ _LOGGER = logging.getLogger(__name__)
 # Type aliases
 # ---------------------------------------------------------------------------
 
-PowerState = Literal["on", "off"]
 InputMemory = Literal["A", "B", "C", "D"]
 DynamicRange = Literal["SDR", "HDR"]
 SourceMode = Literal["Progressive", "Interlaced"]
@@ -161,7 +160,7 @@ class LumagenState:
     serial_number: str | None = None
 
     # Power
-    power: PowerState | None = None
+    power: bool | None = None
 
     # Input (from I00 and I24)
     logical_input: int | None = None
@@ -361,7 +360,7 @@ def _on_power(state: LumagenState, fields: list[str]) -> None:
     """S02 — 0 = standby, 1 = active."""
     if not fields:
         return
-    state.power = "on" if fields[0] == "1" else "off"
+    state.power = fields[0] == "1"
 
 
 @_on("I00")
@@ -440,7 +439,7 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> bool:
     mem = fields[23]
     if mem in get_args(InputMemory):
         state.input_memory = cast("InputMemory", mem)
-    state.power = "on" if fields[24] == "1" else "off"
+    state.power = fields[24] == "1"
     return notify
 
 
@@ -497,7 +496,7 @@ class LumagenClient:
         self._last_recv: float = 0.0
         self._write_lock = asyncio.Lock()
         self._label_lock = asyncio.Lock()
-        self._last_power: PowerState | None = None
+        self._last_power: bool | None = None
         self._power_on_task: asyncio.Task[None] | None = None
         self._state_waiters: list[
             tuple[asyncio.Event, Callable[[LumagenState], bool]]
@@ -647,13 +646,13 @@ class LumagenClient:
         # Special power messages
         if "Power-up complete" in line:
             self.state.clear_changed()
-            self.state.power = "on"
+            self.state.power = True
             if self.state.changed:
                 self._notify_state_changed()
             return
         if "POWER OFF" in line:
             self.state.clear_changed()
-            self.state.power = "off"
+            self.state.power = False
             if self.state.changed:
                 self._notify_state_changed()
             return
@@ -701,7 +700,7 @@ class LumagenClient:
             # Pick probe based on power state
             before = self._last_recv
             try:
-                if self.state.power == "on":
+                if self.state.power:
                     await self.send_command("ZQI25")
                 else:
                     await self.send_command("ZQS02")
@@ -731,7 +730,7 @@ class LumagenClient:
 
     def _notify_state_changed(self) -> None:
         power = self.state.power
-        if power == "on" and self._last_power is not None and self._last_power != "on":
+        if power and self._last_power is not None and not self._last_power:
             self._schedule_power_on_refresh()
         if power is not None:
             self._last_power = power

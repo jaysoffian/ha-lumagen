@@ -203,19 +203,19 @@ class TestHandlePower:
         state = LumagenState()
         _on_power(state, ["1"])
         assert state.changed
-        assert state.power == "on"
+        assert state.power
 
     def test_standby(self):
         state = LumagenState()
         _on_power(state, ["0"])
         assert state.changed
-        assert state.power == "off"
+        assert not state.power
 
     def test_unknown_value_treated_as_standby(self):
         state = LumagenState()
         _on_power(state, ["2"])
         assert state.changed
-        assert state.power == "off"
+        assert not state.power
 
     def test_empty_fields(self):
         state = LumagenState()
@@ -224,7 +224,7 @@ class TestHandlePower:
         assert not state.changed
 
     def test_no_change(self):
-        state = LumagenState(power="on")
+        state = LumagenState(power=True)
         state.clear_changed()
         _on_power(state, ["1"])
         assert not state.changed
@@ -347,14 +347,14 @@ class TestHandleFullInfo:
         _on_full_info(state, fields)
         assert state.changed
         assert state.input_memory == "B"
-        assert state.power == "on"
+        assert state.power
 
     def test_v5_power_off(self):
         """v5 power status field: 0 = off."""
         fields = _make_i24_fields(input_memory="A", power_status="0")
         state = LumagenState()
         _on_full_info(state, fields)
-        assert state.power == "off"
+        assert not state.power
 
     def test_nls_active(self):
         fields = _make_i24_fields(nls="N")
@@ -422,7 +422,7 @@ class TestHandleFullInfo:
         state = LumagenState()
         _on_full_info(state, fields)
         assert state.changed
-        assert state.power == "on"
+        assert state.power
 
 
 # ---------------------------------------------------------------------------
@@ -444,16 +444,16 @@ class TestProcessLine:
 
     def test_power_up_complete(self):
         self.client._on_readline("Power-up complete.")
-        assert self.client.state.power == "on"
+        assert self.client.state.power
         assert self.state_changes == 1
 
     def test_power_off(self):
         self.client._on_readline("POWER OFF.")
-        assert self.client.state.power == "off"
+        assert not self.client.state.power
         assert self.state_changes == 1
 
     def test_power_up_no_duplicate_notify(self):
-        self.client.state.power = "on"
+        self.client.state.power = True
         self.client.state.clear_changed()
         self.client._on_readline("Power-up complete.")
         assert self.state_changes == 0
@@ -479,11 +479,11 @@ class TestProcessLine:
 
     def test_s02_active(self):
         self.client._on_readline("ZQS02!S02,1")
-        assert self.client.state.power == "on"
+        assert self.client.state.power
 
     def test_s02_standby(self):
         self.client._on_readline("ZQS02!S02,0")
-        assert self.client.state.power == "off"
+        assert not self.client.state.power
 
     # -- I00 input info with echo ------------------------------------------
 

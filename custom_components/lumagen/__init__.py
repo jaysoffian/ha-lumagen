@@ -158,7 +158,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await client.send_command("ZQI54")
 
         # If device is on, fetch runtime state
-        if client.state.power == "on":
+        if client.state.power:
             await client.query_runtime_state()
             await client.wait_for(lambda s: s.logical_input is not None, timeout=5)
 

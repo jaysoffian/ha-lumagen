@@ -36,7 +36,7 @@ SWITCH_ENTITIES: tuple[LumagenSwitchEntityDescription, ...] = (
         key="power",
         translation_key="power",
         icon="mdi:power",
-        is_on_fn=lambda s: s.power == "on",
+        is_on_fn=lambda s: s.power,
         turn_on_fn=lambda c: c.client.power_on(),
         turn_off_fn=lambda c: c.client.power_off(),
         available_in_standby=True,

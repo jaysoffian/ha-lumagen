@@ -237,7 +237,7 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     (
         "Power",
         "power",
-        lambda s: {"on": "On", "off": "Off"}.get(s.power or "", "—"),
+        lambda s: {True: "On", False: "Off", None: "—"}[s.power],
     ),
     ("Model", "model_name", lambda s: s.model_name or "—"),
     ("Firmware", "software_revision", lambda s: s.software_revision or "—"),
