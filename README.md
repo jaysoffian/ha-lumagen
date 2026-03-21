@@ -359,4 +359,4 @@ A standalone Textual TUI for exercising the client against a real Lumagen:
 LUMAGEN_HOST=lrp LUMAGEN_PORT=5555 ./tui.py
 ```
 
-<img src="tui.svg" alt="TUI screenshot" width="600">
+<img src="assets/tui.svg" alt="TUI screenshot" width="600">
