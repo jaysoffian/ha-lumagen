@@ -302,6 +302,24 @@ class LumagenState:
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _safe_int(s: str, base: int = 10) -> int | None:
+    """Parse an int, returning None on failure."""
+    with suppress(ValueError):
+        return int(s, base)
+    return None
+
+
+def _safe_aspect(code: str) -> str:
+    """Convert numeric aspect code ('240') to display name ('2.40')."""
+    val = _safe_int(code) or 0
+    return f"{val / 100:.2f}"
+
+
+# ---------------------------------------------------------------------------
 # Response handlers — mutate state directly; changes tracked by __setattr__
 # ---------------------------------------------------------------------------
 
@@ -324,15 +342,6 @@ def _on(
         return fn
 
     return decorator
-
-
-def _aspect_name(code: str) -> str:
-    """Convert numeric aspect code ('240') to display name ('2.40')."""
-    try:
-        val = int(code)
-    except ValueError:
-        val = 0
-    return f"{val / 100:.2f}"
 
 
 @_on("S01")
@@ -364,21 +373,6 @@ def _on_input_info(state: LumagenState, fields: list[str]) -> None:
     state.physical_input = _safe_int(fields[2])
 
 
-def _safe_int(s: str) -> int | None:
-    """Parse an int, returning None on failure."""
-    with suppress(ValueError):
-        return int(s)
-    return None
-
-
-def _parse_outputs_on(hex_str: str) -> int | None:
-    """Parse WWWW hex bitmask into an integer."""
-    try:
-        return int(hex_str, 16)
-    except ValueError:
-        return None
-
-
 @_on("I21", "I22", "I23", "I24", "I25")
 def _on_full_info(state: LumagenState, fields: list[str]) -> None:
     """I21/I22/I23/I24/I25 — full device info.
@@ -403,16 +397,16 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> None:
     state.source_vertical_resolution = _safe_int(fields[2])
     state.source_3d_mode = _3D_MODE.get(fields[3])
     state.input_config_number = _safe_int(fields[4])
-    state.source_raster_aspect = _aspect_name(fields[5])
-    state.source_content_aspect = _aspect_name(fields[6])
+    state.source_raster_aspect = _safe_aspect(fields[5])
+    state.source_content_aspect = _safe_aspect(fields[6])
     state.nls_active = fields[7] == "N"
     state.output_3d_mode = _3D_MODE.get(fields[8])
-    state.outputs_on = _parse_outputs_on(fields[9])
+    state.outputs_on = _safe_int(fields[9], base=16)
     state.output_cms = _safe_int(fields[10])
     state.output_style = _safe_int(fields[11])
     state.output_vertical_rate = _safe_int(fields[12])
     state.output_vertical_resolution = _safe_int(fields[13])
-    state.output_aspect = _aspect_name(fields[14])
+    state.output_aspect = _safe_aspect(fields[14])
 
     # v2+ fields (15-18)
     if len(fields) < 19:
@@ -431,8 +425,8 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> None:
     # v4 fields (21-22) — detected raster/content aspect
     if len(fields) < 23:
         return
-    state.detected_raster_aspect = _aspect_name(fields[21])
-    state.detected_content_aspect = _aspect_name(fields[22])
+    state.detected_raster_aspect = _safe_aspect(fields[21])
+    state.detected_content_aspect = _safe_aspect(fields[22])
 
     # v5 fields (23-24) — input memory, power status
     if len(fields) < 25:

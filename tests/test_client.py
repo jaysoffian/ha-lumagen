@@ -10,11 +10,11 @@ from custom_components.lumagen.client import (
     REMOTE_COMMANDS,
     LumagenClient,
     LumagenState,
-    _aspect_name,
     _on_device_id,
     _on_full_info,
     _on_input_info,
     _on_power,
+    _safe_aspect,
     _safe_int,
 )
 
@@ -118,7 +118,7 @@ class TestSafeInt:
 
 
 # ---------------------------------------------------------------------------
-# _aspect_name
+# _safe_aspect
 # ---------------------------------------------------------------------------
 
 
@@ -140,20 +140,20 @@ class TestAspectName:
         ],
     )
     def test_known_aspects(self, code: str, expected: str):
-        assert _aspect_name(code) == expected
+        assert _safe_aspect(code) == expected
 
     def test_unknown_positive(self):
         """Unknown positive code falls back to decimal formatting."""
-        assert _aspect_name("166") == "1.66"
+        assert _safe_aspect("166") == "1.66"
 
     def test_zero(self):
-        assert _aspect_name("0") == "0.00"
+        assert _safe_aspect("0") == "0.00"
 
     def test_non_numeric(self):
-        assert _aspect_name("abc") == "0.00"
+        assert _safe_aspect("abc") == "0.00"
 
     def test_empty(self):
-        assert _aspect_name("") == "0.00"
+        assert _safe_aspect("") == "0.00"
 
 
 # ---------------------------------------------------------------------------
