@@ -163,16 +163,16 @@ class LumagenState:
     # Power
     power: bool | None = None
 
-    # Input (from I00 and I24)
+    # Input
     logical_input: int | None = None
     input_memory: InputMemory | None = None
     physical_input: int | None = None
     input_config_number: int | None = None
 
-    # Video status (from I2x field 0)
+    # Video status
     input_video_status: InputVideoStatus | None = None
 
-    # Source (from I24)
+    # Source
     source_content_aspect: str | None = None  # "1.33", "1.78", "2.40", …
     source_raster_aspect: str | None = None
     detected_content_aspect: str | None = None
@@ -184,7 +184,7 @@ class LumagenState:
     source_vertical_resolution: int | None = None
     nls: bool | None = None
 
-    # Output (from I24)
+    # Output
     output_vertical_rate: int | None = None
     output_vertical_resolution: int | None = None
     output_cms: int | None = None
@@ -195,7 +195,7 @@ class LumagenState:
     output_mode: OutputMode | None = None
     outputs_on: int | None = None  # raw bitmask from WWWW field
 
-    # Config (from I53, I54)
+    # Config
     game_mode: bool | None = None
     auto_aspect: bool | None = None
 
