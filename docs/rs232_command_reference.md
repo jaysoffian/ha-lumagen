@@ -408,6 +408,7 @@ See CEA 861.3 for value definitions.
 | PWR | Power status (0=off, 1=on) | v5 |
 
 **Notes**:
+- All queries (`ZQS0x`, `ZQI2x`, `ZQI5x`) return valid responses in standby. Signal-related fields (`ZQI2x`) reflect the last-known state before power-off rather than live signal data.
 - Parsers should tolerate additional comma-delimited fields appended to the latest full info response that may be present in future firmware.
 - The `ZQI21`–`ZQI25` response is also sent by the Lumagen unsolicited whenever it detects mode changes, depending upon the "report mode changes" setting.
 

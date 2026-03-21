@@ -639,3 +639,122 @@ class TestConstants:
                 f"Remote command {name!r} maps to {cmd!r} (not single byte)"
             )
             assert cmd.isascii(), f"Remote command {name!r} maps to non-ASCII {cmd!r}"
+
+
+# ---------------------------------------------------------------------------
+# load_initial_state
+# ---------------------------------------------------------------------------
+
+
+def _instrument_client() -> tuple[LumagenClient, list[str]]:
+    """Create a client with _send_command mocked to record calls."""
+    client = _make_client()
+    sent: list[str] = []
+
+    async def _mock_send(cmd: str) -> None:
+        sent.append(cmd)
+
+    client._send_command = _mock_send  # type: ignore[assignment]
+    return client, sent
+
+
+def _deliver(client: LumagenClient, *lines: str) -> None:
+    """Feed lines into the client as if received from the device."""
+    for line in lines:
+        client._on_readline(line)
+
+
+class TestLoadInitialState:
+    @pytest.mark.anyio
+    async def test_success_power_on(self):
+        client, sent = _instrument_client()
+        i25_fields = ",".join(_make_i24_fields(input_memory="A", power_status="1"))
+
+        async def respond():
+            await asyncio.sleep(0)
+            _deliver(client, "ZQS01!S01,RadiancePro,102308,1009,745")
+            await asyncio.sleep(0)
+            _deliver(client, "ZQS02!S02,1")
+            await asyncio.sleep(0)
+            _deliver(client, "ZQI53!I53,0", "ZQI54!I54,1")
+            await asyncio.sleep(0)
+            _deliver(client, f"ZQI25!I25,{i25_fields}")
+
+        await asyncio.gather(respond(), client.load_initial_state(timeout=1))
+
+        assert client.state.model_name == "RadiancePro"
+        assert client.state.power is True
+        assert client.state.game_mode is False
+        assert client.state.auto_aspect is True
+        assert client.state.logical_input == 1
+        assert sent == ["ZQS01", "ZQS02", "ZQI53", "ZQI54", "ZQI25"]
+
+    @pytest.mark.anyio
+    async def test_success_power_off(self):
+        client, sent = _instrument_client()
+
+        async def respond():
+            await asyncio.sleep(0)
+            _deliver(client, "ZQS01!S01,RadiancePro,102308,1009,745")
+            await asyncio.sleep(0)
+            _deliver(client, "ZQS02!S02,0")
+            await asyncio.sleep(0)
+            _deliver(client, "ZQI53!I53,1", "ZQI54!I54,0")
+
+        await asyncio.gather(respond(), client.load_initial_state(timeout=1))
+
+        assert client.state.power is False
+        assert client.state.logical_input is None
+        assert "ZQI25" not in sent
+
+    @pytest.mark.anyio
+    async def test_identity_timeout_raises(self):
+        client, _ = _instrument_client()
+        with pytest.raises(TimeoutError, match="Identity"):
+            await client.load_initial_state(timeout=0.05)
+
+    @pytest.mark.anyio
+    async def test_power_timeout_raises(self):
+        client, _ = _instrument_client()
+
+        async def respond():
+            await asyncio.sleep(0)
+            _deliver(client, "ZQS01!S01,RadiancePro,102308,1009,745")
+
+        with pytest.raises(TimeoutError, match="Power"):
+            await asyncio.gather(respond(), client.load_initial_state(timeout=0.05))
+
+    @pytest.mark.anyio
+    async def test_config_timeout_silent(self):
+        client, _ = _instrument_client()
+
+        async def respond():
+            await asyncio.sleep(0)
+            _deliver(client, "ZQS01!S01,RadiancePro,102308,1009,745")
+            await asyncio.sleep(0)
+            _deliver(client, "ZQS02!S02,0")
+
+        await asyncio.gather(respond(), client.load_initial_state(timeout=0.05))
+
+        assert client.state.game_mode is None
+        assert client.state.auto_aspect is None
+
+    @pytest.mark.anyio
+    async def test_identity_fast_path(self):
+        """When model_name is pre-populated (stored state), wait_for returns
+        immediately even without a device response."""
+        client, sent = _instrument_client()
+        client.state.model_name = "RadiancePro"
+
+        async def respond():
+            # Only deliver power and config — no S01 response
+            await asyncio.sleep(0)
+            _deliver(client, "ZQS02!S02,0")
+            await asyncio.sleep(0)
+            _deliver(client, "ZQI53!I53,0", "ZQI54!I54,0")
+
+        await asyncio.gather(respond(), client.load_initial_state(timeout=0.05))
+
+        # ZQS01 still sent (fire-and-forget refresh), but no timeout
+        assert "ZQS01" in sent
+        assert client.state.model_name == "RadiancePro"

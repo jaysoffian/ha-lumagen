@@ -2,23 +2,6 @@
 
 The integration has no external dependencies. Communication with the Lumagen is handled by `client.py`, a self-contained async TCP client.
 
-```
-┌────────────────────────────────────────────────────┐
-│                  LumagenClient                     │
-│                                                    │
-│  asyncio.open_connection(host, port)               │
-│  ┌────────────┐  ┌──────────────┐  ┌────────────┐  │
-│  │ _read_loop │  │ send_command │  │ _keepalive │  │
-│  └─────┬──────┘  └──────────────┘  └────────────┘  │
-│        │ parses lines, updates state               │
-│        ▼                                           │
-│  LumagenState (dataclass)                          │
-│        │ calls on_state_changed callback           │
-│        ▼                                           │
-│  LumagenCoordinator.async_set_updated_data()       │
-└────────────────────────────────────────────────────┘
-```
-
 ## Event-Driven Updates
 
 The coordinator sets `update_interval=None` — no polling. All state updates come from the TCP stream:
@@ -177,12 +160,23 @@ Known device-level issues:
    5 s timeout).
 2. Load config state from HA storage (identity, game mode, auto aspect,
    labels).
-3. If no stored data, fetch identity (ZQS01).
-4. Query power (ZQS02) — always needed, it's volatile.
-5. Query config toggles (ZQI53 game mode, ZQI54 auto aspect).
-6. If power is on, fetch runtime state (ZQI25).
-7. If no stored config exists (first setup), fetch identity and all
-   labels (blocking, before entity platform setup).
+3. `load_initial_state()` queries all critical state, blocking on each
+   response:
+   - Identity (ZQS01) — always sent. When stored data already populated
+     `model_name`, the wait returns immediately (fast-path) and the
+     response refreshes identity in the background.
+   - Power (ZQS02) — always needed, it's volatile.
+   - Config toggles (ZQI53 game mode, ZQI54 auto aspect).
+   - Runtime state (ZQI25) — only when device is on; signal fields are
+     stale in standby.
+   - Identity or power timeout raises `TimeoutError` →
+     `ConfigEntryNotReady` (HA retries). Config/runtime timeouts are
+     silent (non-critical).
+4. If no stored config exists (first setup), `reload_config()` fetches
+   identity, config toggles, and all labels (blocking, before entity
+   platform setup). Identity is queried again here because
+   `reload_config()` must be self-contained — it also serves the
+   "Reload config" button (e.g., after firmware updates).
 
 On power-on (off → on transition detected from ZQS02 poll response or
 `Power-up complete.` sentinel):

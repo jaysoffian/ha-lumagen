@@ -682,8 +682,9 @@ class LumagenClient:
     async def _keepalive_loop(self) -> None:
         """Probe connection after 30 s of idle.
 
-        When the device is on, poll with ZQI25 (full signal state).
-        When off, poll with ZQS02 (power status).
+        Poll with ZQI25 (full signal state) when device is on and ZQS02 (power status)
+        when device is off. Even though ZQI25 returns a response when device is off,
+        most of the response is stale information.
         """
         interval = 30
         probe_timeout = 5
@@ -702,9 +703,9 @@ class LumagenClient:
             before = self._last_recv
             try:
                 if self.state.power:
-                    await self.send_command("ZQI25")
+                    await self._send_command("ZQI25")
                 else:
-                    await self.send_command("ZQS02")
+                    await self._send_command("ZQS02")
                 await asyncio.sleep(probe_timeout)
             except asyncio.CancelledError:
                 return
@@ -715,7 +716,11 @@ class LumagenClient:
 
     # -- Sending ------------------------------------------------------------
 
-    async def send_command(self, cmd: str) -> None:
+    async def send_raw_command(self, cmd: str) -> None:
+        """Send an arbitrary RS232 command string (public, for debug tools)."""
+        await self._send_command(cmd)
+
+    async def _send_command(self, cmd: str) -> None:
         """Send a raw ASCII command string to the device (no framing)."""
         if not self._writer:
             _LOGGER.warning("Cannot send — not connected")
@@ -781,30 +786,54 @@ class LumagenClient:
 
     async def query_identity(self) -> None:
         """Query device identity (model, firmware, serial)."""
-        await self.send_command("ZQS01")
+        await self._send_command("ZQS01")
 
     async def query_power(self) -> None:
         """Query power state."""
-        await self.send_command("ZQS02")
+        await self._send_command("ZQS02")
 
     async def query_runtime_state(self) -> None:
-        """Query signal info (incl. input memory). Startup & power-on."""
-        await self.send_command("ZQI25")
+        """Query signal info (incl. input memory)."""
+        await self._send_command("ZQI25")
 
-    async def query_full_state(self) -> None:
-        """Query identity, power, signal info, and config state."""
+    async def query_config_state(self) -> None:
+        """Query config toggles (game mode, auto aspect)."""
+        await self._send_command("ZQI53")
+        await self._send_command("ZQI54")
+
+    async def load_initial_state(self, *, timeout: float = 5) -> None:
+        """Query and wait for all state needed at startup.
+
+        Unlike the fire-and-forget query_* methods, this blocks until
+        each response arrives or times out.  Raises TimeoutError if
+        identity or power queries fail — the caller should not proceed
+        with integration setup when the device is unresponsive.
+        """
         await self.query_identity()
+        if not await self.wait_for(lambda s: s.model_name is not None, timeout=timeout):
+            raise TimeoutError("Identity query timed out")
+
         await self.query_power()
-        await self.query_runtime_state()
-        await self.send_command("ZQI53")
-        await self.send_command("ZQI54")
+        if not await self.wait_for(lambda s: s.power is not None, timeout=timeout):
+            raise TimeoutError("Power query timed out")
+
+        await self.query_config_state()
+        await self.wait_for(
+            lambda s: s.game_mode is not None and s.auto_aspect is not None,
+            timeout=timeout,
+        )
+
+        # ZQI25 works in standby but signal fields are stale (last state
+        # before power-off). Skip until power-on refresh queries live state.
+        if self.state.power:
+            await self.query_runtime_state()
+            await self.wait_for(lambda s: s.logical_input is not None, timeout=timeout)
 
     async def reload_config(self) -> None:
         """Re-fetch identity, config state, and all labels."""
         async with self._label_lock:
             await self.query_identity()
-            await self.send_command("ZQI53")
-            await self.send_command("ZQI54")
+            await self.query_config_state()
             await self.query_labels()
             self._notify_state_changed()
 
@@ -830,7 +859,7 @@ class LumagenClient:
         label_id = f"{category}{index}"
         self.state._pending_label_event = asyncio.Event()  # pyright: ignore[reportPrivateUsage]
         self.state._pending_label_text = None  # pyright: ignore[reportPrivateUsage]
-        await self.send_command(f"ZQS1{label_id}")
+        await self._send_command(f"ZQS1{label_id}")
         try:
             await asyncio.wait_for(self.state._pending_label_event.wait(), timeout=2.0)  # pyright: ignore[reportPrivateUsage]
         except TimeoutError:
@@ -888,7 +917,7 @@ class LumagenClient:
         if len(text) > max_len:
             raise ValueError(f"Label text must be <={max_len} chars, got {len(text)}")
         async with self._label_lock:
-            await self.send_command(f"ZY524{category}{index}{text}\r")
+            await self._send_command(f"ZY524{category}{index}{text}\r")
             if await self._query_label(category, index):
                 self._notify_state_changed()
 
@@ -896,11 +925,11 @@ class LumagenClient:
 
     async def power_on(self) -> None:
         """Power on the device."""
-        await self.send_command("%")
+        await self._send_command("%")
 
     async def power_off(self) -> None:
         """Power off (standby)."""
-        await self.send_command("$")
+        await self._send_command("$")
 
     async def select_input(self, number: int) -> None:
         """Select a logical input by number (1-19).
@@ -910,9 +939,9 @@ class LumagenClient:
         for inputs 1-9, ``i+0``-``i+9`` for inputs 10-19.
         """
         if 1 <= number <= 9:
-            await self.send_command(f"i{number}")
+            await self._send_command(f"i{number}")
         elif 10 <= number <= 19:
-            await self.send_command(f"i+{number - 10}")
+            await self._send_command(f"i+{number - 10}")
         else:
             return
         self.state.clear_changed()
@@ -924,7 +953,7 @@ class LumagenClient:
         """Select input memory (A / B / C / D)."""
         if memory not in get_args(InputMemory):
             raise ValueError(f"Invalid input memory: {memory!r}")
-        await self.send_command(memory.lower())
+        await self._send_command(memory.lower())
         self.state.clear_changed()
         self.state.input_memory = memory
         if self.state.changed:
@@ -940,7 +969,7 @@ class LumagenClient:
         if cmd is None:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
-        await self.send_command(cmd)
+        await self._send_command(cmd)
         self.state.clear_changed()
         if aspect == "Auto":
             self.state.nls_active = False
@@ -952,14 +981,14 @@ class LumagenClient:
         if self.state.changed:
             self._notify_state_changed()
         # Query authoritative state from device
-        await self.send_command("ZQI54")
-        await self.send_command("ZQI25")
+        await self._send_command("ZQI54")
+        await self._send_command("ZQI25")
 
     async def toggle_nls(self) -> None:
         """Toggle Non-Linear Stretch on or off."""
-        await self.send_command("N")
+        await self._send_command("N")
         # Query authoritative state — NLS flag is in I25
-        await self.send_command("ZQI25")
+        await self._send_command("ZQI25")
 
     async def send_remote_command(self, command: str) -> None:
         """Send a named remote-control command."""
@@ -967,7 +996,7 @@ class LumagenClient:
         if cmd is None:
             _LOGGER.warning("Unknown remote command: %s", command)
             return
-        await self.send_command(cmd)
+        await self._send_command(cmd)
 
     # -- OSD ----------------------------------------------------------------
 
@@ -1017,7 +1046,7 @@ class LumagenClient:
         digit = 9 if duration == 0 else max(1, min(8, duration))
         payload = f"{line_one:<30}{line_two}" if line_two else line_one
         prefix = f"ZB{block_char}" if block_char else ""
-        await self.send_command(f"{prefix}ZT{digit}{payload}\r")
+        await self._send_command(f"{prefix}ZT{digit}{payload}\r")
 
     async def show_osd_volume_bar(self, level: float, label: str | None = None) -> None:
         """
@@ -1046,11 +1075,11 @@ class LumagenClient:
                 label = "Max"
             else:
                 label = f"{level:.1%}"
-        await self.send_command(f"ZBXZT1{label:<5.5} {'X' * int(level * 24):<24}\r")
+        await self._send_command(f"ZBXZT1{label:<5.5} {'X' * int(level * 24):<24}\r")
 
     async def clear_osd_message(self) -> None:
         """Clear any OSD message."""
-        await self.send_command("ZC")
+        await self._send_command("ZC")
 
     # -- Output config ------------------------------------------------------
 
@@ -1070,50 +1099,50 @@ class LumagenClient:
         m = str(mode) if mode is not None else "K"
         c = str(cms) if cms is not None else "K"
         s = str(style) if style is not None else "K"
-        await self.send_command(f"ZY530{m}{c}{s}\r")
-        await self.send_command("ZQI25")
+        await self._send_command(f"ZY530{m}{c}{s}\r")
+        await self._send_command("ZQI25")
 
     async def previous_input(self) -> None:
         """Switch to the previous input."""
-        await self.send_command("P")
+        await self._send_command("P")
 
     async def display_input_aspect(self) -> None:
         """Pop up input and aspect info on the OSD."""
-        await self.send_command("ZY811\r")
+        await self._send_command("ZY811\r")
 
     async def set_min_fan_speed(self, speed: int) -> None:
         """Set minimum fan speed (1-10)."""
         if not 1 <= speed <= 10:
             raise ValueError(f"Fan speed must be 1-10, got {speed}")
-        await self.send_command(f"ZY552{speed - 1}\r")
+        await self._send_command(f"ZY552{speed - 1}\r")
 
     async def set_subtitle_shift(self, level: int) -> None:
         """Set subtitle shift (0=off, 1=3%, 2=6%)."""
         if level not in (0, 1, 2):
             raise ValueError(f"Subtitle shift must be 0-2, got {level}")
-        await self.send_command(f"ZY553{level}\r")
+        await self._send_command(f"ZY553{level}\r")
 
     async def set_auto_aspect(self, enabled: bool) -> None:
         """Enable or disable auto aspect detection."""
-        await self.send_command("~" if enabled else "V")
-        await self.send_command("ZQI54")
+        await self._send_command("~" if enabled else "V")
+        await self._send_command("ZQI54")
 
     async def set_game_mode(self, enabled: bool) -> None:
         """Enable or disable game mode."""
-        await self.send_command(f"ZY551{'1' if enabled else '0'}\r")
-        await self.send_command("ZQI53")
+        await self._send_command(f"ZY551{'1' if enabled else '0'}\r")
+        await self._send_command("ZQI53")
 
     # -- Misc ---------------------------------------------------------------
 
     async def save_config(self) -> None:
         """Save current configuration to flash."""
-        await self.send_command("ZY6SAVECONFIG\r")
+        await self._send_command("ZY6SAVECONFIG\r")
 
     async def trigger_hotplug(self, input_num: int | None = None) -> None:
         """Toggle HDMI hotplug on an input (or all inputs if None)."""
         target = str(input_num) if input_num is not None else "A"
-        await self.send_command(f"ZY520{target}\r")
+        await self._send_command(f"ZY520{target}\r")
 
     async def restart_outputs(self) -> None:
         """Restart outputs via ALT, PREV remote sequence."""
-        await self.send_command("#P")
+        await self._send_command("#P")

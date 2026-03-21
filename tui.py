@@ -167,10 +167,10 @@ class InstrumentedClient(LumagenClient):
         self._on_line_sent: list[Callable[[str], None]] = []
         self._on_line_received: list[Callable[[str], None]] = []
 
-    async def send_command(self, cmd: str) -> None:
+    async def _send_command(self, cmd: str) -> None:
         for cb in self._on_line_sent:
             cb(cmd)
-        await super().send_command(cmd)
+        await super()._send_command(cmd)
 
     def _on_readline(self, line: str) -> None:
         for cb in self._on_line_received:
@@ -484,7 +484,10 @@ class LumagenTUI(App[None]):
         )
 
         if self._client.state.connected:
-            await self._client.query_full_state()
+            try:
+                await self._client.load_initial_state()
+            except TimeoutError as err:
+                log.write(f"[red]{err}[/]")
             self._refresh_state()
             if not has_stored:
                 log.write("[dim]Fetching labels…[/]")
@@ -762,7 +765,7 @@ class LumagenTUI(App[None]):
 
         # Raw RS232 commands start with Z
         if raw.startswith("Z"):
-            await self._client.send_command(raw)
+            await self._client.send_raw_command(raw)
             return
 
         log.write(f"[red]Unknown command: {raw}[/]")

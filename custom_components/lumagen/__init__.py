@@ -141,33 +141,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         # Load stored identity + labels, or fetch from device
         has_stored = await coordinator.async_load_stored_state()
-
-        if not has_stored:
-            # First-ever setup — fetch identity and save
-            await client.query_identity()
-            if not await client.wait_for(lambda s: s.model_name is not None, timeout=5):
-                _LOGGER.warning("Identity query timed out")
-
-        # Always query power (runtime)
-        await client.query_power()
-        if not await client.wait_for(lambda s: s.power is not None, timeout=5):
-            _LOGGER.warning("Power query timed out")
-
-        # Query config toggles (game mode, auto aspect) so switches
-        # have a known state from the start, not just when stored.
-        await client.send_command("ZQI53")
-        await client.send_command("ZQI54")
-
-        # If device is on, fetch runtime state
-        if client.state.power:
-            await client.query_runtime_state()
-            await client.wait_for(lambda s: s.logical_input is not None, timeout=5)
+        await client.load_initial_state()
 
     except ConfigEntryNotReady:
         raise
     except Exception as err:
-        _LOGGER.error("Failed to connect to Lumagen at %s:%s: %s", host, port, err)
-        raise ConfigEntryNotReady(f"Failed to connect: {err}") from err
+        _LOGGER.error("Failed to set up Lumagen at %s:%s: %s", host, port, err)
+        raise ConfigEntryNotReady(f"Failed to set up: {err}") from err
 
     # Save identity if we just fetched it
     if client.state.model_name:
@@ -178,7 +158,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    # Fetch labels before setting up platforms so select entities have options
+    # Fetch labels before setting up platforms so select entities have options.
+    # reload_config() re-queries identity (already fetched by load_initial_state)
+    # because it must be self-contained for the "Reload config" button.
     if not has_stored:
         await coordinator.reload_config()
 
