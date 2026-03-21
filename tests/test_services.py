@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
-INTEGRATION = Path("custom_components/ha_lumagen")
+INTEGRATION = Path("custom_components/lumagen")
 
 
 def _extract_schema_fields(node: ast.expr) -> set[str] | None:

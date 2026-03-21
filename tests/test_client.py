@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from custom_components.ha_lumagen.client import (
+from custom_components.lumagen.client import (
     REMOTE_COMMANDS,
     LumagenClient,
     LumagenState,

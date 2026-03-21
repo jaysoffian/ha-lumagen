@@ -8,7 +8,7 @@ show_osd_message:
       required: true
       selector:
         device:
-          integration: ha_lumagen
+          integration: lumagen
     line_one:
       name: Line one
       description: First line of text (up to 30 chars).
@@ -47,7 +47,7 @@ show_osd_volume_bar:
       required: true
       selector:
         device:
-          integration: ha_lumagen
+          integration: lumagen
     level:
       name: Volume level
       description: Volume level (0.0–1.0).
@@ -76,4 +76,4 @@ clear_osd_message:
       required: true
       selector:
         device:
-          integration: ha_lumagen
+          integration: lumagen

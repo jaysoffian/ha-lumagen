@@ -1,6 +1,6 @@
 {
   "content_in_root": false,
-  "filename": "ha_lumagen",
+  "filename": "lumagen",
   "homeassistant": "2026.3.1",
   "name": "Lumagen Radiance Pro",
   "render_readme": true

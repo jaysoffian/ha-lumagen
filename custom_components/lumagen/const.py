@@ -1,6 +1,6 @@
 """Constants for the Lumagen integration."""
 
-DOMAIN = "ha_lumagen"
+DOMAIN = "lumagen"
 DEFAULT_PORT = 4999
 
 ERROR_CANNOT_CONNECT = "cannot_connect"

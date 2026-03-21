@@ -41,13 +41,13 @@ The Lumagen should be configured as follows for the integration to work correctl
 1. Install [HACS](https://hacs.xyz)
 2. Open HACS → Integrations
 3. Open triple-dot menu ( ⠇) → Custom repositories
-4. Add this repository's URL (`https://github.com/jaysoffian/ha_lumagen`), category "Integration"
+4. Add this repository's URL (`https://github.com/jaysoffian/ha-lumagen`), category "Integration"
 5. Install this integration and restart Home Assistant
 
 
 ### Manual
 
-Copy `custom_components/ha_lumagen` into your Home Assistant `custom_components` directory and restart.
+Copy `custom_components/lumagen` into your Home Assistant `custom_components` directory and restart.
 
 ## Configuration
 
@@ -184,16 +184,16 @@ data:
 
 The Lumagen Radiance Pro has an On-Screen Display that can show up to two lines of 30 characters each.
 
-This integration provides the following [services](./custom_components/ha_lumagen/services.yaml) to control the OSD:
+This integration provides the following [services](./custom_components/lumagen/services.yaml) to control the OSD:
 
-- `ha_lumagen.show_osd_message`: Show an OSD message
-- `ha_lumagen.show_osd_volume_bar`: Show a volume bar
-- `ha_lumagen.clear_osd_message`: Clear any OSD message
+- `lumagen.show_osd_message`: Show an OSD message
+- `lumagen.show_osd_volume_bar`: Show a volume bar
+- `lumagen.clear_osd_message`: Clear any OSD message
 
 Example:
 
 ```yaml
-action: ha_lumagen.show_osd_message
+action: lumagen.show_osd_message
 data:
   line_one: "Hello" # Maximum 30 characters (ASCII 0x20 - 0x7a)
   line_two: "World" # Optional second line
@@ -241,7 +241,7 @@ conditions:
   - condition: template
     value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
 actions:
-  - action: ha_lumagen.show_osd_volume_bar
+  - action: lumagen.show_osd_volume_bar
     data:
       level: "{{ trigger.to_state.attributes.volume_level }}"
 mode: single
@@ -263,7 +263,7 @@ conditions:
   - condition: template
     value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
 actions:
-  - action: ha_lumagen.show_osd_volume_bar
+  - action: lumagen.show_osd_volume_bar
     data:
       level: "{{ trigger.to_state.attributes.volume_level / 0.8 }}"
       label: >-
@@ -293,7 +293,7 @@ conditions:
   - condition: template
     value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
 actions:
-  - action: ha_lumagen.show_osd_volume_bar
+  - action: lumagen.show_osd_volume_bar
     data:
       level: "{{ trigger.to_state.attributes.volume_level }}"
       label: >-
@@ -320,12 +320,12 @@ triggers:
 actions:
   - if: "{{ trigger.to_state.attributes.is_volume_muted }}"
     then:
-      - action: ha_lumagen.show_osd_message
+      - action: lumagen.show_osd_message
         data:
           line_one: "Mute"
           duration: 0
     else:
-      - action: ha_lumagen.clear_osd_message
+      - action: lumagen.clear_osd_message
 mode: single
 ```
 

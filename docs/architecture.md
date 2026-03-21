@@ -42,7 +42,7 @@ is fetched.
 ### 1. Config state (stored on disk, fetched on demand)
 
 Data that is configured once on the Lumagen and rarely changes. Persisted
-to HA storage (`ha_lumagen.<entry_id>.info`) so it survives HA restarts
+to HA storage (`lumagen.<entry_id>.info`) so it survives HA restarts
 without querying the device.
 
 | Data             | Command | Notes                                      |

@@ -3,8 +3,8 @@
     "@jaysoffian"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/jaysoffian/ha_lumagen",
-  "domain": "ha_lumagen",
+  "documentation": "https://github.com/jaysoffian/ha-lumagen",
+  "domain": "lumagen",
   "integration_type": "device",
   "iot_class": "local_push",
   "name": "Lumagen",

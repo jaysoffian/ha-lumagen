@@ -22,7 +22,7 @@ from textual.widgets import Header, Input, RichLog, Static
 
 sys.path.insert(
     0,
-    str(pathlib.Path(__file__).resolve().parent / "custom_components" / "ha_lumagen"),
+    str(pathlib.Path(__file__).resolve().parent / "custom_components" / "lumagen"),
 )
 
 from client import (
