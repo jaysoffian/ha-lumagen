@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from homeassistant.helpers.typing import StateType
 
 from homeassistant.components.sensor import (
     SensorEntity,
@@ -24,7 +27,7 @@ from .entity import LumagenEntity
 class LumagenSensorEntityDescription(SensorEntityDescription):
     """Describes Lumagen sensor entity."""
 
-    value_fn: Callable[[LumagenState], Any]
+    value_fn: Callable[[LumagenState], StateType]
 
 
 STATUS_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (

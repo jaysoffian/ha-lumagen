@@ -376,7 +376,7 @@ _COMMAND_SUGGESTIONS = sorted(
 )
 
 
-class LumagenTUI(App):
+class LumagenTUI(App[None]):
     """Textual TUI for the Lumagen Radiance Pro."""
 
     CSS = """
@@ -459,8 +459,8 @@ class LumagenTUI(App):
         self.query_one("#log-panel").border_title = "Protocol Log"
         self.query_one("#help-panel").border_title = "Help (Ctrl+H)"
 
-        self._client._on_line_sent.append(self._log_sent)
-        self._client._on_line_received.append(self._log_received)
+        self._client._on_line_sent.append(self._log_sent)  # pyright: ignore[reportPrivateUsage]
+        self._client._on_line_received.append(self._log_received)  # pyright: ignore[reportPrivateUsage]
 
         self.query_one("#input-bar", Input).focus()
         self._connect_client()

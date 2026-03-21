@@ -34,7 +34,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         )
         self.client = client
         self.entry = entry
-        self._store: Store = Store(
+        self._store: Store[dict[str, object]] = Store(
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.info"
         )
 

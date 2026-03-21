@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import cast
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -25,7 +25,7 @@ class LumagenSelectEntityDescription(SelectEntityDescription):
     """Describes Lumagen select entity."""
 
     current_option_fn: Callable[[LumagenState, LumagenCoordinator], str | None]
-    select_option_fn: Callable[[LumagenCoordinator, str], Any]
+    select_option_fn: Callable[[LumagenCoordinator, str], Awaitable[None]]
     options_fn: Callable[[LumagenCoordinator], list[str]] | None = None
     static_options: list[str] | None = None
 

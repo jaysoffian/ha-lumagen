@@ -1,3 +1,4 @@
+# pyright: reportPrivateUsage=false
 """Tests for Lumagen RS-232 client response parsing."""
 
 from __future__ import annotations

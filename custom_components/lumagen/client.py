@@ -1,3 +1,4 @@
+# pyright: reportUnusedFunction=false
 """Async TCP client for Lumagen Radiance Pro."""
 
 from __future__ import annotations
@@ -267,12 +268,12 @@ class LumagenState:
     @property
     def changed(self) -> bool:
         """True if any field or label was modified since last clear."""
-        return self._dirty or self._labels._dirty
+        return self._dirty or self._labels._dirty  # pyright: ignore[reportPrivateUsage]
 
     def clear_changed(self) -> None:
         """Reset change-tracking flags."""
         self.__dict__["_dirty"] = False
-        self._labels._dirty = False
+        self._labels._dirty = False  # pyright: ignore[reportPrivateUsage]
 
     # -- Serialization ------------------------------------------------------
 
@@ -465,11 +466,11 @@ def _on_label(state: LumagenState, fields: list[str]) -> None:
 
     Ignored unless a label query is pending (``_pending_label_event`` is set).
     """
-    if not state._pending_label_event:
+    if not state._pending_label_event:  # pyright: ignore[reportPrivateUsage]
         _LOGGER.debug("Ignoring unsolicited label response: %s", ",".join(fields))
         return
-    state._pending_label_text = ",".join(fields)
-    state._pending_label_event.set()
+    state._pending_label_text = ",".join(fields)  # pyright: ignore[reportPrivateUsage]
+    state._pending_label_event.set()  # pyright: ignore[reportPrivateUsage]
 
 
 # ---------------------------------------------------------------------------
@@ -486,9 +487,9 @@ class LumagenClient:
         self._port: int = 0
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
-        self._read_task: asyncio.Task | None = None
-        self._keepalive_task: asyncio.Task | None = None
-        self._reconnect_task: asyncio.Task | None = None
+        self._read_task: asyncio.Task[None] | None = None
+        self._keepalive_task: asyncio.Task[None] | None = None
+        self._reconnect_task: asyncio.Task[None] | None = None
         self._running = False
         self._disconnecting = False
         self._on_state_changed: Callable[[], None] | None = None
@@ -817,7 +818,7 @@ class LumagenClient:
         """
         mem = self.state.input_memory or "A"
         return [
-            f"{self.state._labels.get(f'{mem}{i}', 'Input')} ({i + 1})"
+            f"{self.state._labels.get(f'{mem}{i}', 'Input')} ({i + 1})"  # pyright: ignore[reportPrivateUsage]
             for i in range(10)
         ]
 
@@ -827,27 +828,27 @@ class LumagenClient:
         Returns True if the label was resolved, False on timeout.
         """
         label_id = f"{category}{index}"
-        self.state._pending_label_event = asyncio.Event()
-        self.state._pending_label_text = None
+        self.state._pending_label_event = asyncio.Event()  # pyright: ignore[reportPrivateUsage]
+        self.state._pending_label_text = None  # pyright: ignore[reportPrivateUsage]
         await self.send_command(f"ZQS1{label_id}")
         try:
-            await asyncio.wait_for(self.state._pending_label_event.wait(), timeout=2.0)
+            await asyncio.wait_for(self.state._pending_label_event.wait(), timeout=2.0)  # pyright: ignore[reportPrivateUsage]
         except TimeoutError:
             _LOGGER.debug("Timeout waiting for label %s", label_id)
             return False
         finally:
-            self.state._pending_label_event = None
+            self.state._pending_label_event = None  # pyright: ignore[reportPrivateUsage]
 
-        text = self.state._pending_label_text
+        text = self.state._pending_label_text  # pyright: ignore[reportPrivateUsage]
         if text is None:
             _LOGGER.warning("Label %s event fired but text was never set", label_id)
             return False
 
         if category == "0":
             for mem in "ABCD":
-                self.state._labels[f"{mem}{index}"] = text
+                self.state._labels[f"{mem}{index}"] = text  # pyright: ignore[reportPrivateUsage]
         else:
-            self.state._labels[label_id] = text
+            self.state._labels[label_id] = text  # pyright: ignore[reportPrivateUsage]
         return True
 
     async def query_labels(self) -> None:

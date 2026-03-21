@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -75,7 +76,7 @@ def _get_coordinator(hass: HomeAssistant, device_id: str) -> LumagenCoordinator:
     raise ServiceValidationError(f"No Lumagen coordinator for device: {device_id}")
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Set up domain-level services."""
 
     async def show_osd_message(call: ServiceCall) -> None:
