@@ -44,8 +44,6 @@ class LumagenReloadConfigButton(LumagenEntity, ButtonEntity):
     def _update_attrs(self) -> None:
         super()._update_attrs()
         data = self.coordinator.data
-        if data is None:
-            return
         # Available whenever connected (even in standby)
         self._attr_available = self.coordinator.last_update_success and data.connected
 

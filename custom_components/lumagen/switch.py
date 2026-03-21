@@ -83,8 +83,6 @@ class LumagenSwitchEntity(LumagenEntity, SwitchEntity):
     def _update_attrs(self) -> None:
         super()._update_attrs()
         data = self.coordinator.data
-        if data is None:
-            return
         if self.entity_description.available_in_standby:
             self._attr_available = (
                 self.coordinator.last_update_success and data.connected

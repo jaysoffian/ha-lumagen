@@ -18,16 +18,15 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
         # device_info must be set before HA registers the entity, so seed it
         # here rather than waiting for the first coordinator update.
         data = coordinator.data
-        if data is not None:
-            self._attr_device_info = {
-                "identifiers": {(DOMAIN, coordinator.entry.entry_id)},
-                "name": f"Lumagen {data.model_name or 'RadiancePro'}",
-                "manufacturer": "Lumagen",
-                "model": data.model_name or "RadiancePro",
-                "model_id": data.model_number,
-                "sw_version": data.software_revision,
-                "serial_number": data.serial_number,
-            }
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, coordinator.entry.entry_id)},
+            "name": f"Lumagen {data.model_name or 'RadiancePro'}",
+            "manufacturer": "Lumagen",
+            "model": data.model_name or "RadiancePro",
+            "model_id": data.model_number,
+            "sw_version": data.software_revision,
+            "serial_number": data.serial_number,
+        }
 
     @property
     def available(self) -> bool:
@@ -50,9 +49,6 @@ class LumagenEntity(CoordinatorEntity[LumagenCoordinator]):
         - Diagnostic sensors: requires connected only
         """
         data = self.coordinator.data
-        if data is None:
-            self._attr_available = False
-            return
         self._attr_available = bool(
             self.coordinator.last_update_success and data.connected and data.power
         )

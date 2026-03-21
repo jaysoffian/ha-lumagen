@@ -43,8 +43,6 @@ class LumagenRemoteEntity(LumagenEntity, RemoteEntity):
     def _update_attrs(self) -> None:
         super()._update_attrs()
         data = self.coordinator.data
-        if data is None:
-            return
         # Available in standby so power-on works via the remote entity
         self._attr_available = self.coordinator.last_update_success and data.connected
 

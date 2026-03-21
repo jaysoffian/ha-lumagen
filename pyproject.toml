@@ -56,7 +56,7 @@ extra-paths = ["custom_components", "custom_components/lumagen"]
 venvPath = "."
 venv = ".venv"
 extraPaths = ["custom_components", "custom_components/lumagen"]
-# reportUnnecessaryComparison = "error"  # TODO: enable and fix issues
+reportUnnecessaryComparison = "error"
 # HA's CachedProperties metaclass + multi-inheritance (CoordinatorEntity + platform
 # entity) causes false positives on `available`, and narrowing `entity_description`
 # to a subclass type is the standard HA pattern. Pyright can't reason through either.

@@ -225,6 +225,4 @@ class LumagenSensorEntity(LumagenEntity, SensorEntity):
     def _update_attrs(self) -> None:
         super()._update_attrs()
         data = self.coordinator.data
-        if data is None:
-            return
         self._attr_native_value = self.entity_description.value_fn(data)
