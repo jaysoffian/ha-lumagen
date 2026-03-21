@@ -67,8 +67,8 @@
       "logical_input": {
         "name": "Logical Input"
       },
-      "nls_active": {
-        "name": "NLS Active"
+      "nls": {
+        "name": "NLS"
       },
       "output_3d_mode": {
         "name": "Output 3D Mode"

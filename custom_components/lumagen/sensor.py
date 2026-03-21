@@ -99,10 +99,10 @@ STATUS_SENSORS: tuple[LumagenSensorEntityDescription, ...] = (
         value_fn=lambda data: data.source_3d_mode,
     ),
     LumagenSensorEntityDescription(
-        key="nls_active",
-        translation_key="nls_active",
+        key="nls",
+        translation_key="nls",
         icon="mdi:arrow-expand-horizontal",
-        value_fn=lambda data: data.nls_active,
+        value_fn=lambda data: data.nls,
     ),
     LumagenSensorEntityDescription(
         key="detected_content_aspect",

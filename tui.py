@@ -256,7 +256,7 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
         lambda s: s.source_content_aspect or "—",
     ),
     ("Raster Aspect", "source_raster_aspect", lambda s: s.source_raster_aspect or "—"),
-    ("NLS", "nls_active", lambda s: "Active" if s.nls_active else "Off"),
+    ("NLS", "nls", lambda s: {True: "Active", False: "Off", None: "—"}[s.nls]),
     ("Source 3D", "source_3d_mode", lambda s: s.source_3d_mode or "—"),
     ("", "", None),
     ("Output", "_output_summary", _output_summary),

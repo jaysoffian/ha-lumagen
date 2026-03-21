@@ -282,7 +282,7 @@ class TestHandleFullInfo:
         assert state.input_config_number == 0
         assert state.source_raster_aspect == "1.78"
         assert state.source_content_aspect == "2.40"
-        assert state.nls_active is False
+        assert state.nls is False
         assert state.output_cms == 0
         assert state.output_style == 0
         assert state.output_vertical_rate == 60
@@ -357,11 +357,11 @@ class TestHandleFullInfo:
         _on_full_info(state, fields)
         assert not state.power
 
-    def test_nls_active(self):
+    def test_nls(self):
         fields = _make_i24_fields(nls="N")
         state = LumagenState()
         _on_full_info(state, fields)
-        assert state.nls_active is True
+        assert state.nls is True
 
     def test_interlaced_source(self):
         fields = _make_i24_fields(src_mode="i")

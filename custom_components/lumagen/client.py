@@ -182,7 +182,7 @@ class LumagenState:
     source_3d_mode: ThreeDMode | None = None
     source_vertical_rate: int | None = None
     source_vertical_resolution: int | None = None
-    nls_active: bool = False
+    nls: bool | None = None
 
     # Output (from I24)
     output_vertical_rate: int | None = None
@@ -397,7 +397,7 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> bool:
     state.input_config_number = _safe_int(fields[4])
     state.source_raster_aspect = _safe_aspect(fields[5])
     state.source_content_aspect = _safe_aspect(fields[6])
-    state.nls_active = fields[7] == "N"
+    state.nls = fields[7] == "N"
     state.output_3d_mode = _3D_MODE.get(fields[8])
     state.outputs_on = _safe_int(fields[9], base=16)
     state.output_cms = _safe_int(fields[10])
@@ -966,10 +966,10 @@ class LumagenClient:
         await self._send_command(cmd)
         self.state.clear_changed()
         if aspect == "Auto":
-            self.state.nls_active = False
+            self.state.nls = False
             self.state.auto_aspect = True
         else:
-            self.state.nls_active = False
+            self.state.nls = False
             self.state.source_content_aspect = aspect
             self.state.auto_aspect = False
         if self.state.changed:
