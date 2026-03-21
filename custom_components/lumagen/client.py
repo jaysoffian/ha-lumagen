@@ -619,7 +619,7 @@ class LumagenClient:
             except (OSError, ConnectionError):
                 break
             except Exception:
-                _LOGGER.debug("Read loop error", exc_info=True)
+                _LOGGER.exception("Read loop error")
                 break
 
         if self._running:
