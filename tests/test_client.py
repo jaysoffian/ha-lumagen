@@ -530,48 +530,48 @@ class TestProcessLine:
     # -- Label responses ---------------------------------------------------
 
     def test_label_with_pending_query(self):
-        self.client.state._pending_label_event = asyncio.Event()
+        self.client._pending_label_event = asyncio.Event()
         self.client._on_readline("ZQS1A0!S1A,Apple TV")
-        assert self.client.state._pending_label_text == "Apple TV"
-        assert self.client.state._pending_label_event.is_set()
+        assert self.client._pending_label_text == "Apple TV"
+        assert self.client._pending_label_event.is_set()
 
     def test_label_ignored_without_pending_query(self):
         """Label responses are ignored when no query is pending."""
-        self.client.state._pending_label_event = None
+        self.client._pending_label_event = None
         self.client._on_readline("ZQS1B3!S1B,Blu-ray")
-        assert self.client.state._pending_label_text is None
+        assert self.client._pending_label_text is None
 
     def test_label_all_memories(self):
         """Labels from all four input memories are recognized."""
         for mem in "ABCD":
             client = _make_client()
-            client.state._pending_label_event = asyncio.Event()
+            client._pending_label_event = asyncio.Event()
             client._on_readline(f"ZQS1{mem}0!S1{mem},Test")
-            assert client.state._pending_label_text == "Test"
+            assert client._pending_label_text == "Test"
 
     def test_label_custom_mode(self):
         """Custom mode labels (category 1) are recognized."""
-        self.client.state._pending_label_event = asyncio.Event()
+        self.client._pending_label_event = asyncio.Event()
         self.client._on_readline("ZQS110!S11,Custom0")
-        assert self.client.state._pending_label_text == "Custom0"
+        assert self.client._pending_label_text == "Custom0"
 
     def test_label_cms(self):
         """CMS labels (category 2) are recognized."""
-        self.client.state._pending_label_event = asyncio.Event()
+        self.client._pending_label_event = asyncio.Event()
         self.client._on_readline("ZQS120!S12,CMS0")
-        assert self.client.state._pending_label_text == "CMS0"
+        assert self.client._pending_label_text == "CMS0"
 
     def test_label_style(self):
         """Style labels (category 3) are recognized."""
-        self.client.state._pending_label_event = asyncio.Event()
+        self.client._pending_label_event = asyncio.Event()
         self.client._on_readline("ZQS130!S13,2.40")
-        assert self.client.state._pending_label_text == "2.40"
+        assert self.client._pending_label_text == "2.40"
 
     def test_label_with_comma(self):
         """Label text containing a comma is preserved intact."""
-        self.client.state._pending_label_event = asyncio.Event()
+        self.client._pending_label_event = asyncio.Event()
         self.client._on_readline("ZQS1A0!S1A,HD, Cable")
-        assert self.client.state._pending_label_text == "HD, Cable"
+        assert self.client._pending_label_text == "HD, Cable"
 
     # -- Ignored lines -----------------------------------------------------
 

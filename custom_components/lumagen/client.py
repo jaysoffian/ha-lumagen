@@ -202,14 +202,6 @@ class LumagenState:
     # Labels (populated by query_labels / set_label)
     _labels: LabelDict = field(default_factory=LabelDict)
 
-    # Label query correlation (not part of equality/repr)
-    _pending_label_text: str | None = field(
-        default=None, init=False, repr=False, compare=False
-    )
-    _pending_label_event: asyncio.Event | None = field(
-        default=None, init=False, repr=False, compare=False
-    )
-
     # Change tracking (not part of equality/repr)
     _dirty: bool = field(default=False, init=False, repr=False, compare=False)
 
@@ -460,19 +452,6 @@ def _on_auto_aspect(state: LumagenState, fields: list[str]) -> None:
     state.auto_aspect = fields[0] == "1"
 
 
-@_on("S1A", "S1B", "S1C", "S1D", "S11", "S12", "S13")
-def _on_label(state: LumagenState, fields: list[str]) -> None:
-    """S1x — label text (input memories A-D, custom mode, CMS, style).
-
-    Ignored unless a label query is pending (``_pending_label_event`` is set).
-    """
-    if not state._pending_label_event:  # pyright: ignore[reportPrivateUsage]
-        _LOGGER.debug("Ignoring unsolicited label response: %s", ",".join(fields))
-        return
-    state._pending_label_text = ",".join(fields)  # pyright: ignore[reportPrivateUsage]
-    state._pending_label_event.set()  # pyright: ignore[reportPrivateUsage]
-
-
 # ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
@@ -497,6 +476,10 @@ class LumagenClient:
         self._last_recv: float = 0.0
         self._write_lock = asyncio.Lock()
         self._label_lock = asyncio.Lock()
+        self._pending_label_event: asyncio.Event | None = None
+        self._pending_label_text: str | None = None
+        for code in ("S1A", "S1B", "S1C", "S1D", "S11", "S12", "S13"):
+            _RESPONSE_HANDLERS[code] = self._on_label
         self._last_power: bool | None = None
         self._power_on_task: asyncio.Task[None] | None = None
         self._state_waiters: list[
@@ -831,11 +814,10 @@ class LumagenClient:
 
     async def reload_config(self) -> None:
         """Re-fetch identity, config state, and all labels."""
-        async with self._label_lock:
-            await self.query_identity()
-            await self.query_config_state()
-            await self.query_labels()
-            self._notify_state_changed()
+        await self.query_identity()
+        await self.query_config_state()
+        await self.query_labels()
+        self._notify_state_changed()
 
     # -- Labels -------------------------------------------------------------
 
@@ -851,34 +833,47 @@ class LumagenClient:
             for i in range(10)
         ]
 
+    def _on_label(self, _state: LumagenState, fields: list[str]) -> None:
+        """S1x — label text (input memories A-D, custom mode, CMS, style).
+
+        Registered into _RESPONSE_HANDLERS at init time so that label
+        responses can update client-owned correlation state directly.
+        """
+        if not self._pending_label_event:
+            _LOGGER.debug("Ignoring unsolicited label response: %s", ",".join(fields))
+            return
+        self._pending_label_text = ",".join(fields)
+        self._pending_label_event.set()
+
     async def _query_label(self, category: LabelCategory, index: int) -> bool:
         """Query a single label and store the result.
 
         Returns True if the label was resolved, False on timeout.
         """
         label_id = f"{category}{index}"
-        self.state._pending_label_event = asyncio.Event()  # pyright: ignore[reportPrivateUsage]
-        self.state._pending_label_text = None  # pyright: ignore[reportPrivateUsage]
-        await self._send_command(f"ZQS1{label_id}")
-        try:
-            await asyncio.wait_for(self.state._pending_label_event.wait(), timeout=2.0)  # pyright: ignore[reportPrivateUsage]
-        except TimeoutError:
-            _LOGGER.debug("Timeout waiting for label %s", label_id)
-            return False
-        finally:
-            self.state._pending_label_event = None  # pyright: ignore[reportPrivateUsage]
+        async with self._label_lock:
+            self._pending_label_event = asyncio.Event()
+            self._pending_label_text = None
+            await self._send_command(f"ZQS1{label_id}")
+            try:
+                await asyncio.wait_for(self._pending_label_event.wait(), timeout=2.0)
+            except TimeoutError:
+                _LOGGER.debug("Timeout waiting for label %s", label_id)
+                return False
+            finally:
+                self._pending_label_event = None
 
-        text = self.state._pending_label_text  # pyright: ignore[reportPrivateUsage]
-        if text is None:
-            _LOGGER.warning("Label %s event fired but text was never set", label_id)
-            return False
+            text = self._pending_label_text
+            if text is None:
+                _LOGGER.warning("Label %s event fired but text was never set", label_id)
+                return False
 
-        if category == "0":
-            for mem in "ABCD":
-                self.state._labels[f"{mem}{index}"] = text  # pyright: ignore[reportPrivateUsage]
-        else:
-            self.state._labels[label_id] = text  # pyright: ignore[reportPrivateUsage]
-        return True
+            if category == "0":
+                for mem in "ABCD":
+                    self.state._labels[f"{mem}{index}"] = text  # pyright: ignore[reportPrivateUsage]
+            else:
+                self.state._labels[label_id] = text  # pyright: ignore[reportPrivateUsage]
+            return True
 
     async def query_labels(self) -> None:
         """Query all labels (inputs A0-D9, custom modes, CMS, styles)."""
@@ -916,10 +911,9 @@ class LumagenClient:
             raise ValueError("Label text must be ASCII only")
         if len(text) > max_len:
             raise ValueError(f"Label text must be <={max_len} chars, got {len(text)}")
-        async with self._label_lock:
-            await self._send_command(f"ZY524{category}{index}{text}\r")
-            if await self._query_label(category, index):
-                self._notify_state_changed()
+        await self._send_command(f"ZY524{category}{index}{text}\r")
+        if await self._query_label(category, index):
+            self._notify_state_changed()
 
     # -- Convenience commands -----------------------------------------------
 
