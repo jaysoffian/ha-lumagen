@@ -1,81 +1,153 @@
 {
   "config": {
-    "step": {
-      "user": {
-        "title": "Configure Lumagen Connection",
-        "description": "Enter the IP address and port of your Lumagen's TCP-to-serial adapter.",
-        "data": {
-          "host": "Host IP Address",
-          "port": "Port"
-        }
-      }
+    "abort": {
+      "already_configured": "This Lumagen device is already configured."
     },
     "error": {
       "cannot_connect": "Failed to connect to the Lumagen device. Please check your connection settings and ensure the device is powered on."
     },
-    "abort": {
-      "already_configured": "This Lumagen device is already configured."
+    "step": {
+      "user": {
+        "data": {
+          "host": "Host IP Address",
+          "port": "Port"
+        },
+        "description": "Enter the IP address and port of your Lumagen's TCP-to-serial adapter.",
+        "title": "Configure Lumagen Connection"
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "display_input_aspect": {
+        "name": "Show Input Aspect"
+      },
+      "nls": {
+        "name": "NLS"
+      },
+      "reload_config": {
+        "name": "Reload Config"
+      },
+      "restart_outputs": {
+        "name": "Restart Outputs"
+      }
+    },
+    "remote": {
+      "remote": {
+        "name": "Remote"
+      }
+    },
+    "select": {
+      "aspect_ratio": {
+        "name": "Aspect Ratio"
+      },
+      "input": {
+        "name": "Input"
+      },
+      "memory": {
+        "name": "Memory"
+      }
+    },
+    "sensor": {
+      "detected_content_aspect": {
+        "name": "Detected Content Aspect Ratio"
+      },
+      "detected_raster_aspect": {
+        "name": "Detected Raster Aspect Ratio"
+      },
+      "input_configuration": {
+        "name": "Input Configuration"
+      },
+      "input_label": {
+        "name": "Input Label"
+      },
+      "input_video_status": {
+        "name": "Input Video Status"
+      },
+      "logical_input": {
+        "name": "Logical Input"
+      },
+      "nls_active": {
+        "name": "NLS Active"
+      },
+      "output_3d_mode": {
+        "name": "Output 3D Mode"
+      },
+      "output_aspect": {
+        "name": "Output Aspect Ratio"
+      },
+      "output_cms": {
+        "name": "Output CMS"
+      },
+      "output_cms_label": {
+        "name": "Output CMS Label"
+      },
+      "output_colorspace": {
+        "name": "Output Colorspace"
+      },
+      "output_mode": {
+        "name": "Output Mode"
+      },
+      "output_style": {
+        "name": "Output Style"
+      },
+      "output_style_label": {
+        "name": "Output Style Label"
+      },
+      "output_vertical_rate": {
+        "name": "Output Refresh Rate"
+      },
+      "output_vertical_resolution": {
+        "name": "Output Resolution"
+      },
+      "outputs_on": {
+        "name": "Active Outputs"
+      },
+      "physical_input": {
+        "name": "Physical Input"
+      },
+      "source_3d_mode": {
+        "name": "Source 3D Mode"
+      },
+      "source_content_aspect": {
+        "name": "Source Content Aspect Ratio"
+      },
+      "source_dynamic_range": {
+        "name": "Source Dynamic Range"
+      },
+      "source_mode": {
+        "name": "Source Mode"
+      },
+      "source_raster_aspect": {
+        "name": "Source Raster Aspect Ratio"
+      },
+      "source_vertical_rate": {
+        "name": "Source Refresh Rate"
+      },
+      "source_vertical_resolution": {
+        "name": "Source Resolution"
+      }
+    },
+    "switch": {
+      "auto_aspect": {
+        "name": "Auto Aspect"
+      },
+      "power": {
+        "name": "Power"
+      }
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Lumagen Options",
         "data": {
           "aspect_ratios": "Aspect Ratios"
         },
         "data_description": {
           "aspect_ratios": "Select which aspect ratios appear in the Aspect Ratio menu. Unselected ratios will not be commandable."
-        }
+        },
+        "title": "Lumagen Options"
       }
-    }
-  },
-  "entity": {
-    "sensor": {
-      "logical_input": { "name": "Logical Input" },
-      "physical_input": { "name": "Physical Input" },
-      "input_configuration": { "name": "Input Configuration" },
-      "source_vertical_resolution": { "name": "Source Resolution" },
-      "source_vertical_rate": { "name": "Source Refresh Rate" },
-      "source_content_aspect": { "name": "Source Content Aspect Ratio" },
-      "source_raster_aspect": { "name": "Source Raster Aspect Ratio" },
-      "source_dynamic_range": { "name": "Source Dynamic Range" },
-      "source_mode": { "name": "Source Mode" },
-      "input_video_status": { "name": "Input Video Status" },
-      "source_3d_mode": { "name": "Source 3D Mode" },
-      "nls_active": { "name": "NLS Active" },
-      "detected_content_aspect": { "name": "Detected Content Aspect Ratio" },
-      "detected_raster_aspect": { "name": "Detected Raster Aspect Ratio" },
-      "output_vertical_resolution": { "name": "Output Resolution" },
-      "output_vertical_rate": { "name": "Output Refresh Rate" },
-      "output_aspect": { "name": "Output Aspect Ratio" },
-      "output_3d_mode": { "name": "Output 3D Mode" },
-      "outputs_on": { "name": "Active Outputs" },
-      "output_mode": { "name": "Output Mode" },
-      "output_colorspace": { "name": "Output Colorspace" },
-      "output_cms": { "name": "Output CMS" },
-      "output_cms_label": { "name": "Output CMS Label" },
-      "output_style": { "name": "Output Style" },
-      "output_style_label": { "name": "Output Style Label" },
-      "input_label": { "name": "Input Label" }
-    },
-    "button": {
-      "reload_config": { "name": "Reload Config" },
-      "display_input_aspect": { "name": "Show Input Aspect" },
-      "restart_outputs": { "name": "Restart Outputs" },
-      "nls": { "name": "NLS" }
-    },
-    "select": {
-      "input": { "name": "Input" },
-      "aspect_ratio": { "name": "Aspect Ratio" },
-      "memory": { "name": "Memory" }
-    },
-    "switch": {
-      "power": { "name": "Power" },
-      "auto_aspect": { "name": "Auto Aspect" }
-    },
-    "remote": {
-      "remote": { "name": "Remote" }
     }
   }
 }
