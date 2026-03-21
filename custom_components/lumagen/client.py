@@ -321,22 +321,23 @@ def _safe_aspect(code: str) -> str:
 
 # ---------------------------------------------------------------------------
 # Response handlers — mutate state directly; changes tracked by __setattr__
+# Return True to force notification even if state hasn't changed
 # ---------------------------------------------------------------------------
 
-_RESPONSE_HANDLERS: dict[str, Callable[[LumagenState, list[str]], None]] = {}
+_RESPONSE_HANDLERS: dict[str, Callable[[LumagenState, list[str]], bool | None]] = {}
 
 
 def _on(
     *codes: str,
 ) -> Callable[
-    [Callable[[LumagenState, list[str]], None]],
-    Callable[[LumagenState, list[str]], None],
+    [Callable[[LumagenState, list[str]], bool | None]],
+    Callable[[LumagenState, list[str]], bool | None],
 ]:
     """Register a function as the handler for one or more response codes."""
 
     def decorator(
-        fn: Callable[[LumagenState, list[str]], None],
-    ) -> Callable[[LumagenState, list[str]], None]:
+        fn: Callable[[LumagenState, list[str]], bool | None],
+    ) -> Callable[[LumagenState, list[str]], bool | None]:
         for code in codes:
             _RESPONSE_HANDLERS[code] = fn
         return fn
@@ -374,7 +375,7 @@ def _on_input_info(state: LumagenState, fields: list[str]) -> None:
 
 
 @_on("I21", "I22", "I23", "I24", "I25")
-def _on_full_info(state: LumagenState, fields: list[str]) -> None:
+def _on_full_info(state: LumagenState, fields: list[str]) -> bool:
     """I21/I22/I23/I24/I25 — full device info.
 
     Field indices (0-based after splitting on commas):
@@ -385,13 +386,18 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> None:
       21=JJJ 22=LLL                     (v4+)
       23=MEM 24=PWR                       (v5)
 
-    Fields are ordered by protocol version. We parse as many as are
-    present; an IndexError means we've reached the end of what this
-    firmware version provides.
+    Fields are ordered by protocol version. We parse as many as are present.
     """
-    # v1 fields (0-14)
+    notify = False
+
+    # I21: v1 fields (0-14)
     if len(fields) < 15:
-        return
+        return notify
+
+    # Always notify on any valid I2x — even unchanged values are
+    # authoritative and must clear optimistic entity state.
+    notify = True
+
     state.input_video_status = _INPUT_VIDEO_STATUS.get(fields[0])
     state.source_vertical_rate = _safe_int(fields[1])
     state.source_vertical_resolution = _safe_int(fields[2])
@@ -408,33 +414,34 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> None:
     state.output_vertical_resolution = _safe_int(fields[13])
     state.output_aspect = _safe_aspect(fields[14])
 
-    # v2+ fields (15-18)
+    # I22: v2 fields (15-18)
     if len(fields) < 19:
-        return
+        return notify
     state.output_colorspace = _OUTPUT_COLORSPACE.get(fields[15])
     state.source_dynamic_range = _DYNAMIC_RANGE.get(fields[16])
     state.source_mode = _SOURCE_MODE.get(fields[17])
     state.output_mode = _OUTPUT_MODE.get(fields[18])
 
-    # v3+ fields (19-20) — II (virtual/logical input), KK (physical input)
+    # I23: v3 fields (19-20) — II (virtual/logical input), KK (physical input)
     if len(fields) < 21:
-        return
+        return notify
     state.logical_input = _safe_int(fields[19])
     state.physical_input = _safe_int(fields[20])
 
-    # v4 fields (21-22) — detected raster/content aspect
+    # I24: v4 fields (21-22) — detected raster/content aspect
     if len(fields) < 23:
-        return
+        return notify
     state.detected_raster_aspect = _safe_aspect(fields[21])
     state.detected_content_aspect = _safe_aspect(fields[22])
 
-    # v5 fields (23-24) — input memory, power status
+    # I25: v5 fields (23-24) — input memory, power status
     if len(fields) < 25:
-        return
+        return notify
     mem = fields[23]
     if mem in get_args(InputMemory):
         state.input_memory = cast("InputMemory", mem)
     state.power = "on" if fields[24] == "1" else "off"
+    return notify
 
 
 @_on("I53")
@@ -623,7 +630,7 @@ class LumagenClient:
                 if text:
                     self._last_recv = time.monotonic()
                     _LOGGER.debug("recv: %s", text)
-                    self._process_line(text)
+                    self._on_readline(text)
             except asyncio.CancelledError:
                 return
             except (OSError, ConnectionError):
@@ -635,7 +642,7 @@ class LumagenClient:
         if self._running:
             await self._on_disconnect()
 
-    def _process_line(self, line: str) -> None:
+    def _on_readline(self, line: str) -> None:
         """Parse a single line from the TCP stream."""
         # Special power messages
         if "Power-up complete" in line:
@@ -656,30 +663,19 @@ class LumagenClient:
         if not match:
             return
 
-        name = match.group(1)
-        fields = match.group(2).split(",")
-
-        # S00 is a no-op alive response — no state to update
-        if name == "S00":
+        name, fields = match.groups()
+        if name not in _RESPONSE_HANDLERS:
             return
 
-        handler = _RESPONSE_HANDLERS.get(name)
-        if handler:
-            try:
-                self.state.clear_changed()
-                handler(self.state, fields)
-                # Always notify on I2x — even unchanged values are
-                # authoritative and must clear optimistic entity state.
-                if self.state.changed or name in (
-                    "I21",
-                    "I22",
-                    "I23",
-                    "I24",
-                    "I25",
-                ):
-                    self._notify_state_changed()
-            except Exception:
-                _LOGGER.debug("Error in handler for %s", name, exc_info=True)
+        self.state.clear_changed()
+        notify = False
+        try:
+            notify = _RESPONSE_HANDLERS[name](self.state, fields.split(","))
+        except Exception:
+            _LOGGER.exception("Error in handler for %s", name)
+        else:
+            if self.state.changed or notify:
+                self._notify_state_changed()
 
     # -- Keepalive ----------------------------------------------------------
 

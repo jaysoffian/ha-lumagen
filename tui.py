@@ -172,10 +172,10 @@ class InstrumentedClient(LumagenClient):
             cb(cmd)
         await super().send_command(cmd)
 
-    def _process_line(self, line: str) -> None:
+    def _on_readline(self, line: str) -> None:
         for cb in self._on_line_received:
             cb(line)
-        super()._process_line(line)
+        super()._on_readline(line)
 
 
 # ---------------------------------------------------------------------------

@@ -426,12 +426,12 @@ class TestHandleFullInfo:
 
 
 # ---------------------------------------------------------------------------
-# _process_line — integration tests via LumagenClient
+# _on_readline — integration tests via LumagenClient
 # ---------------------------------------------------------------------------
 
 
 class TestProcessLine:
-    """Test _process_line with realistic echoed lines."""
+    """Test _on_readline with realistic echoed lines."""
 
     def setup_method(self):
         self.client = _make_client()
@@ -443,31 +443,31 @@ class TestProcessLine:
     # -- Power sentinels ----------------------------------------------------
 
     def test_power_up_complete(self):
-        self.client._process_line("Power-up complete.")
+        self.client._on_readline("Power-up complete.")
         assert self.client.state.power == "on"
         assert self.state_changes == 1
 
     def test_power_off(self):
-        self.client._process_line("POWER OFF.")
+        self.client._on_readline("POWER OFF.")
         assert self.client.state.power == "off"
         assert self.state_changes == 1
 
     def test_power_up_no_duplicate_notify(self):
         self.client.state.power = "on"
         self.client.state.clear_changed()
-        self.client._process_line("Power-up complete.")
+        self.client._on_readline("Power-up complete.")
         assert self.state_changes == 0
 
     # -- Alive (S00) -------------------------------------------------------
 
     def test_alive_response(self):
-        self.client._process_line("ZQS00!S00,Ok")
+        self.client._on_readline("ZQS00!S00,Ok")
         assert self.state_changes == 0  # alive is not a state change
 
     # -- S01 device ID with echo -------------------------------------------
 
     def test_s01_with_echo(self):
-        self.client._process_line("ZQS01!S01,RadiancePro,102308,1009,745")
+        self.client._on_readline("ZQS01!S01,RadiancePro,102308,1009,745")
         s = self.client.state
         assert s.model_name == "RadiancePro"
         assert s.software_revision == "102308"
@@ -478,17 +478,17 @@ class TestProcessLine:
     # -- S02 power with echo -----------------------------------------------
 
     def test_s02_active(self):
-        self.client._process_line("ZQS02!S02,1")
+        self.client._on_readline("ZQS02!S02,1")
         assert self.client.state.power == "on"
 
     def test_s02_standby(self):
-        self.client._process_line("ZQS02!S02,0")
+        self.client._on_readline("ZQS02!S02,0")
         assert self.client.state.power == "off"
 
     # -- I00 input info with echo ------------------------------------------
 
     def test_i00_with_echo(self):
-        self.client._process_line("ZQI00!I00,3,A,5")
+        self.client._on_readline("ZQI00!I00,3,A,5")
         s = self.client.state
         assert s.logical_input == 3
         assert s.input_memory == "A"
@@ -499,7 +499,7 @@ class TestProcessLine:
     def test_i24_with_echo(self):
         # Realistic v4 response
         fields = ",".join(_make_i24_fields())
-        self.client._process_line(f"ZQI24!I24,{fields}")
+        self.client._on_readline(f"ZQI24!I24,{fields}")
         s = self.client.state
         assert s.source_vertical_rate == 60
         assert s.source_vertical_resolution == 2160
@@ -515,7 +515,7 @@ class TestProcessLine:
     def test_i24_unsolicited(self):
         """Unsolicited mode-change messages have no echo prefix."""
         fields = ",".join(_make_i24_fields(content_aspect="235"))
-        self.client._process_line(f"!I24,{fields}")
+        self.client._on_readline(f"!I24,{fields}")
         assert self.client.state.source_content_aspect == "2.35"
 
     def test_i21_i22_i23_i25_also_handled(self):
@@ -523,21 +523,21 @@ class TestProcessLine:
         for cmd in ("I21", "I22", "I23", "I24", "I25"):
             client = _make_client()
             fields = ",".join(_make_i24_fields())
-            client._process_line(f"ZQ{cmd}!{cmd},{fields}")
+            client._on_readline(f"ZQ{cmd}!{cmd},{fields}")
             assert client.state.source_vertical_resolution == 2160
 
     # -- Label responses ---------------------------------------------------
 
     def test_label_with_pending_query(self):
         self.client.state._pending_label_event = asyncio.Event()
-        self.client._process_line("ZQS1A0!S1A,Apple TV")
+        self.client._on_readline("ZQS1A0!S1A,Apple TV")
         assert self.client.state._pending_label_text == "Apple TV"
         assert self.client.state._pending_label_event.is_set()
 
     def test_label_ignored_without_pending_query(self):
         """Label responses are ignored when no query is pending."""
         self.client.state._pending_label_event = None
-        self.client._process_line("ZQS1B3!S1B,Blu-ray")
+        self.client._on_readline("ZQS1B3!S1B,Blu-ray")
         assert self.client.state._pending_label_text is None
 
     def test_label_all_memories(self):
@@ -545,53 +545,53 @@ class TestProcessLine:
         for mem in "ABCD":
             client = _make_client()
             client.state._pending_label_event = asyncio.Event()
-            client._process_line(f"ZQS1{mem}0!S1{mem},Test")
+            client._on_readline(f"ZQS1{mem}0!S1{mem},Test")
             assert client.state._pending_label_text == "Test"
 
     def test_label_custom_mode(self):
         """Custom mode labels (category 1) are recognized."""
         self.client.state._pending_label_event = asyncio.Event()
-        self.client._process_line("ZQS110!S11,Custom0")
+        self.client._on_readline("ZQS110!S11,Custom0")
         assert self.client.state._pending_label_text == "Custom0"
 
     def test_label_cms(self):
         """CMS labels (category 2) are recognized."""
         self.client.state._pending_label_event = asyncio.Event()
-        self.client._process_line("ZQS120!S12,CMS0")
+        self.client._on_readline("ZQS120!S12,CMS0")
         assert self.client.state._pending_label_text == "CMS0"
 
     def test_label_style(self):
         """Style labels (category 3) are recognized."""
         self.client.state._pending_label_event = asyncio.Event()
-        self.client._process_line("ZQS130!S13,2.40")
+        self.client._on_readline("ZQS130!S13,2.40")
         assert self.client.state._pending_label_text == "2.40"
 
     def test_label_with_comma(self):
         """Label text containing a comma is preserved intact."""
         self.client.state._pending_label_event = asyncio.Event()
-        self.client._process_line("ZQS1A0!S1A,HD, Cable")
+        self.client._on_readline("ZQS1A0!S1A,HD, Cable")
         assert self.client.state._pending_label_text == "HD, Cable"
 
     # -- Ignored lines -----------------------------------------------------
 
     def test_pure_echo_ignored(self):
         """Lines with no '!' are echoes and should be ignored."""
-        self.client._process_line("ZQS00")
+        self.client._on_readline("ZQS00")
         assert self.state_changes == 0
 
     def test_empty_line_ignored(self):
-        """Empty lines are filtered before _process_line is called,
+        """Empty lines are filtered before _on_readline is called,
         but it should still be safe."""
-        self.client._process_line("")
+        self.client._on_readline("")
         assert self.state_changes == 0
 
     def test_unknown_response_ignored(self):
-        self.client._process_line("!X99,something")
+        self.client._on_readline("!X99,something")
         assert self.state_changes == 0
 
     def test_noise_from_other_client(self):
         """OSD commands from other TCP clients appear as echo-only lines."""
-        self.client._process_line("ZT3Hello World\r")
+        self.client._on_readline("ZT3Hello World\r")
         assert self.state_changes == 0
 
 
