@@ -64,10 +64,10 @@ After setup, go to **Settings → Devices & Services → Lumagen → Configure**
 
 - **Power** — Turn device on / standby.
 - **Auto Aspect** — Enable / disable auto aspect detection.
-- **NLS** — Toggle non-linear stretch (see [NLS](#nls-non-linear-stretch) below).
 
 ### Buttons
 
+- **NLS** - Enable/disable [non-linear stretch](#non-linear-stretch).
 - **Show input aspect** — Show input and aspect info on the Lumagen OSD.
 - **Restart outputs** — Restart outputs if your TV/projector has trouble locking on the signal.
 - **Reload config** — Reload rarely changing configuration information (identity, firmware revision, game mode, and labels) from your Lumagen.
@@ -93,7 +93,7 @@ All sensors require the device to be active (not in standby).
 - **Source Dynamic Range** — SDR / HDR
 - **Source Mode** — Progressive / Interlaced
 - **Source 3D Mode** — Off / Frame Sequential / Frame Packed / Top-Bottom / Side-by-Side
-- **NLS Active** — Non-linear stretch active
+- **NLS** — Non-linear stretch active
 - **Detected Content Aspect Ratio** — Auto-detected content aspect
 - **Detected Raster Aspect Ratio** — Auto-detected raster aspect
 - **Output Resolution** — Output vertical resolution
@@ -102,7 +102,7 @@ All sensors require the device to be active (not in standby).
 - **Output Mode** — Progressive / Interlaced
 - **Output Colorspace** — Output colorspace (e.g. BT.709, BT.2020)
 - **Output 3D Mode** — Off / Frame Sequential / Frame Packed / Top-Bottom / Side-by-Side
-- **Active Outputs** — Which outputs are active (1–4)
+- **Active Outputs** — Which outputs (1-4) are active (comma-separated list)
 - **Output CMS** — Active color management system (0–7)
 - **Output CMS Label** — Label for the active CMS
 - **Output Style** — Active output style (0–7)
@@ -138,9 +138,9 @@ The Aspect Ratio select and Auto Aspect switch are kept in sync:
 
 By default all supported aspect ratios appear in the select menu. To show only the ratios you use, go to **Settings → Devices & Services → Lumagen → Configure** and select which ratios to include.
 
-### NLS (Non-Linear Stretch)
+### Non-Linear Stretch
 
-NLS stretches a narrower aspect to fill a wider display non-linearly (more stretch at the edges, less in the center). NLS is exposed as a dedicated **switch** entity that can be toggled independently of the aspect ratio selection.
+NLS stretches a narrower aspect to fill a wider display non-linearly (more stretch at the edges, less in the center). NLS is exposed as a non-stateful button entity (as opposed to a stateful switch) because the Lumagen's NLS behavior is not consistent across aspect ratios: it retains NLS state on the 1.85 AR, but no others. i.e. when NLS is activated on 1.85, if you switch to another AR, NLS is de-activated. When you switch back to 1.85, it's re-activated. All other ARs "forget" their NLS state.
 
 ## Usage Examples
 
