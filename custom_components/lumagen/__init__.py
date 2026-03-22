@@ -11,7 +11,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
 from .client import LumagenClient
 from .const import DEFAULT_PORT, DOMAIN
@@ -34,53 +34,54 @@ SERVICE_CLEAR_OSD_MESSAGE = "clear_osd_message"
 
 SHOW_OSD_MESSAGE_SCHEMA = vol.Schema(
     {
-        vol.Required("device_id"): cv.string,
+        vol.Required("entity_id"): cv.entity_id,
         vol.Required("line_one"): cv.string,
         vol.Optional("line_two", default=""): cv.string,
         vol.Optional("duration", default=3): vol.All(
             vol.Coerce(int), vol.Range(min=0, max=8)
         ),
         vol.Optional("block_char", default=""): cv.string,
-    }
+    },
+    extra=vol.REMOVE_EXTRA,
 )
 
 SHOW_OSD_VOLUME_BAR_SCHEMA = vol.Schema(
     {
-        vol.Required("device_id"): cv.string,
+        vol.Required("entity_id"): cv.entity_id,
         vol.Required("level"): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1.0)),
         vol.Optional("label", default=None): vol.Any(None, cv.string),
-    }
+    },
+    extra=vol.REMOVE_EXTRA,
 )
 
 CLEAR_OSD_MESSAGE_SCHEMA = vol.Schema(
     {
-        vol.Required("device_id"): cv.string,
-    }
+        vol.Required("entity_id"): cv.entity_id,
+    },
+    extra=vol.REMOVE_EXTRA,
 )
 
 
-def _get_coordinator(hass: HomeAssistant, device_id: str) -> LumagenCoordinator:
-    """Resolve a device_id to its LumagenCoordinator."""
-    dev_reg = dr.async_get(hass)
-    device = dev_reg.async_get(device_id)
-    if device is None:
-        raise ServiceValidationError(f"Unknown device: {device_id}")
+def _get_coordinator(hass: HomeAssistant, entity_id: str) -> LumagenCoordinator:
+    """Resolve an entity_id to its LumagenCoordinator."""
+    ent_reg = er.async_get(hass)
+    entry = ent_reg.async_get(entity_id)
+    if entry is None or entry.config_entry_id is None:
+        raise ServiceValidationError(f"Unknown entity: {entity_id}")
 
     coordinators: dict[str, LumagenCoordinator] = hass.data.get(DOMAIN, {})
-    for identifier in device.identifiers:
-        if identifier[0] == DOMAIN:
-            entry_id = identifier[1]
-            if entry_id in coordinators:
-                return coordinators[entry_id]
+    coordinator = coordinators.get(entry.config_entry_id)
+    if coordinator is None:
+        raise ServiceValidationError(f"No Lumagen coordinator for entity: {entity_id}")
 
-    raise ServiceValidationError(f"No Lumagen coordinator for device: {device_id}")
+    return coordinator
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Set up domain-level services."""
 
     async def show_osd_message(call: ServiceCall) -> None:
-        coordinator = _get_coordinator(hass, call.data["device_id"])
+        coordinator = _get_coordinator(hass, call.data["entity_id"])
         await coordinator.client.show_osd_message(
             line_one=call.data["line_one"],
             line_two=call.data["line_two"],
@@ -89,13 +90,13 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
         )
 
     async def show_osd_volume_bar(call: ServiceCall) -> None:
-        coordinator = _get_coordinator(hass, call.data["device_id"])
+        coordinator = _get_coordinator(hass, call.data["entity_id"])
         await coordinator.client.show_osd_volume_bar(
             call.data["level"], label=call.data.get("label")
         )
 
     async def clear_osd_message(call: ServiceCall) -> None:
-        coordinator = _get_coordinator(hass, call.data["device_id"])
+        coordinator = _get_coordinator(hass, call.data["entity_id"])
         await coordinator.client.clear_osd_message()
 
     hass.services.async_register(

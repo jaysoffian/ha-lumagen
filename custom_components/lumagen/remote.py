@@ -33,7 +33,7 @@ async def async_setup_entry(
 class LumagenRemoteEntity(LumagenEntity, RemoteEntity):
     """Remote entity for Lumagen menu navigation."""
 
-    _attr_translation_key = "remote"
+    _attr_name = None
     _attr_icon = "mdi:remote"
 
     def __init__(self, coordinator: LumagenCoordinator) -> None:

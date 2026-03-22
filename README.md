@@ -172,7 +172,7 @@ data:
 ```yaml
 action: remote.send_command
 target:
-  entity_id: remote.lumagen_radiancepro_remote
+  entity_id: remote.lumagen_radiancepro
 data:
   command:
     - menu
@@ -195,6 +195,7 @@ Example:
 ```yaml
 action: lumagen.show_osd_message
 data:
+  entity_id: remote.lumagen_radiancepro  # any entity from the Lumagen device
   line_one: "Hello" # Maximum 30 characters (ASCII 0x20 - 0x7a)
   line_two: "World" # Optional second line
   duration: 5 # Clear in 5 secs. Max is 9. Default is 3. Use 0 to disable clearing.
@@ -243,6 +244,7 @@ conditions:
 actions:
   - action: lumagen.show_osd_volume_bar
     data:
+      entity_id: remote.lumagen_radiancepro
       level: "{{ trigger.to_state.attributes.volume_level }}"
 mode: single
 ```
@@ -265,6 +267,7 @@ conditions:
 actions:
   - action: lumagen.show_osd_volume_bar
     data:
+      entity_id: remote.lumagen_radiancepro
       level: "{{ trigger.to_state.attributes.volume_level / 0.8 }}"
       label: >-
         {% if trigger.to_state.attributes.volume_level == 0 %}
@@ -295,6 +298,7 @@ conditions:
 actions:
   - action: lumagen.show_osd_volume_bar
     data:
+      entity_id: remote.lumagen_radiancepro
       level: "{{ trigger.to_state.attributes.volume_level }}"
       label: >-
         {% if trigger.to_state.attributes.volume_level == 0 %}
@@ -322,10 +326,13 @@ actions:
     then:
       - action: lumagen.show_osd_message
         data:
+          entity_id: remote.lumagen_radiancepro
           line_one: "Mute"
           duration: 0
     else:
       - action: lumagen.clear_osd_message
+        data:
+          entity_id: remote.lumagen_radiancepro
 mode: single
 ```
 

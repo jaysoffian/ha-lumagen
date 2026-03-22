@@ -32,11 +32,7 @@
         "name": "Restart Outputs"
       }
     },
-    "remote": {
-      "remote": {
-        "name": "Remote"
-      }
-    },
+    "remote": {},
     "select": {
       "aspect_ratio": {
         "name": "Aspect Ratio"
