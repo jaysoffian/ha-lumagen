@@ -113,12 +113,17 @@ Device identity (model, serial, firmware) is shown in HA's device info rather th
 
 ### Remote
 
-Send navigation and control commands to the Lumagen menu system.
+Send navigation and control commands to the Lumagen menu system. Available commands match the physical (extended) remote: 
 
-Available commands: `up`, `down`, `left`, `right`, `menu`, `ok`, `enter`,
-`exit`, `back`, `home`, `info`, `alt`, `clear`, `help`, `previous`, `pip_off`,
-`pip_select`, `pip_swap`, `pip_mode`, `save`, `zone`, `hdr_setup`,
-`test_pattern`, `osd_on`, `osd_off`, `10+`, `0`–`9`.
+- `on`, `0`..`9`, `10+`, `stby`
+- `clear`, `help`, `exit`, `menu`
+- `up`, `down`, `left`, `right`, `ok`
+- `hdr_setup`
+- `input`, `zone`, `alt`, `prev`
+- `4:3`, `16:9`, `1.85`, `2.00`, `2.20`, `2.40`
+- `lbox`, `1.90`, `2.35`, `nls`
+- `a`, `b`, `c`, `d`
+- `auto_aspect_disable`, `auto_aspect_enable`, `pattern`, `save`
 
 ## Aspect Ratio and Auto Aspect
 
