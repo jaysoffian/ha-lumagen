@@ -361,7 +361,7 @@ mode: single
 
 ### TUI
 
-A standalone Textual TUI for exercising the client against a real Lumagen:
+This repo includes a TUI (requires [uv](https://docs.astral.sh/uv/getting-started/installation/)) for exercising the client against a real Lumagen:
 
 ```bash
 ./tui.py <host> [port]
