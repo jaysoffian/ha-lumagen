@@ -1036,6 +1036,9 @@ class LumagenClient:
           The Lumagen renders any extended-ASCII character as a solid block;
           ``ZB`` temporarily promotes the given character into that range.
         """
+        if not self.state.power:
+            return
+
         if block_char and (
             len(block_char) != 1 or not (0x20 <= ord(block_char) <= 0x7A)
         ):
@@ -1080,6 +1083,9 @@ class LumagenClient:
 
         The message is displayed for 1 second.
         """
+        if not self.state.power:
+            return
+
         level = max(min(level, 1.0), 0)  # clamp to 0 - 1
         if label is None:
             if level == 0:
@@ -1092,6 +1098,8 @@ class LumagenClient:
 
     async def clear_osd_message(self) -> None:
         """Clear any OSD message."""
+        if not self.state.power:
+            return
         await self._send_command("ZC")
 
     # -- Output config ------------------------------------------------------
