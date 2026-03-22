@@ -240,7 +240,7 @@ triggers:
     attribute: volume_level
 conditions:
   - condition: template
-    value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
+    value_template: "{{ trigger.to_state.attributes.volume_level is defined }}"
 actions:
   - action: lumagen.show_osd_volume_bar
     data:
@@ -259,11 +259,11 @@ You might want to do this if you set a volume limit on your AVR.
 alias: "Show AVR volume on Lumagen (scaled)"
 triggers:
   - trigger: state
-    entity_id: media_player.denon_avr_x3800h
+    entity_id: media_player.denon_avr_x3800h  # adjust to your entity
     attribute: volume_level
 conditions:
   - condition: template
-    value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
+    value_template: "{{ trigger.to_state.attributes.volume_level is defined }}"
 actions:
   - action: lumagen.show_osd_volume_bar
     data:
@@ -290,11 +290,11 @@ Denon / Marantz AVRs can display their volume in decibels (-79.5 dB — +18.0 dB
 alias: "Show AVR volume on Lumagen (dB)"
 triggers:
   - trigger: state
-    entity_id: media_player.denon_avr_x3800h
+    entity_id: media_player.denon_avr_x3800h  # adjust to your entity
     attribute: volume_level
 conditions:
   - condition: template
-    value_template: "{{ trigger.to_state.attributes.volume_level is not none }}"
+    value_template: "{{ trigger.to_state.attributes.volume_level is defined }}"
 actions:
   - action: lumagen.show_osd_volume_bar
     data:
@@ -321,6 +321,9 @@ triggers:
   - trigger: state
     entity_id: media_player.denon_avr_x3800h  # adjust to your entity
     attribute: is_volume_muted
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.attributes.is_volume_muted is defined }}"
 actions:
   - if: "{{ trigger.to_state.attributes.is_volume_muted }}"
     then:
