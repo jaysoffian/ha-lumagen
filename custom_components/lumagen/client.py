@@ -34,7 +34,9 @@ LabelCategory = Literal["A", "B", "C", "D", "0", "1", "2", "3"]
 # ---------------------------------------------------------------------------
 
 
-# Display name → RS232 command string for setting aspect.
+# ASPECT_COMMANDS maps each AR to the RS232 command for that ratio. In cases
+# where there's more than one RS232 variant (e.g. "previous zoom" vs "no zoom"),
+# we use the same command the physical remote control sends.
 ASPECT_COMMANDS: dict[str, str] = {
     "Auto": "~",
     "Letterbox": "l",
@@ -52,35 +54,52 @@ ASPECT_COMMANDS: dict[str, str] = {
     "2.76": "+N",
 }
 
-# Remote command name → RS232 byte
+# REMOTE_COMMANDS maps buttons on the physical extended remote to the RS232 command.
+# The keys in this dict essentially match what's silk-screened on the remote.
 REMOTE_COMMANDS: dict[str, str] = {
+    # Digits and power/standby
+    "on": "%",
+    **{str(i): str(i) for i in range(10)},
+    "10+": "+",
+    "stby": "$",
+    # Navigation
+    "clear": "!",
+    "help": "U",
+    "exit": "X",
+    "menu": "M",
     "up": "^",
     "down": "v",
     "left": "<",
     "right": ">",
-    "menu": "M",
     "ok": "k",
-    "enter": "k",
-    "exit": "X",
-    "back": "X",
-    "home": "!",
-    "info": "U",
-    "alt": "#",
-    "clear": "!",
-    "help": "U",
-    "previous": "P",
-    "pip_off": "e",
-    "pip_select": "p",
-    "pip_swap": "r",
-    "pip_mode": "m",
-    "save": "S",
-    "zone": "L",
     "hdr_setup": "Y",
-    "test_pattern": "H",
-    "osd_on": "g",
-    "osd_off": "s",
-    "10+": "+",
-    **{str(i): str(i) for i in range(10)},
+    # Input selection
+    "input": "i",
+    "zone": "L",
+    "alt": "#",
+    "prev": "P",
+    # Aspect ratios
+    "4:3": "n",
+    "16:9": "w",
+    "1.85": "j",
+    "2.00": "C",
+    "2.20": "E",
+    "2.40": "G",
+    # Source aspect ratio
+    "lbox": "l",
+    "1.90": "A",
+    "2.35": "W",
+    "nls": "N",
+    # Memory selection
+    "a": "a",
+    "b": "b",
+    "c": "c",
+    "d": "d",
+    # Bottom row
+    "auto_aspect_disable": "V",
+    "auto_aspect_enable": "~",
+    "pattern": "H",
+    "save": "S",
 }
 
 _DYNAMIC_RANGE: dict[str, DynamicRange] = {"0": "SDR", "1": "HDR"}
