@@ -113,7 +113,7 @@ Device identity (model, serial, firmware) is shown in HA's device info rather th
 
 ### Remote
 
-Send navigation and control commands to the Lumagen menu system. Available commands match the physical (extended) remote: 
+Send navigation and control commands to the Lumagen menu system. Available commands match the [physical (extended) remote](https://github.com/user-attachments/assets/7d1968e4-d3e1-43d7-8ebb-ef41a5e7e2dc): 
 
 - `on`, `0`..`9`, `10+`, `stby`
 - `clear`, `help`, `exit`, `menu`
