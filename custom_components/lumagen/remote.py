@@ -45,6 +45,7 @@ class LumagenRemoteEntity(LumagenEntity, RemoteEntity):
         data = self.coordinator.data
         # Available in standby so power-on works via the remote entity
         self._attr_available = self.coordinator.last_update_success and data.connected
+        self._attr_is_on = bool(data.power)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self.coordinator.client.power_on()
