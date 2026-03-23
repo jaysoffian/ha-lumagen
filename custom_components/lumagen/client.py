@@ -1099,10 +1099,6 @@ class LumagenClient:
             return
         await self._send_command("ZC")
 
-    async def display_input_aspect(self) -> None:
-        """Pop up input and aspect info on the OSD."""
-        await self._send_command("ZY811\r")
-
     async def set_auto_aspect(self, enabled: bool) -> None:
         """Enable or disable auto aspect detection."""
         await self._send_command("~" if enabled else "V")

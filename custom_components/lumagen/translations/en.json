@@ -19,9 +19,6 @@
   },
   "entity": {
     "button": {
-      "display_input_aspect": {
-        "name": "Show Input Aspect"
-      },
       "nls": {
         "name": "NLS"
       },

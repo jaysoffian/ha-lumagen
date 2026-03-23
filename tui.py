@@ -325,7 +325,6 @@ HELP_TEXT = """\
   label <id> <text> — e.g. label A1 Apple TV
   osd \\[0-9] <text> — OSD message (| for line break)
   osd — clear OSD
-  osdaspect — input/aspect info
 
 [bold]Navigation & System[/]
   remote <cmd> — menu, up, ok, exit, …
@@ -352,7 +351,6 @@ _COMMAND_SUGGESTIONS = sorted(
         "labels",
         "label ",
         "osd ",
-        "osdaspect",
         *[f"remote {k}" for k in REMOTE_COMMANDS if not k.isdigit()],
         "remote 0..9",
         "remote 10+",
@@ -623,10 +621,6 @@ class LumagenTUI(App[None]):
         if cmd == "restart":
             await self._client.restart_outputs()
             log.write("[green]Outputs restarted[/]")
-            return
-
-        if cmd == "osdaspect":
-            await self._client.display_input_aspect()
             return
 
         if cmd == "remote" and arg:
