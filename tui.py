@@ -313,20 +313,12 @@ HELP_TEXT = """\
 [bold]Power & Input[/]
   on / off — power on or off
   <1-19> — select input
-  previous — previous input
   a / b / c / d — input memory
 
 [bold]Video Processing[/]
   aspect <name> — 1.33, 1.78, 2.40, …
   nls — non-linear stretch
-  mode <1-8> — output custom mode
-  cms <1-8> — output CMS
-  style <1-8> — output style
   autoaspect on / off — auto aspect
-  subtitle off / 3% / 6%
-
-[bold]Hardware[/]
-  fan <1-10> — minimum fan speed
 
 [bold]Labels & OSD[/]
   labels — show all labels
@@ -338,7 +330,6 @@ HELP_TEXT = """\
 [bold]Navigation & System[/]
   remote <cmd> — menu, up, ok, exit, …
   save — save config to flash
-  hotplug \\[input] — toggle HDMI hotplug
   restart — restart outputs (ALT+PREV)
 
 [bold]Raw RS232[/]
@@ -354,18 +345,10 @@ _COMMAND_SUGGESTIONS = sorted(
     {
         "on",
         "off",
-        "previous",
         *[f"aspect {a}" for a in ASPECT_COMMANDS],
-        *[f"mode {i}" for i in range(1, 9)],
-        *[f"cms {i}" for i in range(1, 9)],
-        *[f"style {i}" for i in range(1, 9)],
         "autoaspect on",
         "autoaspect off",
         "nls",
-        "subtitle off",
-        "subtitle 3%",
-        "subtitle 6%",
-        *[f"fan {i}" for i in range(1, 11)],
         "labels",
         "label ",
         "osd ",
@@ -374,7 +357,6 @@ _COMMAND_SUGGESTIONS = sorted(
         "remote 0..9",
         "remote 10+",
         "save",
-        "hotplug",
         "restart",
     }
 )
@@ -591,42 +573,6 @@ class LumagenTUI(App[None]):
                 log.write(f"[dim]  Valid: {names}[/]")
             return
 
-        if cmd == "mode" and arg:
-            try:
-                val = int(arg)
-            except ValueError:
-                log.write(f"[red]Invalid mode: {arg} (use 1-8)[/]")
-                return
-            if not 1 <= val <= 8:
-                log.write(f"[red]Mode must be 1-8, got {val}[/]")
-                return
-            await self._client.set_output_config(mode=val - 1)
-            return
-
-        if cmd == "cms" and arg:
-            try:
-                val = int(arg)
-            except ValueError:
-                log.write(f"[red]Invalid CMS: {arg} (use 1-8)[/]")
-                return
-            if not 1 <= val <= 8:
-                log.write(f"[red]CMS must be 1-8, got {val}[/]")
-                return
-            await self._client.set_output_config(cms=val - 1)
-            return
-
-        if cmd == "style" and arg:
-            try:
-                val = int(arg)
-            except ValueError:
-                log.write(f"[red]Invalid style: {arg} (use 1-8)[/]")
-                return
-            if not 1 <= val <= 8:
-                log.write(f"[red]Style must be 1-8, got {val}[/]")
-                return
-            await self._client.set_output_config(style=val - 1)
-            return
-
         if cmd == "autoaspect":
             if arg.lower() in ("on", "1"):
                 await self._client.set_auto_aspect(True)
@@ -674,46 +620,9 @@ class LumagenTUI(App[None]):
             log.write("[green]Config saved to flash[/]")
             return
 
-        if cmd == "hotplug":
-            if arg:
-                try:
-                    await self._client.trigger_hotplug(int(arg))
-                except ValueError:
-                    log.write(f"[red]Invalid input: {arg}[/]")
-                    return
-            else:
-                await self._client.trigger_hotplug()
-            log.write("[green]Hotplug triggered[/]")
-            return
-
         if cmd == "restart":
             await self._client.restart_outputs()
             log.write("[green]Outputs restarted[/]")
-            return
-
-        if cmd == "previous":
-            await self._client.previous_input()
-            return
-
-        if cmd == "fan" and arg:
-            try:
-                val = int(arg)
-            except ValueError:
-                log.write(f"[red]Invalid fan speed: {arg} (use 1-10)[/]")
-                return
-            if not 1 <= val <= 10:
-                log.write(f"[red]Fan speed must be 1-10, got {val}[/]")
-                return
-            await self._client.set_min_fan_speed(val)
-            return
-
-        if cmd == "subtitle":
-            shift_map = {"off": 0, "0": 0, "3": 1, "3%": 1, "6": 2, "6%": 2}
-            level = shift_map.get(arg.lower())
-            if level is None:
-                log.write("[red]Usage: subtitle off / 3% / 6%[/]")
-                return
-            await self._client.set_subtitle_shift(level)
             return
 
         if cmd == "osdaspect":

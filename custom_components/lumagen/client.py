@@ -1099,46 +1099,9 @@ class LumagenClient:
             return
         await self._send_command("ZC")
 
-    # -- Output config ------------------------------------------------------
-
-    async def set_output_config(
-        self,
-        mode: int | None = None,
-        cms: int | None = None,
-        style: int | None = None,
-    ) -> None:
-        """Set output mode/CMS/style (0-7 each, None to keep current).
-
-        Uses ZY530MCS where each position is 0-7 or K (keep).
-        """
-        for name, val in (("mode", mode), ("cms", cms), ("style", style)):
-            if val is not None and not 0 <= val <= 7:
-                raise ValueError(f"{name} must be 0-7, got {val}")
-        m = str(mode) if mode is not None else "K"
-        c = str(cms) if cms is not None else "K"
-        s = str(style) if style is not None else "K"
-        await self._send_command(f"ZY530{m}{c}{s}\r")
-        await self._send_command("ZQI25")
-
-    async def previous_input(self) -> None:
-        """Switch to the previous input."""
-        await self._send_command("P")
-
     async def display_input_aspect(self) -> None:
         """Pop up input and aspect info on the OSD."""
         await self._send_command("ZY811\r")
-
-    async def set_min_fan_speed(self, speed: int) -> None:
-        """Set minimum fan speed (1-10)."""
-        if not 1 <= speed <= 10:
-            raise ValueError(f"Fan speed must be 1-10, got {speed}")
-        await self._send_command(f"ZY552{speed - 1}\r")
-
-    async def set_subtitle_shift(self, level: int) -> None:
-        """Set subtitle shift (0=off, 1=3%, 2=6%)."""
-        if level not in (0, 1, 2):
-            raise ValueError(f"Subtitle shift must be 0-2, got {level}")
-        await self._send_command(f"ZY553{level}\r")
 
     async def set_auto_aspect(self, enabled: bool) -> None:
         """Enable or disable auto aspect detection."""
@@ -1150,11 +1113,6 @@ class LumagenClient:
     async def save_config(self) -> None:
         """Save current configuration to flash."""
         await self._send_command("ZY6SAVECONFIG\r")
-
-    async def trigger_hotplug(self, input_num: int | None = None) -> None:
-        """Toggle HDMI hotplug on an input (or all inputs if None)."""
-        target = str(input_num) if input_num is not None else "A"
-        await self._send_command(f"ZY520{target}\r")
 
     async def restart_outputs(self) -> None:
         """Restart outputs via ALT, PREV remote sequence."""
