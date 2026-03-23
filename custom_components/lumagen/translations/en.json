@@ -1,12 +1,21 @@
 {
   "config": {
     "abort": {
-      "already_configured": "This Lumagen device is already configured."
+      "already_configured": "This Lumagen device is already configured.",
+      "reconfigure_successful": "Connection settings updated."
     },
     "error": {
       "cannot_connect": "Failed to connect to the Lumagen device. Please check your connection settings and ensure the device is powered on."
     },
     "step": {
+      "reconfigure": {
+        "data": {
+          "host": "Host IP Address",
+          "port": "Port"
+        },
+        "description": "Update the IP address and port of your Lumagen's TCP-to-serial adapter.",
+        "title": "Reconfigure Lumagen Connection"
+      },
       "user": {
         "data": {
           "host": "Host IP Address",
