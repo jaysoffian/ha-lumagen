@@ -336,7 +336,7 @@ HELP_TEXT = """\
   restart — restart outputs (ALT+PREV)
 
 [bold]Raw RS232[/]
-  Z... — e.g. ZQS01, ZQI24
+  %CMD — e.g. %ZQS01, %ZQI24 (\\r=CR, \\n=NL)
 
 [bold]Keys[/]
   Ctrl+H help     Ctrl+Q quit
@@ -763,9 +763,14 @@ class LumagenTUI(App[None]):
             self._show_labels(log)
             return
 
-        # Raw RS232 commands start with Z
-        if raw.startswith("Z"):
-            await self._client.send_raw_command(raw)
+        # Raw RS232 commands start with %
+        if raw.startswith("%"):
+            payload = raw[1:].strip()
+            if not payload:
+                log.write("[red]Empty raw command — usage: %CMD[/]")
+                return
+            payload = payload.replace("\\r", "\r").replace("\\n", "\n")
+            await self._client.send_raw_command(payload)
             return
 
         log.write(f"[red]Unknown command: {raw}[/]")
