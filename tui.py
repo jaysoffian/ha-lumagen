@@ -581,7 +581,7 @@ class LumagenTUI(App[None]):
             return
 
         if cmd == "nls":
-            await self._client.toggle_nls()
+            await self._client.send_nls_command()
             return
 
         if cmd == "label" and arg:

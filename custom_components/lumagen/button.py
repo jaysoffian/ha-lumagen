@@ -78,4 +78,4 @@ class LumagenNlsButton(LumagenEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Send the NLS command and poll for updated state."""
-        await self.coordinator.client.toggle_nls()
+        await self.coordinator.client.send_nls_command()

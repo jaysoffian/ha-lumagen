@@ -994,8 +994,8 @@ class LumagenClient:
         await self._send_command("ZQI54")
         await self._send_command("ZQI25")
 
-    async def toggle_nls(self) -> None:
-        """Toggle Non-Linear Stretch on or off."""
+    async def send_nls_command(self) -> None:
+        """Send NLS command and query result."""
         await self._send_command("N")
         # Query authoritative state — NLS flag is in I25
         await self._send_command("ZQI25")
