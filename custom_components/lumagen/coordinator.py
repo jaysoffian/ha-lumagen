@@ -69,9 +69,12 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         await self._store.async_save(self.client.state.to_stored_dict())
 
     async def reload_config(self) -> None:
-        """Re-fetch identity, config state, and labels from device."""
-        await self.client.reload_config()
+        """Re-fetch identity and labels from device."""
+        if not await self.client.query_config():
+            _LOGGER.warning("Config reload incomplete — stored state not updated")
+            return
         await self.async_save_stored_state()
+        _LOGGER.info("Config reloaded from device")
 
     async def _async_update_data(self) -> LumagenState:
         """Fallback for first refresh — returns current state snapshot."""

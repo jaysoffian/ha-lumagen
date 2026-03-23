@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 
 import pytest
 
@@ -642,7 +643,7 @@ class TestConstants:
 
 
 # ---------------------------------------------------------------------------
-# load_initial_state
+# query_runtime / query_config
 # ---------------------------------------------------------------------------
 
 
@@ -658,103 +659,142 @@ def _instrument_client() -> tuple[LumagenClient, list[str]]:
     return client, sent
 
 
-def _deliver(client: LumagenClient, *lines: str) -> None:
-    """Feed lines into the client as if received from the device."""
-    for line in lines:
-        client._on_readline(line)
-
-
-class TestLoadInitialState:
+class TestQueryRuntime:
     @pytest.mark.anyio
-    async def test_success_power_on(self):
+    async def test_power_on_pipelines(self):
+        """When on, query_runtime sends ZQI25+ZQI54."""
         client, sent = _instrument_client()
-        i25_fields = ",".join(_make_i24_fields(input_memory="A", power_status="1"))
-
-        async def respond():
-            await asyncio.sleep(0)
-            _deliver(client, "ZQS01!S01,RadiancePro,102308,1009,745")
-            await asyncio.sleep(0)
-            _deliver(client, "ZQS02!S02,1")
-            await asyncio.sleep(0)
-            _deliver(client, "ZQI53!I53,0", "ZQI54!I54,1")
-            await asyncio.sleep(0)
-            _deliver(client, f"ZQI25!I25,{i25_fields}")
-
-        await asyncio.gather(respond(), client.load_initial_state(timeout=1))
-
-        assert client.state.model_name == "RadiancePro"
-        assert client.state.power is True
-        assert client.state.game_mode is False
-        assert client.state.auto_aspect is True
-        assert client.state.logical_input == 1
-        assert sent == ["ZQS01", "ZQS02", "ZQI53", "ZQI54", "ZQI25"]
+        client.state.power = True
+        await client.query_runtime()
+        assert sent == ["ZQI25ZQI54"]
 
     @pytest.mark.anyio
-    async def test_success_power_off(self):
+    async def test_power_off_sends_s02(self):
+        """When off, query_runtime sends ZQS02."""
         client, sent = _instrument_client()
-
-        async def respond():
-            await asyncio.sleep(0)
-            _deliver(client, "ZQS01!S01,RadiancePro,102308,1009,745")
-            await asyncio.sleep(0)
-            _deliver(client, "ZQS02!S02,0")
-            await asyncio.sleep(0)
-            _deliver(client, "ZQI53!I53,1", "ZQI54!I54,0")
-
-        await asyncio.gather(respond(), client.load_initial_state(timeout=1))
-
-        assert client.state.power is False
-        assert client.state.logical_input is None
-        assert "ZQI25" not in sent
+        client.state.power = False
+        await client.query_runtime()
+        assert sent == ["ZQS02"]
 
     @pytest.mark.anyio
-    async def test_identity_timeout_raises(self):
-        client, _ = _instrument_client()
-        with pytest.raises(TimeoutError, match="Identity"):
-            await client.load_initial_state(timeout=0.05)
-
-    @pytest.mark.anyio
-    async def test_power_timeout_raises(self):
-        client, _ = _instrument_client()
-
-        async def respond():
-            await asyncio.sleep(0)
-            _deliver(client, "ZQS01!S01,RadiancePro,102308,1009,745")
-
-        with pytest.raises(TimeoutError, match="Power"):
-            await asyncio.gather(respond(), client.load_initial_state(timeout=0.05))
-
-    @pytest.mark.anyio
-    async def test_config_timeout_silent(self):
-        client, _ = _instrument_client()
-
-        async def respond():
-            await asyncio.sleep(0)
-            _deliver(client, "ZQS01!S01,RadiancePro,102308,1009,745")
-            await asyncio.sleep(0)
-            _deliver(client, "ZQS02!S02,0")
-
-        await asyncio.gather(respond(), client.load_initial_state(timeout=0.05))
-
-        assert client.state.game_mode is None
-        assert client.state.auto_aspect is None
-
-    @pytest.mark.anyio
-    async def test_identity_fast_path(self):
-        """When model_name is pre-populated (stored state), wait_for returns
-        immediately even without a device response."""
+    async def test_power_unknown_sends_s02(self):
+        """When power is None (unknown), query_runtime sends ZQS02."""
         client, sent = _instrument_client()
+        assert client.state.power is None
+        await client.query_runtime()
+        assert sent == ["ZQS02"]
+
+
+class TestQueryConfig:
+    @pytest.mark.anyio
+    async def test_success(self):
+        """query_config sends ZQS01, waits for identity, then queries labels."""
+        client, sent = _instrument_client()
+        labels_called = False
+
+        async def _mock_labels() -> bool:
+            nonlocal labels_called
+            labels_called = True
+            return True
+
+        client._query_labels = _mock_labels  # type: ignore[assignment]
+
+        async def _deliver_identity():
+            await asyncio.sleep(0)
+            client._on_readline("ZQS01!S01,RadiancePro,102308,1009,745")
+
+        result, _ = await asyncio.gather(client.query_config(), _deliver_identity())
+
+        assert sent == ["ZQS01"]
+        assert labels_called
+        assert result is True
+
+    @pytest.mark.anyio
+    async def test_returns_false_when_identity_times_out(self):
+        """query_config returns False when S01 response never arrives."""
+        client, _ = _instrument_client()
+        labels_called = False
+
+        async def _mock_labels() -> bool:
+            nonlocal labels_called
+            labels_called = True
+            return True
+
+        original_wait_for = client.wait_for
+
+        async def _fast_wait_for(
+            predicate: Callable[[LumagenState], bool], timeout: float = 5.0
+        ) -> bool:
+            return await original_wait_for(predicate, timeout=0.01)
+
+        client._query_labels = _mock_labels  # type: ignore[assignment]
+        client.wait_for = _fast_wait_for  # type: ignore[assignment]
+
+        result = await client.query_config()
+
+        assert result is False
+        assert not labels_called  # should not proceed to labels
+
+    @pytest.mark.anyio
+    async def test_returns_false_when_labels_fail(self):
+        """query_config returns False when _query_labels fails."""
+        client, _ = _instrument_client()
+
+        async def _mock_labels() -> bool:
+            return False
+
+        client._query_labels = _mock_labels  # type: ignore[assignment]
+
+        async def _deliver_identity():
+            await asyncio.sleep(0)
+            client._on_readline("ZQS01!S01,RadiancePro,102308,1009,745")
+
+        result, _ = await asyncio.gather(client.query_config(), _deliver_identity())
+
+        assert result is False
+
+    @pytest.mark.anyio
+    async def test_clears_model_name_before_waiting(self):
+        """query_config clears model_name so wait_for actually waits."""
+        client, _ = _instrument_client()
+
+        async def _mock_labels() -> bool:
+            return True
+
+        client._query_labels = _mock_labels  # type: ignore[assignment]
         client.state.model_name = "RadiancePro"
 
-        async def respond():
-            # Only deliver power and config — no S01 response
+        async def _deliver_identity():
             await asyncio.sleep(0)
-            _deliver(client, "ZQS02!S02,0")
-            await asyncio.sleep(0)
-            _deliver(client, "ZQI53!I53,0", "ZQI54!I54,0")
+            # model_name should have been cleared
+            assert client.state.model_name is None
+            client._on_readline("ZQS01!S01,RadiancePro,102308,1009,745")
 
-        await asyncio.gather(respond(), client.load_initial_state(timeout=0.05))
+        result, _ = await asyncio.gather(client.query_config(), _deliver_identity())
 
-        # ZQS01 still sent (fire-and-forget refresh), but no timeout
-        assert "ZQS01" in sent
+        assert result is True
         assert client.state.model_name == "RadiancePro"
+
+    @pytest.mark.anyio
+    async def test_notifies_listeners(self):
+        """query_config calls _notify_listeners after completion."""
+        client, _ = _instrument_client()
+        notified = False
+
+        def _mock_notify() -> None:
+            nonlocal notified
+            notified = True
+
+        async def _mock_labels() -> bool:
+            return True
+
+        client._query_labels = _mock_labels  # type: ignore[assignment]
+        client._notify_listeners = _mock_notify  # type: ignore[assignment]
+
+        async def _deliver_identity():
+            await asyncio.sleep(0)
+            client._on_readline("ZQS01!S01,RadiancePro,102308,1009,745")
+
+        await asyncio.gather(client.query_config(), _deliver_identity())
+
+        assert notified

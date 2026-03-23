@@ -140,9 +140,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not await client.wait_for(lambda s: s.connected, timeout=5):
             raise ConfigEntryNotReady("Device not connected")
 
-        # Load stored identity + labels, or fetch from device
+        # Seed device info from stored state (identity + labels)
         has_stored = await coordinator.async_load_stored_state()
-        await client.load_initial_state()
+
+        if not has_stored and not await client.query_config():
+            raise ConfigEntryNotReady("Config query incomplete")
+
+        # Kick off runtime state (power arrives shortly after)
+        await client.query_runtime()
 
     except ConfigEntryNotReady:
         raise
@@ -150,20 +155,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Failed to set up Lumagen at %s:%s: %s", host, port, err)
         raise ConfigEntryNotReady(f"Failed to set up: {err}") from err
 
-    # Save identity if we just fetched it
-    if client.state.model_name:
+    if not has_stored:
         await coordinator.async_save_stored_state()
-
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
-
-    # Fetch labels before setting up platforms so select entities have options.
-    # reload_config() re-queries identity (already fetched by load_initial_state)
-    # because it must be self-contained for the "Reload config" button.
-    if not has_stored:
-        await coordinator.reload_config()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

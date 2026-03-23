@@ -54,7 +54,7 @@ Copy `custom_components/lumagen` into your Home Assistant `custom_components` di
 1. Settings → Devices & Services → Add Integration → Lumagen
 2. Enter the hostname (or IP address) and port (default: 4999) of your TCP/IP to Serial Adapter.
 
-The integration tests the connection before completing setup. Configuration information that rarely changes (identity, firmware revision, game mode, and labels) are loaded from your Lumagen at this time and then cached across HA restarts. Use the **Reload config** button to refresh this information in the future.
+The integration tests the connection before completing setup. Configuration information that rarely changes (identity, firmware revision, and labels) is loaded from your Lumagen on first setup and cached across HA restarts. Use the **Reload config** button to refresh this information in the future.
 
 After setup, go to **Settings → Devices & Services → Lumagen → Configure** to choose which aspect ratios appear in the Aspect Ratio select menu.
 
@@ -70,7 +70,7 @@ After setup, go to **Settings → Devices & Services → Lumagen → Configure**
 - **NLS** - Enable/disable [non-linear stretch](#non-linear-stretch).
 - **Show input aspect** — Show input and aspect info on the Lumagen OSD.
 - **Restart outputs** — Restart outputs if your TV/projector has trouble locking on the signal.
-- **Reload config** — Reload rarely changing configuration information (identity, firmware revision, game mode, and labels) from your Lumagen.
+- **Reload config** — Reload configuration (identity, firmware revision, and labels) from your Lumagen. This queries all 64 labels sequentially and may take a minute or two to complete. There is no progress indication — verify by checking that labels or firmware version updated.
 
 ### Selects
 

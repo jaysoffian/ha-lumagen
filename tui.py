@@ -271,8 +271,11 @@ _STATE_FIELDS: list[tuple[str, str, Callable[[LumagenState], str | None] | None]
     ("CMS", "_cms", _cms),
     ("Style", "_style", _style),
     ("", "", None),
-    ("Game Mode", "game_mode", lambda s: "On" if s.game_mode else "Off"),
-    ("Auto Aspect", "auto_aspect", lambda s: "On" if s.auto_aspect else "Off"),
+    (
+        "Auto Aspect",
+        "auto_aspect",
+        lambda s: {True: "On", False: "Off", None: "—"}[s.auto_aspect],
+    ),
 ]
 
 
@@ -319,7 +322,6 @@ HELP_TEXT = """\
   mode <1-8> — output custom mode
   cms <1-8> — output CMS
   style <1-8> — output style
-  game on / off — game mode
   autoaspect on / off — auto aspect
   subtitle off / 3% / 6%
 
@@ -357,8 +359,6 @@ _COMMAND_SUGGESTIONS = sorted(
         *[f"mode {i}" for i in range(1, 9)],
         *[f"cms {i}" for i in range(1, 9)],
         *[f"style {i}" for i in range(1, 9)],
-        "game on",
-        "game off",
         "autoaspect on",
         "autoaspect off",
         "nls",
@@ -488,16 +488,12 @@ class LumagenTUI(App[None]):
         )
 
         if self._client.state.connected:
-            try:
-                await self._client.load_initial_state()
-            except TimeoutError as err:
-                log.write(f"[red]{err}[/]")
-            self._refresh_state()
             if not has_stored:
-                log.write("[dim]Fetching labels…[/]")
-                await self._client.query_labels()
+                log.write("[dim]Fetching config…[/]")
+                await self._client.query_config()
                 self._save_state()
-                self._refresh_state()
+            await self._client.query_runtime()
+            self._refresh_state()
         else:
             log.write("[red]Connection failed.[/]")
 
@@ -629,15 +625,6 @@ class LumagenTUI(App[None]):
                 log.write(f"[red]Style must be 1-8, got {val}[/]")
                 return
             await self._client.set_output_config(style=val - 1)
-            return
-
-        if cmd == "game":
-            if arg.lower() in ("on", "1"):
-                await self._client.set_game_mode(True)
-            elif arg.lower() in ("off", "0"):
-                await self._client.set_game_mode(False)
-            else:
-                log.write("[red]Usage: game on / game off[/]")
             return
 
         if cmd == "autoaspect":
@@ -836,16 +823,18 @@ class LumagenTUI(App[None]):
     async def action_refresh_info(self) -> None:
         log = self.query_one("#log", RichLog)
         log.write("[dim]Refreshing signal info…[/]")
-        await self._client.query_runtime_state()
+        await self._client.query_runtime()
         self._refresh_state()
 
     async def action_reload_config(self) -> None:
         log = self.query_one("#log", RichLog)
         log.write("[dim]Reloading config & labels…[/]")
-        await self._client.reload_config()
-        self._save_state()
-        self._refresh_state()
-        log.write("[green]Config reloaded.[/]")
+        if await self._client.query_config():
+            self._save_state()
+            self._refresh_state()
+            log.write("[green]Config reloaded.[/]")
+        else:
+            log.write("[red]Config reload incomplete — stored state not updated[/]")
 
     async def on_unmount(self) -> None:
         await self._client.disconnect()

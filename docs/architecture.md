@@ -32,8 +32,6 @@ without querying the device.
 |------------------|---------|----------------------------------------------|
 | Model / serial   | ZQS01   | Only changes on hardware swap                |
 | Firmware version | ZQS01   | Changes after firmware update                 |
-| Game mode        | ZQI53   | Per-input config in Input > Options > A/V Delay |
-| Auto aspect      | ZQI54   | Per-input config (fw ≥041824)                  |
 | Input labels     | ZQS1*   | 40 labels (A0-D9), set via Lumagen menus      |
 | Mode/CMS/Style labels | ZQS1* | 24 labels (custom mode, CMS, style)       |
 
@@ -57,21 +55,16 @@ candidates for HA entities because:
 
 | Setting         | Command  | Why excluded                                        |
 |-----------------|----------|-----------------------------------------------------|
-| Game mode       | ZY551    | Per-input, saved on device, no automation use case. Queryable (I53) but not worth an entity. |
+| Game mode       | ZY551    | Per-input, saved on device, no automation use case. |
 | Min fan speed   | ZY552    | Global hardware setting. No query command — state lost on restart. |
 | Subtitle shift  | ZY553    | Per-input, no query command, no automation use case. |
 
-The client methods and TUI commands for these settings remain available
+The TUI commands for min fan speed and subtitle shift remain available
 for interactive testing and debugging.
 
-**When fetched:**
-- First-ever setup (no stored data) — automatic with backoff retry.
-- User presses the "Reload config" button entity.
-
-**Why not on every startup:** Labels alone require 64 sequential queries
-with 2-second timeouts each. The device can be slow to respond after
-boot, causing timeouts and retries. Since these values almost never
-change, caching them avoids unnecessary device traffic and startup delays.
+**When fetched:** On first setup via `query_config()` (ZQS01 + all
+labels), then cached across restarts. The "Reload config" button
+re-fetches from the device.
 
 ### 2. Signal state (unsolicited + keepalive)
 
@@ -100,10 +93,14 @@ when configured with "Report mode changes: Full v5" (unsolicited ZQI25).
 | Output CMS                  | ZQI25 unsolicited |
 | Output Style                | ZQI25 unsolicited |
 
+**Connection open:** Power is reset to None on every TCP connect
+(including reconnects) so that `query_runtime()` always starts with
+ZQS02 to discover actual power state.
+
 **Keepalive:** When the connection has been idle for 30 seconds (no data
-received at all), a probe is sent. The probe depends on power state:
-- **Device on:** ZQI25 — full signal state including input memory
-- **Device off:** ZQS02 — power status check
+received at all), a probe is sent via `query_runtime()`:
+- **Device on:** ZQI25+ZQI54 — full signal state + auto aspect
+- **Device off/unknown:** ZQS02 — power status check
 
 Any received data — including unsolicited ZQI25 reports — resets the idle
 timer. This means during active use (source changes, input switches), no
@@ -158,31 +155,22 @@ Known device-level issues:
 
 1. Connect to device, wait for TCP session (response-driven `wait_for`,
    5 s timeout).
-2. Load config state from HA storage (identity, game mode, auto aspect,
-   labels).
-3. `load_initial_state()` queries all critical state, blocking on each
-   response:
-   - Identity (ZQS01) — always sent. When stored data already populated
-     `model_name`, the wait returns immediately (fast-path) and the
-     response refreshes identity in the background.
-   - Power (ZQS02) — always needed, it's volatile.
-   - Config toggles (ZQI53 game mode, ZQI54 auto aspect).
-   - Runtime state (ZQI25) — only when device is on; signal fields are
-     stale in standby.
-   - Identity or power timeout raises `TimeoutError` →
-     `ConfigEntryNotReady` (HA retries). Config/runtime timeouts are
-     silent (non-critical).
-4. If no stored config exists (first setup), `reload_config()` fetches
-   identity, config toggles, and all labels (blocking, before entity
-   platform setup). Identity is queried again here because
-   `reload_config()` must be self-contained — it also serves the
-   "Reload config" button (e.g., after firmware updates).
+2. Load config state from HA storage (identity, labels) to seed device
+   info before device responds.
+3. If no stored config exists (first setup), `query_config()` sends
+   ZQS01 (identity), waits for the response, then queries all 64
+   labels sequentially. If identity times out or any label fails →
+   `ConfigEntryNotReady` (HA retries). When stored config exists
+   (normal restarts), this step is skipped entirely.
+4. `query_runtime()` fires (non-blocking). Power is unknown at this
+   point so it sends ZQS02. Entities start unavailable until the
+   power response arrives.
 
 On power-on (off → on transition detected from ZQS02 poll response or
 `Power-up complete.` sentinel):
 
 1. Wait 10 seconds for the device to finish initialization.
-2. Send ZQI25 to get full signal state.
+2. `query_runtime()` sends ZQI25+ZQI54 to get full signal state.
 
 Note: `None` to `on` transitions (initial state discovery after HA
 restart or reconnect) do NOT trigger the power-on handler — the startup

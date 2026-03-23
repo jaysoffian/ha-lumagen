@@ -79,9 +79,9 @@ class LumagenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not await client.wait_for(lambda s: s.connected, timeout=5):
                 _LOGGER.debug("Connection test: TCP connect failed")
                 return False
-            await client.query_identity()
-            if not await client.wait_for(lambda s: s.model_name is not None, timeout=5):
-                _LOGGER.debug("Connection test: identity query timed out")
+            await client.query_runtime()
+            if not await client.wait_for(lambda s: s.power is not None, timeout=5):
+                _LOGGER.debug("Connection test: device did not respond")
                 return False
             return True
         except Exception:

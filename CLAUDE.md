@@ -11,6 +11,7 @@
 ## Python
 - Always use `uv` to run Python, pytest, and tools (never bare `python` or `python3`).
 - Always use `uv add` and `uv remove` to add or remove Python packages.
+- Never add new `pyright: ignore` or `type: ignore` comments — needing one means the approach is wrong.
 
 ## Project overview
 - Home Assistant custom integration for Lumagen Radiance Pro video processors.

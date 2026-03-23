@@ -14,6 +14,7 @@ from typing import ClassVar, Literal, cast, get_args
 
 _LOGGER = logging.getLogger(__name__)
 
+
 # ---------------------------------------------------------------------------
 # Type aliases
 # ---------------------------------------------------------------------------
@@ -215,10 +216,9 @@ class LumagenState:
     outputs_on: int | None = None  # raw bitmask from WWWW field
 
     # Config
-    game_mode: bool | None = None
     auto_aspect: bool | None = None
 
-    # Labels (populated by query_labels / set_label)
+    # Labels (populated by _query_labels / set_label)
     _labels: LabelDict = field(default_factory=LabelDict)
 
     # Change tracking (not part of equality/repr)
@@ -293,8 +293,6 @@ class LumagenState:
         "software_revision",
         "model_number",
         "serial_number",
-        "game_mode",
-        "auto_aspect",
     )
 
     def to_stored_dict(self) -> dict[str, object]:
@@ -455,14 +453,6 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> bool:
     return notify
 
 
-@_on("I53")
-def _on_game_mode(state: LumagenState, fields: list[str]) -> None:
-    """I53 — game mode status."""
-    if not fields:
-        return
-    state.game_mode = fields[0] == "1"
-
-
 @_on("I54")
 def _on_auto_aspect(state: LumagenState, fields: list[str]) -> None:
     """I54 — auto aspect status (fw ≥041824)."""
@@ -562,6 +552,7 @@ class LumagenClient:
 
         _LOGGER.info("Connected to %s:%s", self._host, self._port)
         self._running = True
+        self.state.power = None
         self.state.connected = True
         self._read_task = asyncio.create_task(self._read_loop())
         self._keepalive_task = asyncio.create_task(self._keepalive_loop())
@@ -596,7 +587,7 @@ class LumagenClient:
         if was_connected:
             if self._on_connection_changed:
                 self._on_connection_changed(False)
-            self._notify_state_changed()
+            self._notify_listeners()
 
         # Start reconnect
         self._disconnecting = False
@@ -615,7 +606,7 @@ class LumagenClient:
             await self._open_connection()
             if self.state.connected:
                 _LOGGER.info("Reconnected to %s:%s", self._host, self._port)
-                await self.query_power()
+                await self.query_runtime()
                 return
             delay = min(delay * 2, 30.0)
 
@@ -651,13 +642,13 @@ class LumagenClient:
             self.state.clear_changed()
             self.state.power = True
             if self.state.changed:
-                self._notify_state_changed()
+                self._notify_listeners()
             return
         if "POWER OFF" in line:
             self.state.clear_changed()
             self.state.power = False
             if self.state.changed:
-                self._notify_state_changed()
+                self._notify_listeners()
             return
 
         # Response: !<code>,<fields>
@@ -677,16 +668,15 @@ class LumagenClient:
             _LOGGER.exception("Error in handler for %s", name)
         else:
             if self.state.changed or notify:
-                self._notify_state_changed()
+                self._notify_listeners()
 
     # -- Keepalive ----------------------------------------------------------
 
     async def _keepalive_loop(self) -> None:
         """Probe connection after 30 s of idle.
 
-        Poll with ZQI25 (full signal state) when device is on and ZQS02 (power status)
-        when device is off. Even though ZQI25 returns a response when device is off,
-        most of the response is stale information.
+        Uses query_runtime which pipelines ZQI25+ZQI54 when the device
+        is on and sends ZQS02 when off.
         """
         interval = 30
         probe_timeout = 5
@@ -701,13 +691,9 @@ class LumagenClient:
             idle = time.monotonic() - self._last_recv
             if idle < interval:
                 continue
-            # Pick probe based on power state
             before = self._last_recv
             try:
-                if self.state.power:
-                    await self._send_command("ZQI25")
-                else:
-                    await self._send_command("ZQS02")
+                await self.query_runtime()
                 await asyncio.sleep(probe_timeout)
             except asyncio.CancelledError:
                 return
@@ -736,7 +722,17 @@ class LumagenClient:
                 _LOGGER.error("Send error: %s", err)
                 await self._on_disconnect()
 
-    def _notify_state_changed(self) -> None:
+    def _notify_listeners(self) -> None:
+        """Notify state-change callback and wake any wait_for waiters.
+
+        Called in two ways:
+        1. From _on_readline — after a response handler runs, guarded by
+           ``if self.state.changed or notify``.  Only fires when a field
+           actually changed or the handler explicitly requested it.
+        2. Explicitly — by query_config (label responses bypass _on_readline)
+           and by _on_disconnect.  These calls are unconditional because the
+           caller knows state has changed in bulk.
+        """
         power = self.state.power
         if power and self._last_power is not None and not self._last_power:
             self._schedule_power_on_refresh()
@@ -761,7 +757,7 @@ class LumagenClient:
         _LOGGER.info("Power on detected — refreshing state in 10s")
         await asyncio.sleep(10)
         try:
-            await self.query_runtime_state()
+            await self.query_runtime()
         except Exception:
             _LOGGER.exception("Error querying state after power-on")
 
@@ -786,57 +782,41 @@ class LumagenClient:
 
     # -- State queries ------------------------------------------------------
 
-    async def query_identity(self) -> None:
-        """Query device identity (model, firmware, serial)."""
-        await self._send_command("ZQS01")
+    async def query_runtime(self) -> None:
+        """Query runtime state (fire-and-forget).
 
-    async def query_power(self) -> None:
-        """Query power state."""
-        await self._send_command("ZQS02")
-
-    async def query_runtime_state(self) -> None:
-        """Query signal info (incl. input memory)."""
-        await self._send_command("ZQI25")
-
-    async def query_config_state(self) -> None:
-        """Query config toggles (game mode, auto aspect)."""
-        await self._send_command("ZQI53")
-        await self._send_command("ZQI54")
-
-    async def load_initial_state(self, *, timeout: float = 5) -> None:
-        """Query and wait for all state needed at startup.
-
-        Unlike the fire-and-forget query_* methods, this blocks until
-        each response arrives or times out.  Raises TimeoutError if
-        identity or power queries fail — the caller should not proceed
-        with integration setup when the device is unresponsive.
+        When on: pipelines ZQI25 + ZQI54 (signal info, auto aspect).
+        When off/unknown: sends ZQS02 (power status only — signal fields
+        are stale in standby).
         """
-        await self.query_identity()
-        if not await self.wait_for(lambda s: s.model_name is not None, timeout=timeout):
-            raise TimeoutError("Identity query timed out")
-
-        await self.query_power()
-        if not await self.wait_for(lambda s: s.power is not None, timeout=timeout):
-            raise TimeoutError("Power query timed out")
-
-        await self.query_config_state()
-        await self.wait_for(
-            lambda s: s.game_mode is not None and s.auto_aspect is not None,
-            timeout=timeout,
-        )
-
-        # ZQI25 works in standby but signal fields are stale (last state
-        # before power-off). Skip until power-on refresh queries live state.
         if self.state.power:
-            await self.query_runtime_state()
-            await self.wait_for(lambda s: s.logical_input is not None, timeout=timeout)
+            await self._send_command("ZQI25ZQI54")
+        else:
+            await self._send_command("ZQS02")
 
-    async def reload_config(self) -> None:
-        """Re-fetch identity, config state, and all labels."""
-        await self.query_identity()
-        await self.query_config_state()
-        await self.query_labels()
-        self._notify_state_changed()
+    async def query_config(self) -> bool:
+        """Refresh identity and labels from device.
+
+        Sends ZQS01 (identity), waits for the response, then queries all
+        labels sequentially.  Returns True if both identity and all labels
+        were resolved.
+        """
+        # Clear model name so we know ZQS01 is successful, but save it first
+        # in case ZQS01 fails so we can restore it to what it was.
+        model_name = self.state.model_name
+        self.state.model_name = None
+        await self._send_command("ZQS01")
+        if not await self.wait_for(lambda s: s.model_name is not None):
+            self.state.model_name = model_name
+            return False
+        labels_ok = await self._query_labels()
+        # Explicit notification: label responses go through _on_label
+        # (event-based correlation), not _on_readline's normal notify
+        # path.  The S01 identity response does flow through _on_readline
+        # but arrives early and may already have been notified.  This
+        # ensures listeners see the complete config state.
+        self._notify_listeners()
+        return labels_ok
 
     # -- Labels -------------------------------------------------------------
 
@@ -875,7 +855,7 @@ class LumagenClient:
             self._pending_label_text = None
             await self._send_command(f"ZQS1{label_id}")
             try:
-                await asyncio.wait_for(self._pending_label_event.wait(), timeout=2.0)
+                await asyncio.wait_for(self._pending_label_event.wait(), timeout=5.0)
             except TimeoutError:
                 _LOGGER.debug("Timeout waiting for label %s", label_id)
                 return False
@@ -894,17 +874,24 @@ class LumagenClient:
                 self.state._labels[label_id] = text  # pyright: ignore[reportPrivateUsage]
             return True
 
-    async def query_labels(self) -> None:
-        """Query all labels (inputs A0-D9, custom modes, CMS, styles)."""
+    async def _query_labels(self) -> bool:
+        """Query all labels (inputs A0-D9, custom modes, CMS, styles).
+
+        Returns True if all labels were resolved, False on first failure.
+        """
         # Input labels: A0-D9 (reverse iteration works around firmware bug)
         for c in ("A", "B", "C", "D"):
             for i in reversed(range(10)):
-                await self._query_label(c, i)
+                if not await self._query_label(c, i):
+                    return False
 
         # Custom mode (1), CMS (2), Style (3) labels: X0-X7
         for c in ("1", "2", "3"):
             for i in range(8):
-                await self._query_label(c, i)
+                if not await self._query_label(c, i):
+                    return False
+
+        return True
 
     async def set_label(self, category: LabelCategory, index: int, text: str) -> None:
         """Set a label on the device.
@@ -932,7 +919,7 @@ class LumagenClient:
             raise ValueError(f"Label text must be <={max_len} chars, got {len(text)}")
         await self._send_command(f"ZY524{category}{index}{text}\r")
         if await self._query_label(category, index):
-            self._notify_state_changed()
+            self._notify_listeners()
 
     # -- Convenience commands -----------------------------------------------
 
@@ -960,7 +947,7 @@ class LumagenClient:
         self.state.clear_changed()
         self.state.logical_input = number
         if self.state.changed:
-            self._notify_state_changed()
+            self._notify_listeners()
 
     async def select_memory(self, memory: InputMemory) -> None:
         """Select input memory (A / B / C / D)."""
@@ -970,7 +957,7 @@ class LumagenClient:
         self.state.clear_changed()
         self.state.input_memory = memory
         if self.state.changed:
-            self._notify_state_changed()
+            self._notify_listeners()
 
     async def set_aspect(self, aspect: str) -> None:
         """Set source aspect ratio by display name.
@@ -992,7 +979,7 @@ class LumagenClient:
             self.state.source_content_aspect = aspect
             self.state.auto_aspect = False
         if self.state.changed:
-            self._notify_state_changed()
+            self._notify_listeners()
         # Query authoritative state from device
         await self._send_command("ZQI54")
         await self._send_command("ZQI25")
@@ -1147,11 +1134,6 @@ class LumagenClient:
         """Enable or disable auto aspect detection."""
         await self._send_command("~" if enabled else "V")
         await self._send_command("ZQI54")
-
-    async def set_game_mode(self, enabled: bool) -> None:
-        """Enable or disable game mode."""
-        await self._send_command(f"ZY551{'1' if enabled else '0'}\r")
-        await self._send_command("ZQI53")
 
     # -- Misc ---------------------------------------------------------------
 
