@@ -27,7 +27,7 @@ from custom_components.lumagen.client import (
 
 def _make_client() -> LumagenClient:
     """Create a LumagenClient without connecting."""
-    return LumagenClient()
+    return LumagenClient("localhost", 0)
 
 
 def _make_i24_fields(

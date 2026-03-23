@@ -166,8 +166,8 @@ class WrappingRichLog(RichLog):
 class InstrumentedClient(LumagenClient):
     """LumagenClient subclass that emits send/receive events for the TUI."""
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, host: str, port: int) -> None:
+        super().__init__(host, port)
         self._on_line_sent: list[Callable[[str], None]] = []
         self._on_line_received: list[Callable[[str], None]] = []
 
@@ -414,7 +414,7 @@ class LumagenTUI(App[None]):
         super().__init__()
         self._host = host
         self._port = port
-        self._client = InstrumentedClient()
+        self._client = InstrumentedClient(host, port)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -461,8 +461,6 @@ class LumagenTUI(App[None]):
         log.write("[dim]Connecting…[/]")
 
         await self._client.connect(
-            self._host,
-            self._port,
             on_state_changed=self._on_state_changed,
             on_connection_changed=self._on_connection_changed,
         )

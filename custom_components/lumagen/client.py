@@ -437,10 +437,12 @@ def _on_auto_aspect(state: LumagenState, fields: list[str]) -> None:
 class LumagenClient:
     """Async TCP client for a Lumagen Radiance Pro."""
 
-    def __init__(self) -> None:
+    def __init__(self, host: str, port: int) -> None:
         self.state = LumagenState()
-        self._host: str = ""
-        self._port: int = 0
+        self._host = host
+        self._port = port
+        self._on_state_changed: Callable[[], None] | None = None
+        self._on_connection_changed: Callable[[bool], None] | None = None
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self._read_task: asyncio.Task[None] | None = None
@@ -448,8 +450,6 @@ class LumagenClient:
         self._reconnect_task: asyncio.Task[None] | None = None
         self._running = False
         self._disconnecting = False
-        self._on_state_changed: Callable[[], None] | None = None
-        self._on_connection_changed: Callable[[bool], None] | None = None
         self._last_recv: float = 0.0
         self._write_lock = asyncio.Lock()
         self._label_lock = asyncio.Lock()
@@ -468,14 +468,10 @@ class LumagenClient:
 
     async def connect(
         self,
-        host: str,
-        port: int,
         on_state_changed: Callable[[], None] | None = None,
         on_connection_changed: Callable[[bool], None] | None = None,
     ) -> None:
         """Connect to the Lumagen device and start background tasks."""
-        self._host = host
-        self._port = port
         self._on_state_changed = on_state_changed
         self._on_connection_changed = on_connection_changed
         await self._open_connection()

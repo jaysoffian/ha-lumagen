@@ -24,7 +24,8 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         self,
         hass: HomeAssistant,
         entry: ConfigEntry,
-        client: LumagenClient,
+        host: str,
+        port: int,
     ) -> None:
         super().__init__(
             hass,
@@ -32,10 +33,17 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
             name=DOMAIN,
             update_interval=None,
         )
-        self.client = client
+        self.client = LumagenClient(host, port)
         self.entry = entry
         self._store: Store[dict[str, object]] = Store(
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.info"
+        )
+
+    async def async_connect(self) -> None:
+        """Connect to the Lumagen device."""
+        await self.client.connect(
+            on_state_changed=self.on_state_changed,
+            on_connection_changed=self.on_connection_changed,
         )
 
     # -- Callbacks wired to LumagenClient -----------------------------------

@@ -13,7 +13,6 @@ from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
-from .client import LumagenClient
 from .const import DEFAULT_PORT, DOMAIN
 from .coordinator import LumagenCoordinator
 
@@ -126,28 +125,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     host = entry.data[CONF_HOST]
     port = entry.data.get(CONF_PORT, DEFAULT_PORT)
 
-    client = LumagenClient()
-    coordinator = LumagenCoordinator(hass, entry, client)
+    coordinator = LumagenCoordinator(hass, entry, host, port)
 
     try:
-        await client.connect(
-            host,
-            port,
-            on_state_changed=coordinator.on_state_changed,
-            on_connection_changed=coordinator.on_connection_changed,
-        )
+        await coordinator.async_connect()
 
-        if not await client.wait_for(lambda s: s.connected, timeout=5):
+        if not await coordinator.client.wait_for(lambda s: s.connected, timeout=5):
             raise ConfigEntryNotReady("Device not connected")
 
         # Seed device info from stored state (identity + labels)
         has_stored = await coordinator.async_load_stored_state()
 
-        if not has_stored and not await client.query_config():
+        if not has_stored and not await coordinator.client.query_config():
             raise ConfigEntryNotReady("Config query incomplete")
 
         # Kick off runtime state (power arrives shortly after)
-        await client.query_runtime()
+        await coordinator.client.query_runtime()
 
     except ConfigEntryNotReady:
         raise

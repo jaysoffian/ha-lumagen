@@ -106,9 +106,9 @@ class LumagenConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     async def _test_connection(host: str, port: int) -> bool:
         """Connect via LumagenClient and verify the device responds."""
-        client = LumagenClient()
+        client = LumagenClient(host, port)
         try:
-            await client.connect(host, port)
+            await client.connect()
             if not await client.wait_for(lambda s: s.connected, timeout=5):
                 _LOGGER.debug("Connection test: TCP connect failed")
                 return False
