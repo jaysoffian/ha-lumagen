@@ -734,8 +734,10 @@ class LumagenClient:
            caller knows state has changed in bulk.
         """
         power = self.state.power
-        if power and self._last_power is not None and not self._last_power:
-            self._schedule_power_on_refresh()
+        if power and not self._last_power:
+            # None → True: first connect, device already on — query immediately
+            # False → True: device just powered on — wait 10s to settle
+            self._schedule_power_on_refresh(delay=self._last_power is not None)
         if power is not None:
             self._last_power = power
 
@@ -746,16 +748,24 @@ class LumagenClient:
                 if predicate(self.state):
                     event.set()
 
-    def _schedule_power_on_refresh(self) -> None:
-        """Schedule a delayed state refresh after power-on."""
+    def _schedule_power_on_refresh(self, *, delay: bool = True) -> None:
+        """Schedule a runtime state refresh after discovering device is on.
+
+        *delay=True* (default) waits 10 s for the device to settle after a
+        real power-on.  *delay=False* queries immediately — used when we
+        first connect and discover the device is already on.
+        """
         if self._power_on_task and not self._power_on_task.done():
             self._power_on_task.cancel()
-        self._power_on_task = asyncio.create_task(self._power_on_refresh())
+        self._power_on_task = asyncio.create_task(self._power_on_refresh(delay=delay))
 
-    async def _power_on_refresh(self) -> None:
-        """Wait for device to settle after power-on, then re-query state."""
-        _LOGGER.info("Power on detected — refreshing state in 10s")
-        await asyncio.sleep(10)
+    async def _power_on_refresh(self, *, delay: bool = True) -> None:
+        """Re-query runtime state after power-on or first connect."""
+        if delay:
+            _LOGGER.info("Power on detected — refreshing state in 10s")
+            await asyncio.sleep(10)
+        else:
+            _LOGGER.info("Device already on — querying runtime state")
         try:
             await self.query_runtime()
         except Exception:

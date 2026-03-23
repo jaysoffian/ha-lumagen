@@ -444,7 +444,8 @@ class TestProcessLine:
 
     # -- Power sentinels ----------------------------------------------------
 
-    def test_power_up_complete(self):
+    @pytest.mark.anyio
+    async def test_power_up_complete(self):
         self.client._on_readline("Power-up complete.")
         assert self.client.state.power
         assert self.state_changes == 1
@@ -479,7 +480,8 @@ class TestProcessLine:
 
     # -- S02 power with echo -----------------------------------------------
 
-    def test_s02_active(self):
+    @pytest.mark.anyio
+    async def test_s02_active(self):
         self.client._on_readline("ZQS02!S02,1")
         assert self.client.state.power
 
