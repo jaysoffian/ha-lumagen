@@ -487,8 +487,9 @@ class LumagenClient:
         self._label_lock = asyncio.Lock()
         self._pending_label_event: asyncio.Event | None = None
         self._pending_label_text: str | None = None
+        self._handlers = _RESPONSE_HANDLERS.copy()
         for code in ("S1A", "S1B", "S1C", "S1D", "S11", "S12", "S13"):
-            _RESPONSE_HANDLERS[code] = self._on_label
+            self._handlers[code] = self._on_label
         self._last_power: bool | None = None
         self._power_on_task: asyncio.Task[None] | None = None
         self._state_waiters: list[
@@ -657,13 +658,13 @@ class LumagenClient:
             return
 
         name, fields = match.groups()
-        if name not in _RESPONSE_HANDLERS:
+        if name not in self._handlers:
             return
 
         self.state.clear_changed()
         notify = False
         try:
-            notify = _RESPONSE_HANDLERS[name](self.state, fields.split(","))
+            notify = self._handlers[name](self.state, fields.split(","))
         except Exception:
             _LOGGER.exception("Error in handler for %s", name)
         else:
@@ -845,8 +846,8 @@ class LumagenClient:
     def _on_label(self, _state: LumagenState, fields: list[str]) -> None:
         """S1x — label text (input memories A-D, custom mode, CMS, style).
 
-        Registered into _RESPONSE_HANDLERS at init time so that label
-        responses can update client-owned correlation state directly.
+        Registered into the instance-level handler map (not the module-level
+        one) so that correlation state stays bound to the correct client.
         """
         if not self._pending_label_event:
             _LOGGER.debug("Ignoring unsolicited label response: %s", ",".join(fields))
