@@ -148,6 +148,10 @@ class WrappingRichLog(RichLog):
         if prev is not None and event.size.width != prev:
             self.set_timer(0.05, self._rewrap)
 
+    def rewrap(self) -> None:
+        """Force a re-render of all buffered writes (e.g. after visibility change)."""
+        self._rewrap()
+
     def _rewrap(self) -> None:
         at_end = self.scroll_offset.y >= self.virtual_size.height - self.size.height
         self._rewrapping = True
@@ -808,14 +812,20 @@ class LumagenTUI(App[None]):
         """Hide the log pane when it would be too narrow to be useful."""
         help_panel = self.query_one("#help-panel")
         log_panel = self.query_one("#log-panel")
+        was_hidden = not log_panel.display
         if not help_panel.has_class("visible"):
             log_panel.display = True
-            return
-        # State panel (fixed 40) + help panel (49) + log + borders/gaps
-        # Estimate remaining space for the log pane
-        main = self.query_one("#main")
-        available = main.size.width - 34 - 49  # state + help widths
-        log_panel.display = available >= self._LOG_MIN_WIDTH
+        else:
+            # State panel (fixed 40) + help panel (49) + log + borders/gaps
+            # Estimate remaining space for the log pane
+            main = self.query_one("#main")
+            available = main.size.width - 34 - 49  # state + help widths
+            log_panel.display = available >= self._LOG_MIN_WIDTH
+        # Rewrap after becoming visible — writes while hidden rendered at zero
+        # width and are effectively lost from the display.
+        if was_hidden and log_panel.display:
+            rich_log = self.query_one("#log", WrappingRichLog)
+            rich_log.set_timer(0.05, rich_log.rewrap)
 
     def on_resize(self, event: Resize) -> None:
         self._update_log_visibility()
