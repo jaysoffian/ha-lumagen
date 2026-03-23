@@ -979,7 +979,7 @@ class LumagenClient:
         if cmd is None:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
-        await self._send_command(cmd)
+        # Optimistic update so the UI reflects the change immediately
         self.state.clear_changed()
         if aspect == "Auto":
             self.state.nls = False
@@ -990,15 +990,12 @@ class LumagenClient:
             self.state.auto_aspect = False
         if self.state.changed:
             self._notify_listeners()
-        # Query authoritative state from device
-        await self._send_command("ZQI54")
-        await self._send_command("ZQI25")
+        # Send command and query authoritative state in one write
+        await self._send_command(f"{cmd}ZQI54ZQI25")
 
     async def send_nls_command(self) -> None:
         """Send NLS command and query result."""
-        await self._send_command("N")
-        # Query authoritative state — NLS flag is in I25
-        await self._send_command("ZQI25")
+        await self._send_command("NZQI25")
 
     async def send_remote_command(self, command: str) -> None:
         """Send a named remote-control command."""
@@ -1101,8 +1098,8 @@ class LumagenClient:
 
     async def set_auto_aspect(self, enabled: bool) -> None:
         """Enable or disable auto aspect detection."""
-        await self._send_command("~" if enabled else "V")
-        await self._send_command("ZQI54")
+        cmd = "~" if enabled else "V"
+        await self._send_command(f"{cmd}ZQI54")
 
     # -- Misc ---------------------------------------------------------------
 
