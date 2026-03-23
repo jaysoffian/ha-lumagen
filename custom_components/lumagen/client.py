@@ -141,23 +141,15 @@ _RESPONSE_RE = re.compile(r"!([A-Z][A-Z0-9]{2}),(.*)")
 
 
 class LabelDict(dict[str, str]):
-    """Dict that logs and tracks mutations like LumagenState.__setattr__.
+    """Dict that logs mutations like LumagenState.__setattr__.
 
-    Each ``__setitem__`` call that changes a value emits a debug log and
-    sets ``_dirty``.  ``LumagenState.clear_changed`` resets the flag.
+    Each ``__setitem__`` call that changes a value emits a debug log.
     """
-
-    __slots__ = ("_dirty",)
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._dirty = False
 
     def __setitem__(self, key: str, value: str) -> None:
         old = self.get(key)
         if old != value:
             _LOGGER.debug("state: labels[%s]: %r -> %r", key, old, value)
-            self._dirty = True
         super().__setitem__(key, value)
 
 
@@ -165,10 +157,8 @@ class LabelDict(dict[str, str]):
 class LumagenState:
     """Flat device state, updated in place by response handlers.
 
-    Tracks field-level changes via ``__setattr__`` and ``LabelDict``.
-    Any assignment that actually modifies a value emits a debug log line.
-    Callers should call ``clear_changed()`` before a batch of updates and
-    inspect ``changed`` afterward to decide whether to notify listeners.
+    Any assignment that actually modifies a value emits a debug log line
+    via ``__setattr__`` (and ``LabelDict`` for labels).
     """
 
     # Connection
@@ -221,9 +211,6 @@ class LumagenState:
     # Labels (populated by _query_labels / set_label)
     _labels: LabelDict = field(default_factory=LabelDict)
 
-    # Change tracking (not part of equality/repr)
-    _dirty: bool = field(default=False, init=False, repr=False, compare=False)
-
     # -- Derived properties -------------------------------------------------
 
     @property
@@ -263,7 +250,7 @@ class LumagenState:
         """Return sorted labels whose key starts with *prefix*."""
         return {k: v for k, v in sorted(self._labels.items()) if k[0] == prefix}
 
-    # -- Change tracking ----------------------------------------------------
+    # -- Debug logging ------------------------------------------------------
 
     def __setattr__(self, name: str, value: object) -> None:
         try:
@@ -273,18 +260,7 @@ class LumagenState:
         else:
             if old != value and not name.startswith("_"):
                 _LOGGER.debug("state: %s: %r -> %r", name, old, value)
-                self.__dict__["_dirty"] = True
         object.__setattr__(self, name, value)
-
-    @property
-    def changed(self) -> bool:
-        """True if any field or label was modified since last clear."""
-        return self._dirty or self._labels._dirty  # pyright: ignore[reportPrivateUsage]
-
-    def clear_changed(self) -> None:
-        """Reset change-tracking flags."""
-        self.__dict__["_dirty"] = False
-        self._labels._dirty = False  # pyright: ignore[reportPrivateUsage]
 
     # -- Serialization ------------------------------------------------------
 
@@ -329,24 +305,23 @@ def _safe_aspect(code: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Response handlers — mutate state directly; changes tracked by __setattr__
-# Return True to force notification even if state hasn't changed
+# Response handlers — mutate state directly; changes logged by __setattr__
 # ---------------------------------------------------------------------------
 
-_RESPONSE_HANDLERS: dict[str, Callable[[LumagenState, list[str]], bool | None]] = {}
+_RESPONSE_HANDLERS: dict[str, Callable[[LumagenState, list[str]], None]] = {}
 
 
 def _on(
     *codes: str,
 ) -> Callable[
-    [Callable[[LumagenState, list[str]], bool | None]],
-    Callable[[LumagenState, list[str]], bool | None],
+    [Callable[[LumagenState, list[str]], None]],
+    Callable[[LumagenState, list[str]], None],
 ]:
     """Register a function as the handler for one or more response codes."""
 
     def decorator(
-        fn: Callable[[LumagenState, list[str]], bool | None],
-    ) -> Callable[[LumagenState, list[str]], bool | None]:
+        fn: Callable[[LumagenState, list[str]], None],
+    ) -> Callable[[LumagenState, list[str]], None]:
         for code in codes:
             _RESPONSE_HANDLERS[code] = fn
         return fn
@@ -384,7 +359,7 @@ def _on_input_info(state: LumagenState, fields: list[str]) -> None:
 
 
 @_on("I21", "I22", "I23", "I24", "I25")
-def _on_full_info(state: LumagenState, fields: list[str]) -> bool:
+def _on_full_info(state: LumagenState, fields: list[str]) -> None:
     """I21/I22/I23/I24/I25 — full device info.
 
     Field indices (0-based after splitting on commas):
@@ -397,15 +372,9 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> bool:
 
     Fields are ordered by protocol version. We parse as many as are present.
     """
-    notify = False
-
     # I21: v1 fields (0-14)
     if len(fields) < 15:
-        return notify
-
-    # Always notify on any valid I2x — even unchanged values are
-    # authoritative and must clear optimistic entity state.
-    notify = True
+        return
 
     state.input_video_status = _INPUT_VIDEO_STATUS.get(fields[0])
     state.source_vertical_rate = _safe_int(fields[1])
@@ -425,7 +394,7 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> bool:
 
     # I22: v2 fields (15-18)
     if len(fields) < 19:
-        return notify
+        return
     state.output_colorspace = _OUTPUT_COLORSPACE.get(fields[15])
     state.source_dynamic_range = _DYNAMIC_RANGE.get(fields[16])
     state.source_mode = _SOURCE_MODE.get(fields[17])
@@ -433,24 +402,23 @@ def _on_full_info(state: LumagenState, fields: list[str]) -> bool:
 
     # I23: v3 fields (19-20) — II (virtual/logical input), KK (physical input)
     if len(fields) < 21:
-        return notify
+        return
     state.logical_input = _safe_int(fields[19])
     state.physical_input = _safe_int(fields[20])
 
     # I24: v4 fields (21-22) — detected raster/content aspect
     if len(fields) < 23:
-        return notify
+        return
     state.detected_raster_aspect = _safe_aspect(fields[21])
     state.detected_content_aspect = _safe_aspect(fields[22])
 
     # I25: v5 fields (23-24) — input memory, power status
     if len(fields) < 25:
-        return notify
+        return
     mem = fields[23]
     if mem in get_args(InputMemory):
         state.input_memory = cast("InputMemory", mem)
     state.power = fields[24] == "1"
-    return notify
 
 
 @_on("I54")
@@ -640,16 +608,12 @@ class LumagenClient:
         """Parse a single line from the TCP stream."""
         # Special power messages
         if "Power-up complete" in line:
-            self.state.clear_changed()
             self.state.power = True
-            if self.state.changed:
-                self._notify_listeners()
+            self._notify_listeners()
             return
         if "POWER OFF" in line:
-            self.state.clear_changed()
             self.state.power = False
-            if self.state.changed:
-                self._notify_listeners()
+            self._notify_listeners()
             return
 
         # Response: !<code>,<fields>
@@ -661,15 +625,12 @@ class LumagenClient:
         if name not in self._handlers:
             return
 
-        self.state.clear_changed()
-        notify = False
         try:
-            notify = self._handlers[name](self.state, fields.split(","))
+            self._handlers[name](self.state, fields.split(","))
         except Exception:
             _LOGGER.exception("Error in handler for %s", name)
         else:
-            if self.state.changed or notify:
-                self._notify_listeners()
+            self._notify_listeners()
 
     # -- Keepalive ----------------------------------------------------------
 
@@ -724,16 +685,7 @@ class LumagenClient:
                 await self._on_disconnect()
 
     def _notify_listeners(self) -> None:
-        """Notify state-change callback and wake any wait_for waiters.
-
-        Called in two ways:
-        1. From _on_readline — after a response handler runs, guarded by
-           ``if self.state.changed or notify``.  Only fires when a field
-           actually changed or the handler explicitly requested it.
-        2. Explicitly — by query_config (label responses bypass _on_readline)
-           and by _on_disconnect.  These calls are unconditional because the
-           caller knows state has changed in bulk.
-        """
+        """Notify state-change callback and wake any wait_for waiters."""
         power = self.state.power
         if power and not self._last_power:
             # None → True: first connect, device already on — query immediately
@@ -955,20 +907,16 @@ class LumagenClient:
             await self._send_command(f"i+{number - 10}")
         else:
             return
-        self.state.clear_changed()
         self.state.logical_input = number
-        if self.state.changed:
-            self._notify_listeners()
+        self._notify_listeners()
 
     async def select_memory(self, memory: InputMemory) -> None:
         """Select input memory (A / B / C / D)."""
         if memory not in get_args(InputMemory):
             raise ValueError(f"Invalid input memory: {memory!r}")
         await self._send_command(memory.lower())
-        self.state.clear_changed()
         self.state.input_memory = memory
-        if self.state.changed:
-            self._notify_listeners()
+        self._notify_listeners()
 
     async def set_aspect(self, aspect: str) -> None:
         """Set source aspect ratio by display name.
@@ -981,7 +929,6 @@ class LumagenClient:
             _LOGGER.warning("Unknown aspect ratio: %s", aspect)
             return
         # Optimistic update so the UI reflects the change immediately
-        self.state.clear_changed()
         if aspect == "Auto":
             self.state.nls = False
             self.state.auto_aspect = True
@@ -989,8 +936,7 @@ class LumagenClient:
             self.state.nls = False
             self.state.source_content_aspect = aspect
             self.state.auto_aspect = False
-        if self.state.changed:
-            self._notify_listeners()
+        self._notify_listeners()
         # Send command and query authoritative state in one write
         await self._send_command(f"{cmd}ZQI54ZQI25")
 
