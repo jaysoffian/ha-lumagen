@@ -38,12 +38,15 @@ The Lumagen should be configured as follows for the integration to work correctl
 
 ### HACS
 
-1. Install [HACS](https://hacs.xyz)
-2. Open HACS → Integrations
-3. Open triple-dot menu ( ⠇) → Custom repositories
-4. Add this repository's URL (`https://github.com/jaysoffian/ha-lumagen`), category "Integration"
-5. Install this integration and restart Home Assistant
+1. Install [HACS](https://hacs.xyz), then either:
+   1. [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jaysoffian&repository=ha-lumagen&category=integration)
 
+   Or:
+
+   1. Open HACS → Integrations
+   2. Open triple-dot menu ( ⠇) → Custom repositories
+   3. Add this repository's URL (`https://github.com/jaysoffian/ha-lumagen`), category "Integration"
+2. Install this integration and restart Home Assistant
 
 ### Manual
 
