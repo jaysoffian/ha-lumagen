@@ -10,7 +10,9 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
       - id: pretty-format-json
-        args: [--autofix]
+        args:
+          - --autofix
+          - --top-keys=domain,name
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.8
