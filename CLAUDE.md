@@ -7,6 +7,7 @@
 ## Verification
 - Use pre-commit hooks to verify work — do NOT run checkers (ruff, pyright, pytest, etc.) manually.
 - Run: `pre-commit run --all-files`
+- Run: `make hassfest` — validates manifest, config schema, translations, etc. via the HA hassfest container.
 
 ## Python
 - Always use `uv` to run Python, pytest, and tools (never bare `python` or `python3`).
