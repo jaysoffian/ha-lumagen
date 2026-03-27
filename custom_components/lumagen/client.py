@@ -283,7 +283,7 @@ class LumagenState:
             if key in data:
                 setattr(self, key, data[key])
         if "labels" in data:
-            self._labels.update(data["labels"])  # type: ignore[arg-type]
+            self._labels.update(cast("dict[str, str]", data["labels"]))
 
 
 # ---------------------------------------------------------------------------
