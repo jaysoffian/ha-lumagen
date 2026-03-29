@@ -78,7 +78,6 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
     async def async_save_stored_state(self) -> None:
         """Persist identity, config, and labels to disk."""
         data = self.client.state.to_stored_dict()
-        # data["labels"] = dict(data["labels"]) # Copy to ensure updates are saved
         # Copy to ensure updates are saved
         data["labels"] = dict(cast(Iterable[list[bytes]], data["labels"]))
         await self._store.async_save(data)
