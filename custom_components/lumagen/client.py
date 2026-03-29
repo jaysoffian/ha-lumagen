@@ -103,6 +103,8 @@ REMOTE_COMMANDS: dict[str, str] = {
     "save": "S",
 }
 
+_DELIMETER_REPLACEMENT_COMMANDS = {"~": "?", "#": ":"}
+
 _DYNAMIC_RANGE: dict[str, DynamicRange] = {"0": "SDR", "1": "HDR"}
 _SOURCE_MODE: dict[str, SourceMode | None] = {
     "i": "Interlaced",
@@ -437,10 +439,11 @@ def _on_auto_aspect(state: LumagenState, fields: list[str]) -> None:
 class LumagenClient:
     """Async TCP client for a Lumagen Radiance Pro."""
 
-    def __init__(self, host: str, port: int) -> None:
+    def __init__(self, host: str, port: int, delimiters: bool = False) -> None:
         self.state = LumagenState()
         self._host = host
         self._port = port
+        self._delimiters = delimiters
         self._on_state_changed: Callable[[], None] | None = None
         self._on_connection_changed: Callable[[bool], None] | None = None
         self._reader: asyncio.StreamReader | None = None
@@ -612,6 +615,9 @@ class LumagenClient:
             self._notify_listeners()
             return
 
+        if self._delimiters:
+            line = line.lstrip("#")
+
         # Response: !<code>,<fields>
         match = _RESPONSE_RE.search(line)
         if not match:
@@ -672,6 +678,15 @@ class LumagenClient:
             _LOGGER.warning("Cannot send — not connected")
             return
         async with self._write_lock:
+            if self._delimiters:
+                # Replace first character if ~ or #
+                if cmd[0] in _DELIMETER_REPLACEMENT_COMMANDS:
+                    cmd = _DELIMETER_REPLACEMENT_COMMANDS[cmd[0]] + cmd[1:]
+                # Split at each "ZQ" boundary (keep "ZQ" with segment)
+                segments = [s for s in re.split(r"(?=ZQ)", cmd) if s]
+                # Prefix # and add \r to each
+                cmd = "".join(f"#{seg}\r" for seg in segments)
+
             try:
                 _LOGGER.debug("send: %s", cmd)
                 self._writer.write(cmd.encode("ascii"))

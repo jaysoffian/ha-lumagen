@@ -13,7 +13,7 @@ from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
-from .const import DEFAULT_PORT, DOMAIN
+from .const import CONF_DELIMITERS, DEFAULT_PORT, DOMAIN
 from .coordinator import LumagenCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -124,8 +124,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Lumagen from a config entry."""
     host = entry.data[CONF_HOST]
     port = entry.data.get(CONF_PORT, DEFAULT_PORT)
+    delimeters = entry.data.get(CONF_DELIMITERS, False)
 
-    coordinator = LumagenCoordinator(hass, entry, host, port)
+    coordinator = LumagenCoordinator(hass, entry, host, port, delimeters)
 
     try:
         await coordinator.async_connect()

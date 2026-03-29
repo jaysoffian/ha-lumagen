@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
+from typing import cast
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -26,6 +28,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
         entry: ConfigEntry,
         host: str,
         port: int,
+        delimeters: bool,
     ) -> None:
         super().__init__(
             hass,
@@ -33,7 +36,7 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
             name=DOMAIN,
             update_interval=None,
         )
-        self.client = LumagenClient(host, port)
+        self.client = LumagenClient(host, port, delimeters)
         self.entry = entry
         self._store: Store[dict[str, object]] = Store(
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.info"
@@ -74,7 +77,11 @@ class LumagenCoordinator(DataUpdateCoordinator[LumagenState]):
 
     async def async_save_stored_state(self) -> None:
         """Persist identity, config, and labels to disk."""
-        await self._store.async_save(self.client.state.to_stored_dict())
+        data = self.client.state.to_stored_dict()
+        # data["labels"] = dict(data["labels"]) # Copy to ensure updates are saved
+        # Copy to ensure updates are saved
+        data["labels"] = dict(cast(Iterable[list[bytes]], data["labels"]))
+        await self._store.async_save(data)
 
     async def reload_config(self) -> None:
         """Re-fetch identity and labels from device."""

@@ -24,7 +24,7 @@ The Lumagen should be configured as follows for the integration to work correctl
 1. **MENU → Other → I/O Setup → RS-232 Setup:**
    - **Echo-RS232**: On (Lumagen recommends "On". If set to "Off" it may affect the ability to do software updates. *This integration should work either way, but is tested with it On.*)
    - **Echo-USB**: On (Lumagen recommends "On". If set to "Off" it may affect the ability to do software updates. *Mentioned only for completeness as the TCP/IP to serial adapter connects to the RS-232 port.*)
-   - **Delimiters**: Off (Lumagen recommends "Off". This works reliably and is easier to implement. *This integration WILL NOT work unless Delimiters=Off.*)
+   - **Delimiters**: Off (Lumagen recommends "Off". This works reliably and is easier to implement. *Setup does allow integration to work with Delimiters=On.*)
    - **Report mode changes**: Full v5 (Optional but recommended. *Enables the integration to receive real-time updates from the Lumagen.*)
 2. **MENU → Other → OnOff Setup:**
     - **On Message**: N (Message may interfere with integration.)
@@ -376,5 +376,6 @@ This repo includes a TUI (requires [uv](https://docs.astral.sh/uv/getting-starte
 # or via env vars:
 LUMAGEN_HOST=lrp LUMAGEN_PORT=5555 ./tui.py
 ```
+Use the optional parameter '-d' if Lumagen configured with ***Delimiters=On***.
 
 <img src="assets/tui.svg" alt="TUI screenshot" width="600">
