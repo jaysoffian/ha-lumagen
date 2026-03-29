@@ -679,9 +679,8 @@ class LumagenClient:
             return
         async with self._write_lock:
             if self._delimiters:
-                # Replace first character if ~ or #
-                if cmd[0] in _DELIMETER_REPLACEMENT_COMMANDS:
-                    cmd = _DELIMETER_REPLACEMENT_COMMANDS[cmd[0]] + cmd[1:]
+                # Replace characters if ~ or #
+                cmd = "".join(_DELIMETER_REPLACEMENT_COMMANDS.get(c, c) for c in cmd)
                 # Split at each "ZQ" boundary (keep "ZQ" with segment)
                 segments = [s for s in re.split(r"(?=ZQ)", cmd) if s]
                 # Prefix # and add \r to each
