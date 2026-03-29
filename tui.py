@@ -166,8 +166,8 @@ class WrappingRichLog(RichLog):
 class InstrumentedClient(LumagenClient):
     """LumagenClient subclass that emits send/receive events for the TUI."""
 
-    def __init__(self, host: str, port: int) -> None:
-        super().__init__(host, port)
+    def __init__(self, host: str, port: int, delimiters: bool) -> None:
+        super().__init__(host, port, delimiters)
         self._on_line_sent: list[Callable[[str], None]] = []
         self._on_line_received: list[Callable[[str], None]] = []
 
@@ -410,11 +410,12 @@ class LumagenTUI(App[None]):
 
     _STATE_FILE = pathlib.Path(__file__).resolve().parent / "tui.state"
 
-    def __init__(self, host: str, port: int) -> None:
+    def __init__(self, host: str, port: int, delimiters: bool) -> None:
         super().__init__()
         self._host = host
         self._port = port
-        self._client = InstrumentedClient(host, port)
+        self._delimiters = delimiters
+        self._client = InstrumentedClient(host, port, delimiters)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -749,6 +750,13 @@ class LumagenTUI(App[None]):
 def main(
     host: Annotated[str, typer.Argument(envvar="LUMAGEN_HOST", help="Hostname or IP")],
     port: Annotated[int, typer.Argument(envvar="LUMAGEN_PORT", help="TCP port")] = 4999,
+    delimiters: bool = typer.Option(
+        False,
+        "-d",
+        envvar="LUMAGEN_DELIMITERS",
+        help="Enable delimiters",
+        show_default=True,
+    ),
 ) -> None:
     """Lumagen Radiance Pro TUI."""
     # Log all client protocol traffic to tui.log
@@ -759,7 +767,7 @@ def main(
     client_logger.addHandler(handler)
     client_logger.setLevel(logging.DEBUG)
 
-    app = LumagenTUI(host, port)
+    app = LumagenTUI(host, port, delimiters)
     app.run()
 
 
